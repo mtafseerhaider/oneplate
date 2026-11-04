@@ -4,20 +4,20 @@
 <style>
 /* Layout: glanceable daily dashboard. Phone: sticky top bar, scrolling bento cards, bottom tab bar. Desktop: top bar, left sidebar, two-column bento. Saffron accent on a soft warm-green ground; semantic green/amber/red kept separate from the accent. */
 :root{
-  --bg:#F4F5F1; --panel:#FFFFFF; --panel2:#F8F9F6; --fg:#17211C; --muted:#66736C; --line:#E3E7E0;
-  --accent:#D4821F; --accent-2:#F3B55A; --accent-ink:#FFFFFF; --soft:#FBF1E1;
-  --green:#2F8F63; --green-soft:#E1F3E8; --amber:#C28A0C; --amber-soft:#FBF0CF; --red:#C1463C; --red-soft:#FAE1DD; --blue:#3E7BC8; --blue-soft:#E3EDFA;
+  --bg:#F4F5F1; --panel:#FFFFFF; --panel2:#F8F9F6; --fg:#17211C; --muted:#5E6B64; --line:#E3E7E0;
+  --accent:#C4731A; --accent-2:#F3B55A; --accent-text:#9A560C; --btn:#A35D0E; --accent-ink:#FFFFFF; --soft:#FBF1E1;
+  --green:#257553; --green-soft:#E1F3E8; --amber:#85600A; --amber-soft:#FBF0CF; --red:#B03A31; --red-soft:#FAE1DD; --blue:#2F67AE; --blue-soft:#E3EDFA;
   --scrim:rgba(23,33,28,.45); --shadow:0 1px 2px rgba(23,33,28,.05),0 10px 30px -14px rgba(23,33,28,.16); --r:18px;
   --display:"Outfit",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#0F1412; --panel:#182019; --panel2:#1F2922; --fg:#E9EEEA; --muted:#93A098; --line:#28332C;
-  --accent:#F0A63A; --accent-2:#F6C87A; --accent-ink:#1B1308; --soft:#2A2114;
+  --accent:#F0A63A; --accent-2:#F6C87A; --accent-text:#F0A63A; --btn:#F0A63A; --accent-ink:#1B1308; --soft:#2A2114;
   --green:#5ECB97; --green-soft:#163527; --amber:#E6BC4C; --amber-soft:#36300F; --red:#F18E85; --red-soft:#3E1F1C; --blue:#7FB0F0; --blue-soft:#15263A;
   --scrim:rgba(0,0,0,.6); --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -14px rgba(0,0,0,.6); color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#0F1412; --panel:#182019; --panel2:#1F2922; --fg:#E9EEEA; --muted:#93A098; --line:#28332C;
-  --accent:#F0A63A; --accent-2:#F6C87A; --accent-ink:#1B1308; --soft:#2A2114;
+  --accent:#F0A63A; --accent-2:#F6C87A; --accent-text:#F0A63A; --btn:#F0A63A; --accent-ink:#1B1308; --soft:#2A2114;
   --green:#5ECB97; --green-soft:#163527; --amber:#E6BC4C; --amber-soft:#36300F; --red:#F18E85; --red-soft:#3E1F1C; --blue:#7FB0F0; --blue-soft:#15263A;
   --scrim:rgba(0,0,0,.6); --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -14px rgba(0,0,0,.6); color-scheme:dark }
 
@@ -33,14 +33,14 @@ svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;str
 .chip{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:5px 10px;border-radius:999px;background:var(--green-soft);color:var(--green);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .chip.local{background:var(--amber-soft);color:var(--amber)}
-.chip.wait{background:var(--line);color:var(--muted)}
+.chip.wait{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
 .chip.view{background:var(--blue-soft);color:var(--blue)}
 main{flex:1;min-height:0;overflow-y:auto;padding-block:18px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .tabs{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--panel);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 .tabs button{appearance:none;background:none;border:0;color:var(--muted);font:600 10.5px var(--body);letter-spacing:.04em;text-transform:uppercase;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
 .tabs button .ib{display:grid;place-items:center;width:44px;height:28px;border-radius:999px;transition:background .2s}
-.tabs button.on{color:var(--accent)}
+.tabs button.on{color:var(--accent-text)}
 .tabs button.on .ib{background:var(--soft)}
 .tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:12px}
 
@@ -64,10 +64,10 @@ p{margin:0}
 .tile{background:var(--panel2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .tile b{font-family:var(--mono);font-size:21px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .tile span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px}
-.tile .ic{width:16px;height:16px;color:var(--accent)}
+.tile .ic{width:16px;height:16px;color:var(--accent-text)}
 button.btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:600 14px var(--body);padding:11px 16px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s,background .15s}
 button.btn:active{transform:scale(.98)}
-button.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px -8px var(--accent)}
+button.btn.primary{background:var(--btn);border-color:var(--btn);color:var(--accent-ink);box-shadow:0 6px 16px -8px var(--btn)}
 button.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
 button.btn.wide{width:100%}
 button.btn:focus-visible,.sw-row:focus-visible,.dot:focus-visible,.seg button:focus-visible,.info:focus-visible,.card.link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -98,7 +98,7 @@ button.btn:focus-visible,.sw-row:focus-visible,.dot:focus-visible,.seg button:fo
 .strip .txt{flex:1;min-width:0}
 .strip .txt b{display:block;font-family:var(--display);font-size:15px}
 .strip .txt small{color:var(--muted);font-size:12px}
-.streak{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:var(--soft);color:var(--accent);font:600 13px var(--body);white-space:nowrap}
+.streak{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:var(--soft);color:var(--accent-text);font:600 13px var(--body);white-space:nowrap}
 .streak .ic{width:16px;height:16px}
 /* check-ins */
 .checks{display:flex;flex-direction:column;gap:4px}
@@ -112,7 +112,7 @@ button.btn:focus-visible,.sw-row:focus-visible,.dot:focus-visible,.seg button:fo
 .dots{display:flex;gap:6px;flex-wrap:wrap}
 .dot{appearance:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);color:var(--muted);font:500 12px var(--mono);cursor:pointer;display:grid;place-items:center;transition:transform .1s,background .15s;padding:0}
 .dot.on{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
-.dots.palms .dot.on{background:var(--soft);border-color:var(--accent);color:var(--accent)}
+.dots.palms .dot.on{background:var(--soft);border-color:var(--accent);color:var(--accent-text)}
 .dot:active{transform:scale(.9)}
 .dots.ro .dot{cursor:default}
 .sw-row{cursor:pointer}
@@ -126,7 +126,7 @@ button.btn:focus-visible,.sw-row:focus-visible,.dot:focus-visible,.seg button:fo
 .pill.green{background:var(--green-soft);color:var(--green)}
 .pill.amber{background:var(--amber-soft);color:var(--amber)}
 .pill.red{background:var(--red-soft);color:var(--red)}
-.pill.soft{background:var(--soft);color:var(--accent)}
+.pill.soft{background:var(--soft);color:var(--accent-text)}
 .pill.grey{background:var(--line);color:var(--muted)}
 .pill.blue{background:var(--blue-soft);color:var(--blue)}
 /* plate */
@@ -150,6 +150,7 @@ button.btn:focus-visible,.sw-row:focus-visible,.dot:focus-visible,.seg button:fo
 .mkey b{color:var(--fg);font-weight:500}
 .mkey i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
 details{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:0 16px;box-shadow:var(--shadow)}
+details summary>span{min-width:0;flex:1}
 details summary{cursor:pointer;padding:13px 0;font-family:var(--display);font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
 details summary::-webkit-details-marker{display:none}
 details summary .chev{color:var(--muted);transition:transform .2s}
@@ -182,7 +183,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mu
 .wday .ib{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--muted);border:1.5px solid var(--line)}
 .wday .ib .ic{width:17px;height:17px}
 .wday.cycle .ib{color:var(--blue);background:var(--blue-soft);border-color:transparent}
-.wday.strength .ib{color:var(--accent);background:var(--soft);border-color:transparent}
+.wday.strength .ib{color:var(--accent-text);background:var(--soft);border-color:transparent}
 .wday.easy .ib{color:var(--green);background:var(--green-soft);border-color:transparent}
 .wday.today{background:var(--fg);color:var(--bg)}
 .wday.today .ib{box-shadow:0 0 0 2px var(--bg)}
@@ -218,13 +219,13 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mu
 .tl .c span{font-size:13px;color:var(--muted)}
 .rules{counter-reset:r;display:grid;gap:8px}
 .rules div{display:flex;gap:12px;align-items:flex-start;background:var(--panel2);border-radius:14px;padding:12px 14px}
-.rules div::before{counter-increment:r;content:counter(r);font-family:var(--display);font-weight:700;color:var(--accent);font-size:22px;line-height:1;min-width:22px}
+.rules div::before{counter-increment:r;content:counter(r);font-family:var(--display);font-weight:700;color:var(--accent-text);font-size:22px;line-height:1;min-width:22px}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;white-space:nowrap;box-shadow:var(--shadow)}
 .toast.show{opacity:1}
 ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
 .note{font-size:13px;color:var(--muted);padding:11px 14px;border-left:3px solid var(--accent);background:var(--soft);border-radius:0 12px 12px 0}
 .info{appearance:none;border:1.5px solid var(--line);background:var(--panel);color:var(--muted);width:17px;height:17px;border-radius:50%;font:700 10px var(--display);line-height:1;display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle;padding:0;flex:0 0 auto;text-transform:none;letter-spacing:0}
-.info:hover{border-color:var(--accent);color:var(--accent)}
+.info:hover{border-color:var(--accent-text);color:var(--accent-text)}
 .scrim{position:fixed;inset:0;background:var(--scrim);z-index:30;display:none}
 .scrim.show{display:block}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;background:var(--panel);color:var(--fg);border-radius:22px 22px 0 0;padding-block:14px calc(22px + env(safe-area-inset-bottom,0px));padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px));display:none;flex-direction:column;gap:8px;box-shadow:0 -8px 30px rgba(0,0,0,.18);max-width:640px;margin:0 auto}
@@ -244,7 +245,7 @@ ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
   .tabs{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:4px;align-items:stretch;border-top:0;border-right:1px solid var(--line);padding:18px 12px;overflow-y:auto}
   .tabs button{flex-direction:row;justify-content:flex-start;gap:12px;padding:10px 12px;border-radius:12px;font:600 14px var(--body);text-transform:capitalize;letter-spacing:0}
   .tabs button .ib{width:auto;height:auto;background:none!important}
-  .tabs button.on{background:var(--soft)}
+  .tabs button.on{background:var(--soft);color:var(--accent-text)}
   .tabs button:hover:not(.on){background:var(--panel2)}
   main{grid-column:2;grid-row:2;padding-block:30px 48px;padding-left:32px;padding-right:32px}
   .wrap{max-width:1060px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
@@ -564,7 +565,7 @@ function vToday(){
     <p class="eyebrow">Check-ins</p>
     <div class="checks">
       <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,ro,"")}</div></div>
-      <div class="crow"><span class="lead" style="color:var(--accent)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,ro,"palms")}</div></div>
+      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,ro,"palms")}</div></div>
       ${swRow("starter","Protein starter at home","≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,ro,"home","starter")}
       ${swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,ro,KIND_ICON[plan.k]||"bike","cycle")}
       ${swRow("walk","Walk after dinner","10–15 min within 30 min of the last bite",d.walk,ro,"walk","walk")}
@@ -586,7 +587,7 @@ function plateSvg(){return `<svg viewBox="0 0 160 160" role="img" aria-label="Pl
   <path d="${arc(80,80,62,0,90)}" fill="var(--amber-soft)" stroke="var(--panel)" stroke-width="2"/>
   <circle cx="80" cy="80" r="8" fill="var(--panel)" stroke="var(--muted)" stroke-width="1.5"/>
   <text x="46" y="84" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--green)">2 fists</text>
-  <text x="108" y="56" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--accent)">2 palms</text>
+  <text x="108" y="56" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--accent-text)">2 palms</text>
   <text x="108" y="112" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--amber)">1 hand</text>
 </svg>`}
 function mbar(m){const p=m.p*4,c=m.c*4,f=m.f*9,t=p+c+f;return `<div class="mbar"><i class="p" style="width:${(p/t*100).toFixed(0)}%"></i><i class="c" style="width:${(c/t*100).toFixed(0)}%"></i><i class="f" style="width:${(f/t*100).toFixed(0)}%"></i></div><div class="mkey"><span><b>${m.kcal}</b> kcal ${I("kcal")}</span><span><i style="background:var(--accent)"></i>P <b>${m.p}g</b></span><span><i style="background:var(--amber)"></i>C <b>${m.c}g</b></span><span><i style="background:var(--muted)"></i>F <b>${m.f}g</b> ${I("macros")}</span></div>`}
