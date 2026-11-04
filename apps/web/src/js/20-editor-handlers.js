@@ -91,6 +91,9 @@ document.addEventListener("click",e=>{
   if(a==="dot"){const dd=b.dataset.d||t,d=day(dd),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(dd);render();return}
   if(a==="tog"){const dd=b.dataset.d||t,d=day(dd);d[b.dataset.k]=!d[b.dataset.k];persistDay(dd);render();return}
   if(a==="mood"){const d=day(t);d.mood=Number(b.dataset.v);persistDay(t);render();return}
+  if(a==="copytext"||a==="share"){const kind=b.dataset.kind,x=findItem(kind,decodeURIComponent(b.dataset.key)),kid=b.dataset.kid==="1";if(!x){toast("Not found");return}const text=shareTextFor(kind,x,kid);
+    if(a==="share"&&navigator.share){navigator.share({title:"OnePlate · "+itemTitle(kind,x).slice(0,80),text}).catch(e=>{if(e&&e.name!=="AbortError")copyText(text).then(ok=>toast(ok?"Copied instead":""))});return}
+    copyText(text).then(ok=>{if(ok)toast(tr("Copied"))});return}
   if(a==="rvexport"){S._rvx=!S._rvx;render();return}
   if(a==="rvimport"){if(!canReview)return;try{importReviews(document.getElementById("rv_json").value).then(n=>{toast(n+" reviews imported");render()}).catch(e=>toast(e.message))}catch(e){toast(e.message)}return}
   if(a==="rvopen"){if(!canReview){toast("Reviewing is for the content reviewers");return}S._rv=S._rv===b.dataset.k?null:b.dataset.k;render();return}

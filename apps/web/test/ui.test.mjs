@@ -74,6 +74,16 @@ test("the home screen names who is signed in", async () => {
   await page.evaluate(() => { readOnly = true; isOwner = false; render(); }); assert.doesNotMatch(await page.$eval(".hdr h1", e => e.textContent), /,/);
   await page.evaluate(() => { readOnly = false; isOwner = true; render(); });
 });
+test("learn cards carry a long-form companion and copyable text", async () => {
+  await page.evaluate(() => { tab = "learn"; render(); });
+  const kinds = await page.$$eval("details[data-depth]", els => els.map(e => e.dataset.depth)); for (const k of ["story", "book", "teaching", "verse", "word", "idea", "dua", "poem"]) assert.ok(kinds.includes(k), k);
+  await page.click('details[data-depth="story"] summary'); const heads = await page.$$eval('details[data-depth="story"] .depth p.eyebrow', els => els.map(e => e.textContent)); assert.ok(heads.includes("The story") && heads.includes("Al-Mizan's reading"), heads.join(","));
+  const txt = await page.evaluate(() => shareTextFor("story", STORIES[0], false)); assert.match(txt, /^Story · Adam and the first mistake/); assert.ok(txt.length > 3000); assert.match(txt, /THE STORY[\s\S]*LESSONS[\s\S]*— OnePlate/);
+  const kidTxt = await page.evaluate(() => shareTextFor("story", STORIES[0], true)); assert.ok(kidTxt.length < txt.length && kidTxt.includes("Iblis"));
+  const reading = await page.evaluate(() => shareTextFor("reading", QPLAN[0], false)); assert.match(reading, /Quran reading · Al-Fatiha[\s\S]*quran\.com\/1\/1-7/);
+  assert.ok((await page.$$('[data-a="copytext"]')).length >= 9);
+  await page.evaluate(() => { S._lm = "abbas"; render(); }); assert.match(await page.$eval('details[data-depth="story"] summary', e => e.textContent), /for the children/); await page.evaluate(() => { S._lm = "tafseer"; render(); });
+});
 test("appearance cycles auto, light, dark and is remembered per device", async () => {
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
   await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");

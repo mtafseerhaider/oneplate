@@ -28,6 +28,7 @@ function quranCard(d,ro,compact){
     <h2>${esc(e.n)}</h2>
     <p class="small muted">${sub}</p>
     <div class="row"><a class="btn primary" href="${qLink(e)}" target="_blank" rel="noopener">${ic("book")} Read ${esc(qRef(e))} on Quran.com</a>${reviewBadge(e.key)}</div>
+    ${shareBtns("reading",e,false)}
     ${e.cur?`<p class="small"><b>Summary.</b> ${esc(e.sum)}</p>
     <div class="note" style="border-left-color:var(--green)"><b>From al-Mizan ${I("mizan")}</b><br>${esc(e.mz)}</div>`:`<p class="small"><b>The surah.</b> ${esc(e.sum)}</p>
     <div class="note" style="border-left-color:var(--green)"><b>Al-Mizan on the surah's purpose ${I("mizan")}</b><br>${esc(e.mz)}<br><span class="muted">Read today's ${esc(e.portion)} with this purpose in mind; the volume below has Tabataba'i's verse-by-verse discussion.</span></div>`}

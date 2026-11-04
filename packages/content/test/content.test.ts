@@ -13,5 +13,14 @@ describe("content libraries", () => {
     for (const q of C.QPLAN) expect(q.t).toBeLessThanOrEqual(C.SURAH_INDEX[q.s - 1]!.v);
     expect(Object.keys(C.REVIEW_GATES)).toEqual(["draft", "reviewed", "verified", "disputed"]);
   });
+  it("every Learn item has a long-form companion, and no companion is orphaned", () => {
+    const kinds: [string, any[]][] = [["story", C.STORIES], ["book", C.BOOKS], ["teaching", C.TEACHINGS], ["verse", C.VERSES], ["word", C.WORDS], ["idea", C.IDEAS], ["dua", C.DUAS], ["poem", C.POEMS]];
+    for (const [kind, list] of kinds) {
+      const keys = new Set(list.map(x => C.depthKey(kind, x))); expect(keys.size).toBe(list.length);
+      for (const x of list) { const d = C.depthOf(kind, x); expect(d, `${kind}: ${C.depthKey(kind, x)}`).toBeTruthy(); expect(d!.sections.length).toBeGreaterThanOrEqual(3); for (const sec of d!.sections) expect(sec.h && ((sec.p && sec.p.length) || (sec.l && sec.l.length))).toBeTruthy(); expect(d!.kids && d!.kids.length).toBeTruthy(); }
+      for (const k of Object.keys(C.DEPTH[kind]!)) expect(keys.has(k), `${kind} orphan: ${k}`).toBe(true);
+    }
+    const words = Object.values(C.DEPTH).flatMap(m => Object.values(m)).flatMap(d => d.sections.flatMap(s => [...(s.p ?? []), ...(s.l ?? [])])).join(" ").split(/\s+/).length; expect(words).toBeGreaterThan(30000);
+  });
   it("verse references are well-formed", () => { for (const v of C.VERSES) expect(v.r).toMatch(/^\d{1,3}:\d{1,3}(–\d{1,3})?$/); });
 });

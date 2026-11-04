@@ -289,3 +289,4 @@ html.ur .kcal,html.ur .mkey,html.ur .stat b,html.ur .tile b,html.ur .ring .lbl,h
 .rqrow .t{flex:1;min-width:180px}.rqrow .t small{display:block;color:var(--muted)}
 .rqrow .rvform{flex-basis:100%;margin:4px 0 0}
 #themeBtn{display:inline-flex;align-items:center;gap:4px;margin-right:6px;padding-left:8px;padding-right:8px}#themeBtn .ic{width:15px;height:15px}@media(max-width:480px){#themeBtn .tl{display:none}}
+.depth p.eyebrow{margin:10px 0 2px}.depth p.small{margin:4px 0}.depth ul.small{margin:4px 0 4px 18px;padding:0}.depth ul.small li{margin:3px 0}
