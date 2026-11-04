@@ -1,0 +1,21 @@
+# Render blueprint: one free web service running the API and the web app together.
+# 1. Create a free PostgreSQL database (Neon, Supabase or Render) and copy its connection string.
+# 2. In Render: New → Blueprint → this repository. Paste the connection string as DATABASE_URL when asked.
+# 3. Open https://<service>.onrender.com/account.html, create the first account (Tafseer), add the family on the Family tab, then make the family links from Progress → Account.
+services:
+  - type: web
+    name: oneplate
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      # PUBLIC_URL and CORS_ORIGIN default to Render's RENDER_EXTERNAL_URL; set PUBLIC_URL yourself when you add a custom domain.
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: MAIL_TRANSPORT
+        value: console

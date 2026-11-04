@@ -13,6 +13,8 @@ import { canWrite, validateFamilyDoc, type Actor, type Level } from "./auth/poli
 import { ChangeBus, type Change } from "./events.js";
 import { createMailer, type Mailer } from "./mail.js";
 import { createHash, randomBytes } from "node:crypto";
+import fastifyStatic from "@fastify/static";
+import path from "node:path";
 import { registerPasskeyRoutes } from "./auth/passkeys.js";
 import { registerOpsRoutes, createErrorReporter } from "./ops.js";
 
@@ -111,6 +113,38 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   app.delete("/households/:hid", { preHandler: withHousehold }, async (req: any, reply) => { if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } }); await audit(req, "household.delete"); await db.query("delete from households where id=$1", [req.householdId]); return { ok: true }; });
   app.get("/households/:hid/export", { preHandler: withHousehold }, async (req: any, reply) => { if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } }); const docs = await db.query("select collection,doc_id,body,version,updated_at from documents where household_id=$1 order by collection,doc_id", [req.householdId]); await audit(req, "household.export"); return { exportedAt: new Date().toISOString(), documents: docs.rows }; });
 
+  // ---- family links: open by date of birth, then a passkey ----
+  const linkUrl = (token: string) => `${cfg.PUBLIC_URL}/account.html?open=${token}`;
+  app.post("/households/:hid/member-links", { preHandler: withHousehold }, async (req: any, reply) => {
+    if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } });
+    const p = z.object({ memberId: z.string().min(1).max(40) }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "memberId required" } });
+    const fam = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection='family' and doc_id=$2", [req.householdId, p.data.memberId]);
+    const dob = fam.rows[0]?.body?.dob; if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(String(dob))) return reply.code(422).send({ error: { code: "NO_DOB", message: "add this member's date of birth on the Family tab first" } });
+    if (fam.rows[0]!.body.role === "child") return reply.code(422).send({ error: { code: "CHILD_RULE", message: "links are for adults; children are logged for by their parents" } });
+    const level: Level = p.data.memberId === req.actor.memberId ? "owner" : "contributor";
+    const token = randomBytes(24).toString("base64url"), id = randomBytes(5).toString("base64url");
+    await db.query("insert into member_links(id,token_hash,household_id,member_id,level,created_by) values($1,$2,$3,$4,$5,$6)", [id, createHash("sha256").update(token).digest("hex"), req.householdId, p.data.memberId, level, req.userId]);
+    await audit(req, "member_link.create", { doc_id: p.data.memberId }); return { id, memberId: p.data.memberId, level, url: linkUrl(token) };
+  });
+  app.get("/households/:hid/member-links", { preHandler: withHousehold }, async (req: any, reply) => { if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } }); return (await db.query("select id,member_id,level,created_at,last_used_at,uses,disabled from member_links where household_id=$1 order by created_at desc", [req.householdId])).rows; });
+  app.delete("/households/:hid/member-links/:id", { preHandler: withHousehold }, async (req: any, reply) => { if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } }); await db.query("update member_links set disabled=true where household_id=$1 and id=$2", [req.householdId, req.params.id]); await audit(req, "member_link.revoke", { doc_id: req.params.id }); return { ok: true }; });
+  app.post("/open/:token", { config: { rateLimit: { max: 8, timeWindow: "15 minutes" } } }, async (req: any, reply) => {
+    const p = z.object({ dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "date of birth required as YYYY-MM-DD" } });
+    const h = createHash("sha256").update(String(req.params.token)).digest("hex");
+    const l = await db.query<{ id: string; household_id: string; member_id: string; level: Level }>("select id,household_id,member_id,level from member_links where token_hash=$1 and disabled=false", [h]);
+    if (!l.rowCount) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "this link is not valid any more; ask for a new one" } });
+    const link = l.rows[0]!; const fam = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection='family' and doc_id=$2", [link.household_id, link.member_id]);
+    if (!fam.rowCount || String(fam.rows[0]!.body.dob) !== p.data.dob) { await db.query("insert into audit_events(household_id,user_id,action,doc_id,ip) values($1,null,'member_link.denied',$2,$3)", [link.household_id, link.member_id, req.ip]).catch(() => {}); return reply.code(401).send({ error: { code: "DOB_MISMATCH", message: "that date of birth does not match" } }); }
+    let m = await db.query<{ user_id: string }>("select user_id from memberships where household_id=$1 and member_id=$2 order by created_at limit 1", [link.household_id, link.member_id]); let userId: string;
+    if (m.rowCount) userId = m.rows[0]!.user_id;
+    else { const name = String(fam.rows[0]!.body.name || link.member_id); const email = `${link.member_id}.${link.household_id.slice(0, 8)}@members.oneplate.invalid`;
+      const u = await db.query<{ id: string }>("insert into users(email,password_hash,display_name) values($1,$2,$3) on conflict (email) do update set updated_at=now() returning id", [email, await hashPassword(randomBytes(24).toString("base64url")), name]); userId = u.rows[0]!.id;
+      await db.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,$3,$4) on conflict (household_id,user_id) do nothing", [link.household_id, userId, link.level, link.member_id]); }
+    await db.query("update member_links set uses=uses+1, last_used_at=now() where id=$1", [link.id]); await setSession(reply, userId, req.headers["user-agent"]); req.userId = userId; req.householdId = link.household_id; await audit(req, "member_link.open", { doc_id: link.member_id });
+    const pk = await db.query("select count(*)::int as n from passkeys where user_id=$1", [userId]);
+    return { householdId: link.household_id, memberId: link.member_id, level: link.level, name: fam.rows[0]!.body.name, passkeys: pk.rows[0]!.n };
+  });
+
   // ---- documents: the same contract the artifact database serves ----
   const COLL = /^[a-z][a-z0-9_-]{0,39}$/, DOC = /^[A-Za-z0-9_\-.~:@+]{1,200}$/;
   app.get("/households/:hid/docs/:collection", { preHandler: withHousehold }, async (req: any, reply) => {
@@ -154,6 +188,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     req.raw.on("close", () => { clearInterval(beat); unsub(); });
     await new Promise(() => {}); // held open until the client disconnects
   });
+  if (cfg.WEB_DIST) { await app.register(fastifyStatic, { root: path.resolve(cfg.WEB_DIST), prefix: "/", wildcard: true, index: ["index.html"], decorateReply: false, cacheControl: true, maxAge: "1h" }); }
   app.setErrorHandler((err: any, req, reply) => { app.log.error(err); const status = (err as any).statusCode ?? 500; if (status >= 500) reporter.report({ message: err.message, stack: err.stack, requestId: req.id, route: req.routeOptions?.url, status }); reply.code(status).send({ error: { code: status >= 500 ? "INTERNAL" : "ERROR", message: status >= 500 ? "something went wrong" : err.message, requestId: req.id } }); });
   return app;
 }

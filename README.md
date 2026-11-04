@@ -44,6 +44,24 @@ A phone-first companion app lives in [`app/index.html`](app/index.html): a live 
 
 It is published as a private Claude Artifact, which works on iOS, Android and desktop browsers from one link (the page switches to a sidebar layout on wide screens) with no app store or hosting setup. Weigh-ins and check-ins sync across devices through the Claude account that owns the artifact. The same file can also be served by GitHub Pages if you ever want a public URL; in that mode data stays on each device.
 
+## Open it from a link, with Face ID
+
+The self-hosted OnePlate gives every adult a private **family link**. Opening the link asks for that person's date of birth, which must match the Family tab, signs the device in, and offers Face ID, Touch ID or fingerprint (a passkey). After that the link, or the installed app, opens by itself. Make the links from Progress → Account; revoke one there if it leaks. Children do not get links; their parents log for them.
+
+Install it like an app: on Android, Chrome's menu → Install app (or the Install button on the Account card); on iPhone and iPad, Safari's Share → Add to Home Screen; on macOS, Safari's File → Add to Dock, or the install icon in Chrome and Edge. The installed app opens full screen and stays signed in.
+
+The claude.ai artifact cannot do this: its database is only readable by people signed in to claude.ai whom the owner has shared it with, so a link that opens on a date of birth alone has to come from your own hosted copy.
+
+## Deploy it for free in ten minutes
+
+One service runs the API and the web app together (`Dockerfile` at the root, `WEB_DIST` set), and only needs a PostgreSQL URL.
+
+1. Create a free PostgreSQL database at [Neon](https://neon.tech) (persistent free tier) and copy its connection string.
+2. On [Render](https://render.com): New → Blueprint → this repository; it reads `render.yaml`. Paste the connection string as `DATABASE_URL` and your email as `ADMIN_EMAILS`. The free plan sleeps after idle minutes and takes a few seconds to wake.
+3. Open `https://<your-service>.onrender.com/account.html`, create the first account, add the family on the Family tab, then make the family links from Progress → Account and send each adult theirs.
+
+Any host that runs a Docker image works the same way: set `DATABASE_URL`, `SESSION_SECRET`, `PUBLIC_URL` (your https address, which passkeys are bound to) and `ADMIN_EMAILS`.
+
 ## Run it yourself
 
 OnePlate is also a locally deployable product. The architecture is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the phased plan in [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).

@@ -18,7 +18,11 @@ const schema = z.object({
   AUDIT_RETENTION_DAYS: z.coerce.number().default(365),
   MAX_HOUSEHOLDS_PER_USER: z.coerce.number().default(3),
   MAX_DOCS_PER_HOUSEHOLD: z.coerce.number().default(25000),
-  PUBLIC_URL: z.string().default("http://localhost:5173")
+  PUBLIC_URL: z.string().default("http://localhost:5173"),
+  WEB_DIST: z.string().optional()                         // when set, the API also serves the built web app from this directory (single-service deploys)
 });
 export type Config = z.infer<typeof schema>;
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config { const c = schema.parse(env); if (c.NODE_ENV === "production" && c.SESSION_SECRET.startsWith("change-me")) throw new Error("SESSION_SECRET must be set in production"); return c; }
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+  // Hosts such as Render give the public URL in their own variable; same-origin deploys need no separate CORS origin.
+  const e: NodeJS.ProcessEnv = { ...env }; if (!e.PUBLIC_URL && e.RENDER_EXTERNAL_URL) e.PUBLIC_URL = e.RENDER_EXTERNAL_URL; if (!e.CORS_ORIGIN && e.PUBLIC_URL) e.CORS_ORIGIN = e.PUBLIC_URL;
+  const c = schema.parse(e); if (c.NODE_ENV === "production" && c.SESSION_SECRET.startsWith("change-me")) throw new Error("SESSION_SECRET must be set in production"); return c; }

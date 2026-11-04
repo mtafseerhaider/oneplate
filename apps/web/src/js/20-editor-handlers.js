@@ -105,6 +105,12 @@ document.addEventListener("click",e=>{
   if(a==="backtoday"){S._ld=null;render();return}
   if(a==="acc_invite"||a==="acc_invite_view"){window.oneplate.invite(a==="acc_invite"?"contributor":"viewer",a==="acc_invite"?"uzma":null).then(r=>{S._inviteCode=r.code;render()}).catch(e=>toast(e.message));return}
   if(a==="acc_export"){window.oneplate.exportHousehold().then(d=>{const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});const u=URL.createObjectURL(blob);const x=document.createElement("a");x.href=u;x.download="oneplate-export-"+todayStr()+".json";document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);toast("Exported "+d.documents.length+" records")}).catch(e=>toast(e.message));return}
+  if(a==="acc_link"){const m=member(b.dataset.m);window.oneplate.createMemberLink(b.dataset.m).then(r=>{S._link={name:m?m.name:b.dataset.m,url:r.url};return window.oneplate.memberLinks()}).then(l=>{S._links=l;render()}).catch(e=>toast(e.message||"Could not create the link"));return}
+  if(a==="acc_links"){window.oneplate.memberLinks().then(l=>{S._links=l.length?l:[{id:"",member_id:"",disabled:true}];if(!l.length)toast("No links yet");render()}).catch(e=>toast(e.message));return}
+  if(a==="acc_link_copy"){const i=document.getElementById("linkUrl");i.select();(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).then(()=>toast("Link copied"),()=>{document.execCommand("copy");toast("Link selected · copy it")});return}
+  if(a==="acc_link_share"){navigator.share({title:"OnePlate",text:"Open our family's OnePlate",url:S._link.url}).catch(()=>{});return}
+  if(a==="acc_link_revoke"){window.oneplate.revokeMemberLink(b.dataset.id).then(()=>window.oneplate.memberLinks()).then(l=>{S._links=l;S._link=null;toast("Link revoked");render()}).catch(e=>toast(e.message));return}
+  if(a==="acc_install"){window.oneplate.install().then(ok=>toast(ok?"Installed":"Not installed")).catch(()=>{});render();return}
   if(a==="acc_signout"){window.oneplate.signOut();return}
   if(a==="acc_passkey"){window.oneplate.addPasskey().then(()=>toast("Passkey added")).catch(e=>toast(e.message||"Passkey not added"));return}
   if(a==="acc_delete"){if(S._delconfirm){window.oneplate.deleteHousehold().then(()=>{localStorage.removeItem(LS);location.href="./account.html"}).catch(e=>toast(e.message))}else{S._delconfirm=true;toast("Tap again within 5 s to delete everything");setTimeout(()=>{S._delconfirm=false},5000)}return}

@@ -71,6 +71,29 @@ describe("OnePlate API", () => {
     const gone = await app.inject({ method: "GET", url: "/content/reviews", headers: { cookie: owner } }); expect(gone.json().reviews["quran-1-1-7"]).toBeUndefined();
     const list = await app.inject({ method: "GET", url: "/admin/content/reviews", headers: { cookie: owner } }); expect(list.statusCode).toBe(200);
   });
+  it("opens a family link by date of birth and signs the device in", async () => {
+    const noDob = await app.inject({ method: "POST", url: `/households/${hid}/member-links`, headers: { cookie: owner }, payload: { memberId: "uzma" } }); expect(noDob.statusCode).toBe(422);
+    await app.inject({ method: "PUT", url: `/households/${hid}/docs/family/uzma`, headers: { cookie: owner }, payload: { body: { id: "uzma", name: "Uzma", rel: "wife", role: "adult", sex: "female", goal: "maintain", dob: "1993-02-03" } } });
+    await app.inject({ method: "PUT", url: `/households/${hid}/docs/family/abbas`, headers: { cookie: owner }, payload: { body: { id: "abbas", name: "Abbas", rel: "son", role: "child", sex: "male", goal: "growth", dob: "2019-02-09" } } });
+    const child = await app.inject({ method: "POST", url: `/households/${hid}/member-links`, headers: { cookie: owner }, payload: { memberId: "abbas" } }); expect(child.statusCode).toBe(422);
+    const notOwner = await app.inject({ method: "POST", url: `/households/${hid}/member-links`, headers: { cookie: wife }, payload: { memberId: "uzma" } }); expect(notOwner.statusCode).toBe(403);
+    const mk = await app.inject({ method: "POST", url: `/households/${hid}/member-links`, headers: { cookie: owner }, payload: { memberId: "uzma" } }); expect(mk.statusCode).toBe(200); expect(mk.json().level).toBe("contributor"); const token = mk.json().url.split("open=")[1];
+    const wrong = await app.inject({ method: "POST", url: `/open/${token}`, payload: { dob: "1993-02-04" } }); expect(wrong.statusCode).toBe(401); expect(wrong.headers["set-cookie"]).toBeUndefined();
+    const ok = await app.inject({ method: "POST", url: `/open/${token}`, payload: { dob: "1993-02-03" } }); expect(ok.statusCode).toBe(200); expect(ok.json().memberId).toBe("uzma"); expect(ok.json().passkeys).toBe(0); const dev = cookieOf(ok);
+    const me = await app.inject({ method: "GET", url: "/auth/me", headers: { cookie: dev } }); expect(me.json().households[0].member_id).toBe("uzma"); expect(me.json().user.email).toBe("uzma@example.com"); // the existing account for that member, not a new one
+    const list = await app.inject({ method: "GET", url: `/households/${hid}/member-links`, headers: { cookie: owner } }); expect(list.json()[0].uses).toBe(1);
+    await app.inject({ method: "DELETE", url: `/households/${hid}/member-links/${mk.json().id}`, headers: { cookie: owner } });
+    const gone = await app.inject({ method: "POST", url: `/open/${token}`, payload: { dob: "1993-02-03" } }); expect(gone.statusCode).toBe(404);
+    const own = await app.inject({ method: "POST", url: `/households/${hid}/member-links`, headers: { cookie: owner }, payload: { memberId: "tafseer" } }); expect(own.statusCode).toBe(422); // no family doc for tafseer yet
+    await app.inject({ method: "PUT", url: `/households/${hid}/docs/family/tafseer`, headers: { cookie: owner }, payload: { body: { id: "tafseer", name: "Tafseer", rel: "me", role: "adult", sex: "male", goal: "fat_loss", dob: "1988-02-05" } } });
+    const own2 = await app.inject({ method: "POST", url: `/households/${hid}/member-links`, headers: { cookie: owner }, payload: { memberId: "tafseer" } }); expect(own2.json().level).toBe("owner");
+  });
+  it("serves the web app from WEB_DIST when configured", async () => {
+    const { mkdtemp, writeFile } = await import("node:fs/promises"); const os = await import("node:os"); const pathMod = await import("node:path"); const dir = await mkdtemp(pathMod.join(os.tmpdir(), "oneplate-web-")); await writeFile(pathMod.join(dir, "index.html"), "<!doctype html><title>OnePlate</title>"); await writeFile(pathMod.join(dir, "account.html"), "<p>account</p>");
+    const one = await buildApp(loadConfig({ ...process.env, NODE_ENV: "test", DATABASE_URL: cfg.DATABASE_URL, LOG_LEVEL: "silent", WEB_DIST: dir }), db, { mailer });
+    const root = await one.inject({ method: "GET", url: "/" }); expect(root.statusCode).toBe(200); expect(root.body).toContain("OnePlate"); const acc = await one.inject({ method: "GET", url: "/account.html" }); expect(acc.body).toContain("account");
+    const health = await one.inject({ method: "GET", url: "/health" }); expect(health.json().status).toBe("ok"); await one.close();
+  });
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
     expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);

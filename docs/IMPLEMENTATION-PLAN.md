@@ -53,6 +53,14 @@ Done in this commit:
 - Follow-up in the same phase: progress is now stored by passage key (`quran-s-f-t`, document version 3) instead of reading number, with the v1 (67 readings) and v2 (first 365-day course) key lists frozen in content so older marks move once and nothing shifts when the course changes. A reviewer's queue lists every item of one kind in one status in course order, with export and import of reviews as JSON. The close readings grew from 67 to 112, so 112 of the 365 days now carry their own al-Mizan note; longest reading still 44 verses, median 18.
 Still open: every note is a draft until someone reviews it; the first pass through the close readings against the printed WOFIS volumes is the next content task (al-islam.org hosts volumes 1 to 13, which cover the readings up to 6:83, but this cloud session's network policy blocks that host), and the mechanical schedule can later be hand-tuned to ruku boundaries.
 
+## Phase 5: Open from a link, on every device
+Done in this commit:
+- Family links: `member_links` table, owner-only create/list/revoke routes, and `POST /open/:token` which checks the member's date of birth against the family document, signs the device in (reusing that member's account, or creating one bound to the membership), and reports whether a passkey exists. Rate-limited; denied attempts audited. Children never get links.
+- `account.html?open=<token>`: date-of-birth step, then passkey setup (Face ID, Touch ID, fingerprint), then the app; an already signed-in device goes straight in; after sign-out the page leads with the passkey button. Account card: links per adult with copy and share, revoke, an Install button where the browser offers it, and install instructions per platform.
+- Single-service deploy: the API serves the built web app when `WEB_DIST` is set; root `Dockerfile`, `render.yaml` blueprint, `PUBLIC_URL` defaulting from Render's variable.
+- End-to-end browser test against the real API: link created in the app, wrong and right date of birth, passkey registered through a virtual authenticator, auto-open on the next visit, passkey sign-in after sign-out. CI builds the API and runs it.
+Not possible on the claude.ai artifact: its database is readable only by signed-in people the owner shared it with.
+
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.
 - No change to a domain rule without a test.
