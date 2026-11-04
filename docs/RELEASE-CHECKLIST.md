@@ -4,7 +4,7 @@ Run through this before exposing OnePlate beyond a laptop. Each line names where
 
 ## Before deploying
 - [ ] `pnpm typecheck && pnpm test` green; `node scripts/build-app.mjs --check` passes (CI does both).
-- [ ] `infra/.env` set: strong `SESSION_SECRET` (32+ random chars), `POSTGRES_PASSWORD`, `PUBLIC_HOST`, `PUBLIC_ORIGIN`, `MAIL_TRANSPORT=smtp` with `SMTP_URL` and `MAIL_FROM`, `ADMIN_EMAILS`, optionally `ERROR_WEBHOOK_URL`.
+- [ ] `infra/.env` set: strong `SESSION_SECRET` (32+ random chars), `POSTGRES_PASSWORD`, `PUBLIC_HOST`, `PUBLIC_ORIGIN`, `MAIL_TRANSPORT=smtp` with `SMTP_URL` and `MAIL_FROM`, `ADMIN_EMAILS` (also the content reviewers), optionally `ERROR_WEBHOOK_URL`.
 - [ ] DNS points `PUBLIC_HOST` at the server; ports 80 and 443 open; Caddy obtains a certificate on first start.
 - [ ] Backups: `infra/backup.sh` in cron nightly; `infra/drill.sh` run once against the real data and passing.
 - [ ] Load: `node scripts/loadtest.mjs https://your-host 20 10` shows p95 under 300 ms with zero failures.

@@ -41,6 +41,23 @@ test("progress grid: states cycle and bulk update marks a range", async () => {
   await page.click("details[data-qbulk] summary"); await page.fill("#qb_from", "1"); await page.fill("#qb_to", "10"); await page.click('[data-a="qbulk"][data-s="read"]'); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => qCount()), 10); assert.equal(await page.evaluate(() => qState(3)), "read");
 });
+test("quran course: whole Quran in 365 readings, old progress migrates by passage", async () => {
+  const st = await page.evaluate(() => core.courseStats(QPLAN)); assert.equal(st.readings, 365); assert.equal(st.verses, 6236); assert.equal(st.curated, 67);
+  const m = await page.evaluate(() => { S.qprog = { done: { "0": "2026-10-01", "1": "2026-10-02" }, flag: { "1": true } }; S.qnotes = { "1": { i: "1", page: "55" } }; migrateCourse(false); return { v: S.qprog.v, d0: qState(0), d1: qState(QPLAN.findIndex(r => r.key === "quran-2-1-5")), note: S.qnotes["quran-2-1-5"] && S.qnotes["quran-2-1-5"].page, old: S.qnotes["1"] }; });
+  assert.equal(m.v, 2); assert.equal(m.d0, "read"); assert.equal(m.d1, "revisit"); assert.equal(m.note, "55"); assert.equal(m.old, undefined);
+  await page.evaluate(() => { tab = "learn"; render(); }); assert.equal(await page.$$eval(".qc", els => els.length), 365);
+  await page.click("details:has(#qsurah) summary"); await page.selectOption("#qsurah", "114"); await page.waitForTimeout(100); assert.match(await page.$eval("details .tbl", e => e.textContent), /114:1–6/);
+});
+test("scholar review: a reviewer records a status and the badge shows it", async () => {
+  await page.evaluate(() => { canReview = true; S.reviews = {}; tab = "learn"; render(); });
+  const key = await page.evaluate(() => QPLAN[qIndex()].key); assert.match(await page.$eval(`[data-a="rvopen"][data-k="${key}"]`, e => e.parentElement.textContent), /Draft/);
+  await page.click(`[data-a="rvopen"][data-k="${key}"]`); await page.selectOption("#rv_status", "verified"); await page.fill("#rv_by", "Tafseer"); await page.click(`[data-a="rvsave"][data-k="${key}"]`); await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(k => (S.reviews[k] || {}).status, key), undefined); // refused without a source
+  await page.fill("#rv_src", "WOFIS vol. 1, p. 20"); await page.click(`[data-a="rvsave"][data-k="${key}"]`); await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(k => S.reviews[k].status, key), "verified"); assert.match(await page.$eval(`[data-a="rvopen"][data-k="${key}"]`, e => e.parentElement.textContent), /Verified · Tafseer/);
+  const c = await page.evaluate(() => core.reviewCounts(allContentKeys(), REVIEWS_SHIPPED, S.reviews)); assert.equal(c.verified, 1);
+  await page.evaluate(() => { canReview = false; render(); }); assert.equal(await page.$(`[data-a="rvopen"]`), null);
+});
 test("urdu toggle flips direction without overflow", async () => {
   await page.click("#langBtn"); await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 402);

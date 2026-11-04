@@ -20,7 +20,8 @@
   "17-quran-view.js",
   "18-mizan-volumes.js",
   "19-quran-progress.js",
-  "20-editor-handlers.js"
+  "20-editor-handlers.js",
+  "21-reviews.js"
  ],
  "tail": ""
 }

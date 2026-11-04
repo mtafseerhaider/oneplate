@@ -57,6 +57,20 @@ describe("OnePlate API", () => {
     const unknown = await app.inject({ method: "POST", url: "/auth/passkey/login/verify", payload: { challengeId: lo.json().challengeId, response: { id: "nope", rawId: "bm9wZQ", type: "public-key", response: {}, clientExtensionResults: {} } } }); expect(unknown.statusCode).toBe(400);
     const anon = await app.inject({ method: "POST", url: "/auth/passkey/register/options" }); expect(anon.statusCode).toBe(401);
   });
+  it("runs the scholar review workflow for admins only", async () => {
+    const anon = await app.inject({ method: "GET", url: "/content/reviews" }); expect(anon.statusCode).toBe(401);
+    const notAdmin = await app.inject({ method: "PUT", url: "/admin/content/reviews/quran-1-1-7", headers: { cookie: wife }, payload: { status: "reviewed", by: "Uzma" } }); expect(notAdmin.statusCode).toBe(404);
+    const noName = await app.inject({ method: "PUT", url: "/admin/content/reviews/quran-1-1-7", headers: { cookie: owner }, payload: { status: "reviewed" } }); expect(noName.statusCode).toBe(400);
+    const noSource = await app.inject({ method: "PUT", url: "/admin/content/reviews/quran-1-1-7", headers: { cookie: owner }, payload: { status: "verified", by: "Tafseer" } }); expect(noSource.statusCode).toBe(400);
+    const ok = await app.inject({ method: "PUT", url: "/admin/content/reviews/quran-1-1-7", headers: { cookie: owner }, payload: { status: "verified", by: "Tafseer", source: "WOFIS vol. 1, pp. 20-48" } }); expect(ok.statusCode).toBe(200);
+    const badKey = await app.inject({ method: "PUT", url: "/admin/content/reviews/Bad%20Key", headers: { cookie: owner }, payload: { status: "reviewed", by: "T" } }); expect(badKey.statusCode).toBe(400);
+    const seen = await app.inject({ method: "GET", url: "/content/reviews", headers: { cookie: wife } }); expect(seen.json().reviews["quran-1-1-7"].status).toBe("verified"); expect(seen.json().reviews["quran-1-1-7"].by).toBe("Tafseer"); expect(seen.json().canReview).toBe(false);
+    const mine = await app.inject({ method: "GET", url: "/content/reviews", headers: { cookie: owner } }); expect(mine.json().canReview).toBe(true);
+    const me = await app.inject({ method: "GET", url: "/auth/me", headers: { cookie: owner } }); expect(me.json().admin).toBe(true);
+    const back = await app.inject({ method: "PUT", url: "/admin/content/reviews/quran-1-1-7", headers: { cookie: owner }, payload: { status: "draft" } }); expect(back.statusCode).toBe(200);
+    const gone = await app.inject({ method: "GET", url: "/content/reviews", headers: { cookie: owner } }); expect(gone.json().reviews["quran-1-1-7"]).toBeUndefined();
+    const list = await app.inject({ method: "GET", url: "/admin/content/reviews", headers: { cookie: owner } }); expect(list.statusCode).toBe(200);
+  });
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
     expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);

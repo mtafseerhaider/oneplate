@@ -47,8 +47,10 @@ Done in this commit:
 Not planned: app-store wrappers; the PWA installs on both platforms.
 
 ## Phase 4: Content and scholarship
-- Scholar review workflow for teachings and al-Mizan notes with verification status shown in the UI, following the Bayan Library's review gates.
-- Expand the Quran course to the full text in 365 readings.
+Done in this commit:
+- The Quran course now covers the whole text: `core.buildCourse` splits the 6,236 verses into 365 readings in canonical order, never crossing a surah, keeping the 67 curated passages intact as close readings and filling the rest with each surah's summary and al-Mizan purpose note from the new 114-surah index (`packages/content/src/surah-index.ts`). Longest reading 44 verses, median 18. Progress and page notes recorded against the old 67-reading course migrate by passage reference, once, on the owner's next open (tested).
+- Scholar review workflow after the Bayan Library's gates: draft → reviewed → verified, plus disputed. `content_reviews` table (global), `GET /content/reviews` for any signed-in user, `PUT /admin/content/reviews/:key` for reviewers (the `ADMIN_EMAILS` accounts; verified requires the source checked), audited. The artifact keeps reviews in one `reviews/all` document written by the owner. Stable content keys (`core.contentKey`): readings and surahs by reference, other items by a hash of their text so reordering never moves a review. Badges on the reading, surah, teaching and story cards; an inline review panel for reviewers; a summary with counts on the Learn tab.
+Still open: every note is a draft until someone reviews it; the first pass through the 67 close readings against the printed WOFIS volumes is the next content task, and the mechanical 365-day schedule can later be hand-tuned to ruku boundaries.
 
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.

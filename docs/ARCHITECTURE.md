@@ -10,7 +10,8 @@ apps/api        HTTP API (Fastify, TypeScript). Auth, households, documents, syn
 packages/core   Pure domain logic, no I/O: foods, meals, portions, family stages, Hijri,
                 prayer times, training plan, Quran course, well-being scoring.
 packages/content Curated content with provenance: verses, surahs, stories, teachings,
-                words, ideas, books, duas, poems, the al-Mizan volume map.
+                words, ideas, books, duas, poems, the al-Mizan volume map,
+                the 114-surah index with al-Mizan purpose notes, the review gates.
 infra/          Docker Compose, Caddy reverse proxy, backup script, env templates.
 app/index.html  The single-file build that the claude.ai artifact serves today. It stays
                 the fastest way to try the app and is regenerated from the same sources.
@@ -30,7 +31,8 @@ Dependency rule: `web` and `api` depend on `core` and `content`; `core` depends 
 | Weigh-in | date, member, weight, waist or height | owner; contributor for non-owner members |
 | Fast | current fast start, last fast | owner |
 | Meal | built-in override or custom meal: items of food × quantity | owner, contributor |
-| Quran progress | one document: read and revisit flags per reading, page notes | owner |
+| Quran progress | one document: read and revisit flags per reading (365, the whole Quran), page notes per passage | owner |
+| Content review | global, not per household: status per content key (draft, reviewed, verified, disputed), reviewer, source checked, note | reviewers named in `ADMIN_EMAILS`; the owner in the artifact |
 | Audit event | who changed what, when, from where | system |
 
 Children are never restricted. This is enforced in `core` (no calorie or target fields exist on a child member) and validated again at the API boundary.

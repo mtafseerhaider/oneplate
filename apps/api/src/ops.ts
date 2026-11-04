@@ -2,7 +2,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Db } from "./db/pool.js";
 import type { Config } from "./config.js";
-export const VERSION = "0.3.0";
+export const VERSION = "0.4.0";
 const started = Date.now();
 export interface ErrorReporter { report(e: { message: string; stack?: string; requestId?: string; route?: string; status?: number }): void }
 /** Fire-and-forget JSON webhook; point ERROR_WEBHOOK_URL at a Sentry relay, a Slack hook or your own collector. Off by default. */
@@ -32,4 +32,22 @@ export function registerOpsRoutes(app: FastifyInstance, cfg: Config, db: Db, liv
   app.get("/admin/households", { preHandler: adminOnly }, async () => (await db.query("select h.id,h.name,h.created_at,u.email as owner,(select count(*) from memberships m where m.household_id=h.id)::int as members,(select count(*) from documents d where d.household_id=h.id)::int as documents,(select max(updated_at) from documents d where d.household_id=h.id) as last_write from households h join users u on u.id=h.owner_user_id order by h.created_at desc limit 500")).rows);
   app.get("/admin/audit", { preHandler: adminOnly }, async (req: any) => (await db.query("select * from audit_events where ($1::uuid is null or household_id=$1) order by at desc limit 200", [req.query.hid ?? null])).rows);
   app.post("/admin/retention", { preHandler: adminOnly }, async () => retention(db, cfg.AUDIT_RETENTION_DAYS));
+  // ---- scholar review workflow: anyone signed in reads the statuses, admins (the reviewers) set them ----
+  app.get("/content/reviews", async (req: any, reply) => {
+    if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });
+    const r = await db.query<{ key: string; status: string; reviewer_name: string; source: string | null; note: string | null; updated_at: Date }>("select key,status,reviewer_name,source,note,updated_at from content_reviews");
+    const reviews: Record<string, any> = {}; for (const row of r.rows) reviews[row.key] = { status: row.status, by: row.reviewer_name, source: row.source ?? undefined, note: row.note ?? undefined, date: row.updated_at.toISOString().slice(0, 10) };
+    return { reviews, canReview: await isAdmin(req.userId) };
+  });
+  app.put("/admin/content/reviews/:key", { preHandler: adminOnly }, async (req: any, reply) => {
+    const key = String(req.params.key); if (!/^[a-z]+-[a-z0-9-]{1,60}$/.test(key)) return reply.code(400).send({ error: { code: "INVALID", message: "bad content key" } });
+    const b = req.body ?? {}; const status = String(b.status ?? ""); if (!["draft", "reviewed", "verified", "disputed"].includes(status)) return reply.code(400).send({ error: { code: "INVALID", message: "status must be draft, reviewed, verified or disputed" } });
+    const by = String(b.by ?? "").trim().slice(0, 80), source = b.source ? String(b.source).slice(0, 200) : null, note = b.note ? String(b.note).slice(0, 1000) : null;
+    if (status === "draft") { await db.query("delete from content_reviews where key=$1", [key]); }
+    else { if (!by) return reply.code(400).send({ error: { code: "INVALID", message: "a reviewer name is required" } }); if (status === "verified" && !source) return reply.code(400).send({ error: { code: "INVALID", message: "verified needs the edition, volume and page checked" } });
+      await db.query("insert into content_reviews(key,status,reviewer_user_id,reviewer_name,source,note) values($1,$2,$3,$4,$5,$6) on conflict (key) do update set status=excluded.status, reviewer_user_id=excluded.reviewer_user_id, reviewer_name=excluded.reviewer_name, source=excluded.source, note=excluded.note, updated_at=now()", [key, status, req.userId, by, source, note]); }
+    await db.query("insert into audit_events(household_id,user_id,action,collection,doc_id,ip) values(null,$1,'content.review','content_reviews',$2,$3)", [req.userId, key + ":" + status, req.ip]).catch(() => {});
+    return { key, status };
+  });
+  app.get("/admin/content/reviews", { preHandler: adminOnly }, async () => (await db.query("select r.*,u.email as reviewer_email from content_reviews r left join users u on u.id=r.reviewer_user_id order by updated_at desc limit 1000")).rows);
 }

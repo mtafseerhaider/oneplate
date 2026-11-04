@@ -10,3 +10,5 @@ export * from "./poems.js";
 export * from "./quran-plan.js";
 export * from "./fast-items.js";
 export * from "./misc.js";
+export * from "./surah-index.js";
+export * from "./reviews.js";

@@ -76,7 +76,8 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });
     const u = await db.query("select id,email,display_name from users where id=$1", [req.userId]);
     const hh = await db.query("select h.id,h.name,m.level,m.member_id from memberships m join households h on h.id=m.household_id where m.user_id=$1 order by h.created_at", [req.userId]);
-    return { user: u.rows[0], households: hh.rows };
+    const admins = cfg.ADMIN_EMAILS.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+    return { user: u.rows[0], households: hh.rows, admin: admins.includes(String((u.rows[0] as any)?.email ?? "").toLowerCase()) };
   });
 
   const requireUser = async (req: any, reply: any) => { if (!req.userId) { reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } }); return reply; } };
