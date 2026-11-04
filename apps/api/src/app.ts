@@ -27,7 +27,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   await app.register(swagger, { openapi: { info: { title: "OnePlate API", version: "0.1.0" } } });
   await app.register(swaggerUi, { routePrefix: "/docs" });
   const COOKIE = "op_session";
-  const mailer = deps.mailer ?? createMailer(cfg.MAIL_TRANSPORT, m => app.log.info(m));
+  const mailer = deps.mailer ?? createMailer(cfg.MAIL_TRANSPORT, m => app.log.info(m), { smtpUrl: cfg.SMTP_URL, from: cfg.MAIL_FROM });
   const bus = deps.bus ?? null;
   app.decorate("mailer", mailer);
   const audit = (req: any, action: string, extra: Partial<{ collection: string; doc_id: string; version: number }> = {}) => db.query("insert into audit_events(household_id,user_id,action,collection,doc_id,version,ip) values($1,$2,$3,$4,$5,$6,$7)", [req.householdId ?? null, req.userId ?? null, action, extra.collection ?? null, extra.doc_id ?? null, extra.version ?? null, req.ip]).catch(e => app.log.warn(e, "audit failed"));

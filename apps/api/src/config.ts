@@ -9,7 +9,9 @@ const schema = z.object({
   COOKIE_SECURE: z.coerce.boolean().default(false),
   SESSION_DAYS: z.coerce.number().default(30),
   LOG_LEVEL: z.string().default("info"),
-  MAIL_TRANSPORT: z.enum(["console", "memory"]).default("console"),
+  MAIL_TRANSPORT: z.enum(["console", "memory", "smtp"]).default("console"),
+  SMTP_URL: z.string().optional(),
+  MAIL_FROM: z.string().default("OnePlate <no-reply@localhost>"),
   PUBLIC_URL: z.string().default("http://localhost:5173")
 });
 export type Config = z.infer<typeof schema>;

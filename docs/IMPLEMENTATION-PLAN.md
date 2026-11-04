@@ -22,12 +22,16 @@ Also done:
 - Passkey sign-in (WebAuthn, discoverable credentials): add a passkey from the Account card, sign in with Face ID or fingerprint from the sign-in page; verified end to end with a virtual authenticator.
 - Urdu interface as a per-device choice (toggle in the top bar): right-to-left layout, Noto Nastaliq Urdu, about 100 interface strings; the content libraries stay in English until the phase 4 content edition.
 - Accessibility: skip link, main landmark, labelled navigation, every icon button labelled, visible focus, reduced-motion respected.
+- SMTP transport for the Mailer (`MAIL_TRANSPORT=smtp`, `SMTP_URL`, `MAIL_FROM`), wired into Docker Compose.
 Still to do:
-- SMTP or provider transport for the Mailer (one class), and a real domain for the reset links.
+- A real domain for the reset links (configuration, once hosted).
 - Translate the remaining long-form screens (Train and Learn body text) once a reviewer for the Urdu copy is available.
 
-## Phase 2: Decompose the UI (3–4 weeks)
-- Move the single-file UI into `apps/web/src` modules by tab, keeping the design tokens. The artifact build becomes a bundler target that inlines the result, so `app/index.html` is generated, not hand-edited.
+## Phase 2: Decompose the UI
+Step 1, done in this commit:
+- The single file is split into `apps/web/src` (head, styles, markup, 21 ordered script chunks). `scripts/build-app.mjs` reassembles `app/index.html` byte for byte; the PWA build runs it first; CI fails on drift. The artifact is now a build output, not a hand-edited file.
+Step 2, next:
+- Convert the chunks to ES modules importing `@oneplate/core` and `@oneplate/content`, deleting the duplicated logic and data from the UI, with a bundler (esbuild) producing the inlined artifact and the PWA.
 - Component tests for the plate builder, meal editor and progress grid.
 
 ## Phase 3: Launch readiness (2–3 weeks)

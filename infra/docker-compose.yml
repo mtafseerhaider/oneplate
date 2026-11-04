@@ -13,6 +13,10 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in infra/.env}
       CORS_ORIGIN: ${PUBLIC_ORIGIN:-https://localhost}
       COOKIE_SECURE: "true"
+      PUBLIC_URL: ${PUBLIC_ORIGIN:-https://localhost}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-console}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-OnePlate <no-reply@localhost>}
     depends_on: { db: { condition: service_healthy } }
     restart: unless-stopped
   web:

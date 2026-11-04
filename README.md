@@ -54,7 +54,7 @@ apps/api         Fastify + PostgreSQL API: auth, households, invites, versioned 
 packages/core    Pure domain logic with tests (meals, portions, family stages, Hijri, prayer times, plan, Quran course)
 packages/content Curated content with provenance
 infra            Docker Compose, Caddy, backup script
-app/index.html   The single-file build the claude.ai artifact serves
+app/index.html   Generated: the single-file build the claude.ai artifact serves (source in apps/web/src)
 ```
 
 Quick start with Docker:

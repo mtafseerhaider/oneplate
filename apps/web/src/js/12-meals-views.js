@@ -1,0 +1,378 @@
+/* ---------- meal maths ---------- */
+function normItems(items){return (items||[]).map(it=>Array.isArray(it)?{f:it[0],q:Number(it[1])}:{f:it.f,q:Number(it.q)}).filter(it=>FOODS[it.f]&&it.q>0)}
+function mealCalc(m){let k=0,p=0,c=0,f=0;normItems(m.items).forEach(it=>{const fd=FOODS[it.f];k+=fd.kcal*it.q;p+=fd.p*it.q;c+=fd.c*it.q;f+=fd.f*it.q});return {kcal:Math.round(k/5)*5,p:Math.round(p),c:Math.round(c),f:Math.round(f)}}
+function qtyStr(q){const w=Math.floor(q),r=q-w;const fr=r>=.74?"¾":r>=.49?"½":r>=.24?"¼":"";return (w?w:"")+(fr?(w?" ":"")+fr:"")||String(q)}
+function portion(q,fd){const u=UNITS[fd.u]||["",""];return (qtyStr(q)+" "+(q<=1?u[0]:u[1])+" "+(fd.short||"")).replace(/\s+/g," ").trim()}
+function hands(m){const g={protein:[],veg:[],carb:[],fat:[],plus:[]};normItems(m.items).forEach(it=>{const fd=FOODS[it.f];g[fd.cat].push(portion(it.q,fd))});return g}
+function handLine(m){const g=hands(m);return [].concat(g.protein,g.veg,g.carb,g.fat,g.plus).join(" · ")}
+function allMeals(){const o=S.meals||{};const list=BASE_MEALS.map(b=>{const v=o[b.id];if(v&&v.deleted)return null;return Object.assign({},b,v||{},{base:true})}).filter(Boolean);Object.values(o).forEach(v=>{if(v&&v.id&&/^c_/.test(v.id)&&!v.deleted)list.push(Object.assign({},v,{base:false}))});return list}
+function tonightMeal(){const l=allMeals();if(!l.length)return null;const d=S.days[logDate()];if(d&&d.meal){const m=l.find(x=>x.id===d.meal);if(m)return m}const dt=new Date(logDate()+"T12:00:00");return l[(dt.getDate()+dt.getMonth())%l.length]}
+function foodOptions(sel){const cats=[["protein","Protein"],["veg","Vegetables"],["carb","Carbs"],["fat","Fats"],["plus","Daal, dairy & extras"]];return cats.map(c=>`<optgroup label="${c[1]}">${Object.keys(FOODS).filter(k=>FOODS[k].cat===c[0]).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(FOODS[k].n)} · ${esc(FOODS[k].ur||"")} · per ${esc((UNITS[FOODS[k].u]||[""])[0]||"item")}</option>`).join("")}</optgroup>`).join("")}
+function mealTotals(d){const t=mealCalc(d);const line=handLine(d);return `${mbar(t)}<p class="small"><b>By hand:</b> ${line?esc(line):"<span class='muted'>add foods to see the portions</span>"}</p>`}
+function mealEditor(d){return `
+  <section class="card" id="meditor">
+    <div class="row between"><p class="eyebrow">${ic("plate")} ${d.id?"Edit meal":"New meal"}</p>${d.base?`<span class="pill grey">built-in</span>`:`<span class="pill soft">custom</span>`}</div>
+    <div class="form">
+      <label class="f" style="flex:2 1 180px">Name<input type="text" id="me_n" value="${esc(d.n||"")}" placeholder="e.g. Chicken Karahi Plate" maxlength="60"></label>
+      <label class="f">Type<select id="me_tag">${["chicken","beef","fish","meatless","other"].map(t=>`<option value="${t}" ${d.tag===t?"selected":""}>${t}</option>`).join("")}</select></label>
+    </div>
+    <div class="erows">
+      ${d.items.map((it,i)=>`<div class="erow"><select data-me="food" data-i="${i}" aria-label="food">${foodOptions(it.f)}</select><input type="number" data-me="qty" data-i="${i}" value="${it.q}" min="0" max="12" step="0.5" inputmode="decimal" aria-label="how many"><button class="btn ghost" type="button" data-a="me_del" data-i="${i}" aria-label="remove">✕</button></div>`).join("")}
+    </div>
+    <button class="btn" type="button" data-a="me_add">+ Add a food</button>
+    <div id="mtot">${mealTotals(d)}</div>
+    <label class="f">Why it works (optional)<input type="text" id="me_note" value="${esc(d.note||"")}" maxlength="200"></label>
+    <div class="row">
+      <button class="btn primary" type="button" data-a="me_save">Save meal</button>
+      <button class="btn" type="button" data-a="me_cancel">Cancel</button>
+      ${d.base&&S.meals[d.id]?`<button class="btn ghost" type="button" data-a="me_reset">Reset to default</button>`:""}
+      ${d.id?`<button class="btn ghost" type="button" data-a="me_delete" style="color:var(--red)">${d.base?"Hide":"Delete"}</button>`:""}
+    </div>
+    <p class="small muted">Values are per hand portion, from the plan's food table. Change a food or quantity and the calories, protein, carbs, fat and the by-hand line update instantly.</p>
+  </section>`}
+
+function vToday(){
+  const t=logDate(),isToday=t===todayStr(),d=day(t),wd=new Date(t+"T12:00:00").getDay(),plan=planFor(wd),w=weekNo(),hint=nowHint(),ro=readOnly;
+  const on=!!S.fast.startedAt,goal=S.settings.fastHours||21,dn=doneCount(d),st=streak();
+  const h=new Date().getHours()+new Date().getMinutes()/60;
+  const roMe=readOnly||!isOwner;
+  const tonight=tonightMeal();
+  const hj=hijriOf(t),sf=sunnahFast(t),ram=ramadanActive(),ft=ram?fastingTimes(t):null;
+  let kv="";
+  if(on){const s=new Date(S.fast.startedAt),e=new Date(s.getTime()+goal*36e5);kv=`<div class="kv"><span>Started</span><b>${s.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(s)}</b><span>Goal at</span><b>${e.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(e)}</b></div>`}
+  else kv=`<div class="kv"><span>Goal</span><b id="kvGoal">${ram&&ft?((ft.maghrib-ft.fajr)/36e5).toFixed(1):goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
+  return `
+  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?tr(greeting()):tr("Catching up")}</h1></div>
+   <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
+  ${ro?`<div class="note">You are viewing Tafseer's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab, your own journal on the <b>Learn</b> tab, and edit meals on the <b>Plate</b> tab.</div>`:""}
+  ${logBar(t)}
+  <section class="card strip">
+    <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-dn/7)).toFixed(1)}"/></svg><b>${dn}/7</b></div>
+    <div class="txt"><b>${dn===7?"Perfect day":dn>=4?"Good day so far":"Today's habits"}</b><small>${dn} of 7 done · water, protein, starter, session, walk, steps, kitchen closed</small></div>
+    <div class="streak">${ic("flame")}${st}<small style="font-weight:500">day${st===1?"":"s"}</small> ${I("streak")}</div>
+  </section>
+  <section class="card">
+    <div class="row between"><p class="eyebrow">${ic("clock")} ${tr("Fast")} ${I("fast")}</p><span class="status ${on?"on":""}"><i></i>${tr(on?"Fasting":"Eating window")}</span></div>
+    <div class="hero">
+      <div class="ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent-2)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient></defs><circle class="track" cx="60" cy="60" r="52"/><circle class="bar" id="ringBar" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
+        <div class="lbl">${on?`<b id="ringTime"></b><span id="ringSub"></span>`:`${ic("moon")}<span id="ringSub">not fasting</span><b id="ringTime" hidden></b>`}</div></div>
+      <div class="side">
+        ${kv}
+        ${roMe?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} ${tr("End fast, eat")}</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="cancelfast">${tr("Cancel")}</button><button class="btn ghost" data-a="ftimes">${tr("Set times")}</button></div>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} ${tr("Start fast now")}</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="startfast930">From 9:30 PM</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`}
+      </div>
+    </div>
+    ${S._ft&&!roMe?`<form class="form" id="fform" autocomplete="off" style="border-top:1px solid var(--line);padding-top:12px">
+      <label class="f">Fast started<input type="datetime-local" id="f_start" value="${dtl(S.fast.startedAt||(()=>{const x=new Date();x.setHours(21,30,0,0);if(x>new Date())x.setDate(x.getDate()-1);return x})())}" required></label>
+      <label class="f">Fast ended (leave empty if still fasting)<input type="datetime-local" id="f_end" value=""></label>
+      <button class="btn primary" type="submit">Save times</button><button class="btn" type="button" data-a="ftcancel">Cancel</button>
+      <p class="small muted" style="flex-basis:100%">Enter both times to log a finished fast. Enter only the start to correct the running one.</p>
+    </form>`:""}
+  </section>
+  ${ram&&ft?`<section class="card" style="border-color:var(--green)">
+    <div class="row between"><p class="eyebrow">${ic("moon")} Ramadan · ${esc(ft.city)} ${I("ramadan")}</p><span class="pill green">${hj.day} Ramadan</span></div>
+    <div class="bento">
+      <div class="tile"><b>${fmtClock(ft.fajr)}</b><span>suhoor ends (Fajr) ${I("suhoor")}</span></div>
+      <div class="tile"><b>${fmtClock(ft.maghrib)}</b><span>iftar (Maghrib) ${I("iftar")}</span></div>
+    </div>
+    <p class="small" id="rCount"></p>
+    ${roMe?"":on?"":`<button class="btn wide" data-a="rfajr">${ic("moon")} I'm fasting since Fajr</button>`}
+    <p class="small muted">Imsak ${fmtClock(ft.imsak)} (Fajr − 10 min, a reminder only). Karachi calculation method, Fajr 18°. Local moon sighting may shift the date: adjust the Hijri offset in Settings. The app suggests times; it never rules.</p>
+  </section>`:""}
+  ${isToday?`<section class="card accent">
+    <p class="eyebrow">${ic(hintIcon(h))} ${tr("Right now")}</p>
+    <h2>${esc(hint[0])}</h2><p class="small">${esc(hint[1])}</p>
+  </section>`:""}
+  <section class="card">
+    <div class="row between"><p class="eyebrow">${ic(KIND_ICON[plan.k]||"bike")} ${tr("Today's session")} ${I(plan.k==="strength"?"strength":plan.k==="cycle"?"cycle":"recovery")}</p><span class="pill ${plan.k==="rest"?"green":plan.k==="cycle"?"blue":"amber"}">${esc(plan.t)}</span></div>
+    <p class="small">${esc(plan.d)}</p>
+  </section>
+  <section class="card">
+    <div class="row between"><p class="eyebrow">${tr("Check-ins")} · ${dn} / 7 ${I("backdate")}</p>${roMe?"":`<div class="row" style="gap:8px">${logPicker(t)}<button class="btn ghost" data-a="habits_all">${ic("check")} ${tr("All done")}</button></div>`}</div>
+    <div class="checks">
+      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>${tr("Water")} ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
+      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>${tr("Protein palms")} ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
+      ${swRow("starter",tr("Protein starter at home"),"≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,roMe,"home","starter")}
+      ${swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,roMe,KIND_ICON[plan.k]||"bike","cycle")}
+      ${swRow("walk",tr("Walk after dinner"),"10–15 min within 30 min of the last bite",d.walk,roMe,"walk","walk")}
+      ${swRow("steps",tr("8,000 steps"),"Or your current phase target",d.steps,roMe,"foot","steps")}
+      ${swRow("closed",tr("Kitchen closed by 9:30 PM"),"Then start the fast",d.closed,roMe,"moon","closed")}
+    </div>
+  </section>
+  ${quranCard(d,roMe,true)}
+  ${wellbeingCard(d,roMe)}
+  <section class="card">
+    <div class="row between"><p class="eyebrow">${ic("clock")} ${tr("Mindful dinner · 20 minutes")} ${I("thuluth")}</p>${S._meal?`<span class="pill green" id="mealT">00:00</span>`:""}</div>
+    <p class="small" id="mealMsg">${S._meal?"":"Water 20–30 min before. Bismillah. Protein first, roti or rice last, spoon down between bites. Stop at about 80 % full."}</p>
+    ${roMe?"":S._meal?`<button class="btn" data-a="mealstop">${tr("Finished eating")}</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} ${tr("Start the 20-minute meal timer")}</button>`}
+  </section>
+  ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
+    <div class="row between"><p class="eyebrow">${ic("plate")} ${tr("Tonight's plate")}${(d.meal&&d.meal===tonight.id)?" · chosen":" · suggested"}</p>${ic("chev","")}</div>
+    <h3>${esc(tonight.n)}</h3>
+    <p class="small muted">${esc(handLine(tonight))} · ${mealCalc(tonight).kcal} kcal</p>
+    <p class="small muted"><b>Cook for the family:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
+  </section>`:""}`;
+}
+function arc(cx,cy,r,a0,a1){const p=a=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${cx} ${cy}L${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}Z`}
+function plateSvg(){return `<svg viewBox="0 0 160 160" role="img" aria-label="Plate: half vegetables, a quarter protein, a quarter carbs, a thumb of fat">
+  <circle cx="80" cy="80" r="76" fill="var(--panel2)" stroke="var(--line)" stroke-width="2"/>
+  <path d="${arc(80,80,62,90,270)}" fill="var(--green-soft)" stroke="var(--panel)" stroke-width="2"/>
+  <path d="${arc(80,80,62,270,360)}" fill="var(--soft)" stroke="var(--panel)" stroke-width="2"/>
+  <path d="${arc(80,80,62,0,90)}" fill="var(--amber-soft)" stroke="var(--panel)" stroke-width="2"/>
+  <circle cx="80" cy="80" r="8" fill="var(--panel)" stroke="var(--muted)" stroke-width="1.5"/>
+  <text x="46" y="84" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--green)">2 fists</text>
+  <text x="108" y="56" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--accent-text)">2 palms</text>
+  <text x="108" y="112" text-anchor="middle" font-family="Outfit,sans-serif" font-size="11" font-weight="600" fill="var(--amber)">1 hand</text>
+</svg>`}
+function mbar(m){const p=m.p*4,c=m.c*4,f=m.f*9,t=p+c+f;return `<div class="mbar"><i class="p" style="width:${(p/t*100).toFixed(0)}%"></i><i class="c" style="width:${(c/t*100).toFixed(0)}%"></i><i class="f" style="width:${(f/t*100).toFixed(0)}%"></i></div><div class="mkey"><span><b>${m.kcal}</b> kcal ${I("kcal")}</span><span><i style="background:var(--accent)"></i>P <b>${m.p}g</b></span><span><i style="background:var(--amber)"></i>C <b>${m.c}g</b></span><span><i style="background:var(--muted)"></i>F <b>${m.f}g</b> ${I("macros")}</span></div>`}
+function vPlate(){
+  const filt=S._mf||"all",ro=readOnly;
+  const tonight=tonightMeal();
+  const meals=allMeals();
+  const list=meals.filter(m=>filt==="all"||m.tag===filt);
+  const ed=S._medit;
+  return `
+  <div class="hdr"><div><p class="eyebrow">${tr("Build by hand, no scales")}</p><h1>${tr("The Plate")}</h1></div></div>
+  <section class="card">
+    <div class="platewrap">${plateSvg()}
+      <div class="legend">
+        <div class="lg"><i style="background:var(--accent)"></i><div class="lt"><b>2 palms <em>protein</em> ${I("palm")}</b><span>chicken · beef · fish · eggs · paneer</span></div></div>
+        <div class="lg"><i style="background:var(--green)"></i><div class="lt"><b>2 fists <em>vegetables</em> ${I("fist")}</b><span>salad · sabzi · kachumber</span></div></div>
+        <div class="lg"><i style="background:var(--amber)"></i><div class="lt"><b>1 cupped hand <em>carbs</em> ${I("cupped")}</b><span>rice, or 1 roti. Never both.</span></div></div>
+        <div class="lg"><i style="background:var(--muted)"></i><div class="lt"><b>1 thumb <em>fat</em> ${I("thumb")}</b><span>measured oil · ghee · cream</span></div></div>
+      </div></div>
+    <p class="small muted">Plus 1 bowl of yogurt ${I("bowl")}. About 800–950 kcal and 60–75 g protein. On a night with no starter, add 1 palm and 1 bowl.</p>
+  </section>
+  ${tonight?`<section class="card accent">
+    <p class="eyebrow">${ic("plate")} ${((S.days[logDate()]||{}).meal===tonight.id)?"Tonight's plate · chosen":"Tonight's suggestion"}</p>
+    <h2>${esc(tonight.n)}</h2>
+    ${mbar(mealCalc(tonight))}
+    <p class="small">${esc(handLine(tonight))}</p>
+  </section>`:""}
+  <section class="card">
+    <p class="eyebrow">${ic("home")} Course 1 · starter at home, ≈7:00 PM ${I("starter")}</p>
+    <div class="list">${STARTERS.map(s=>`<div class="item"><div class="t"><b>${esc(s.n)}</b></div><span class="kcal">${s.kcal} kcal · P ${s.p}</span></div>`).join("")}</div>
+    <p class="small muted">Dinner at 8:00 PM. Kitchen closed 9:30 PM.</p>
+  </section>
+  <div class="hdr"><h2>${meals.length} ${tr("dinners")}</h2>${ro?`<span class="small muted">${list.length} shown</span>`:`<button class="btn" type="button" data-a="me_new">+ ${tr("New meal")}</button>`}</div>
+  ${ed&&!ed.id?mealEditor(ed):""}
+  <div class="seg">${["all","chicken","beef","fish","meatless","other"].map(k=>`<button class="${filt===k?"on":""}" data-a="mf" data-v="${k}">${k}</button>`).join("")}</div>
+  ${list.map(m=>{if(ed&&ed.id===m.id)return mealEditor(ed);const t=mealCalc(m),g=hands(m);return `<details ${S._mopen===m.id?"open":""} data-mid="${m.id}"><summary><span>${esc(m.n)}${m.base?"":` <span class="pill soft" style="font-size:10px;padding:1px 7px">custom</span>`}${m.base&&S.meals[m.id]?` <span class="pill grey" style="font-size:10px;padding:1px 7px">edited</span>`:""}<br><span class="kcal">${t.kcal} kcal · ${t.p} g protein</span></span>${ic("chev","chev")}</summary><div class="body">
+    ${mbar(t)}
+    <div class="hands"><span>Protein</span><div>${esc(g.protein.join(" · ")||"—")}</div><span>Veg</span><div>${esc(g.veg.join(" · ")||"—")}</div><span>Carbs</span><div>${esc(g.carb.join(" · ")||"—")}</div><span>Fat</span><div>${esc(g.fat.join(" · ")||"—")}</div><span>Plus</span><div>${esc(g.plus.join(" · ")||"—")}</div></div>
+    <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(FOODS[it.f].ur||FOODS[it.f].n)).join(" · "))}</p>
+    <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Family portions · cook: ${esc(cookQuantities(m).join(" · "))}</span>${ic("chev","chev")}</summary><div class="body"><div class="hands">${members().map(mm=>`<span>${esc(mm.name)}</span><div class="small">${memberPortions(m,mm).length?esc(memberPortions(m,mm).join(" · "))+(mm.role==="child"?" + seconds if hungry":""):"milk-based"}</div>`).join("")}</div></div></details>
+    ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
+    ${ro?"":`<div class="row"><button class="btn ${(S.days[logDate()]||{}).meal===m.id?"primary":""}" type="button" data-a="tonight" data-id="${m.id}">${(S.days[logDate()]||{}).meal===m.id?ic("check")+" "+tr("Tonight's plate"):tr("Set as tonight's plate")}</button><button class="btn ghost" type="button" data-a="me_edit" data-id="${m.id}">${tr("Edit meal")}</button></div>`}
+    </div></details>`}).join("")}
+  ${list.length?"":`<p class="small muted">No meals of this type yet.</p>`}
+  <div class="note">Three cooking rules: measure oil with a tablespoon, roti without ghee, salad on the plate first.</div>`;
+}
+function vTrain(){
+  const w=weekNo(),ph=phase(w),wd=new Date().getDay(),on=strengthOn();
+  const steps=w<=2?"6,000":w<=6?"7,500":"8,000+";
+  const need=S.settings.unlockKg||5,lost=Math.max(0,lostKg()),pct=Math.min(100,lost/need*100);
+  const unlockAt=(Number(S.settings.startWeight)-need).toFixed(1);
+  const today=planFor(wd);
+  return `
+  <div class="hdr"><div><p class="eyebrow">Week ${w} · ${esc(ph.n)} phase ${I("phase")}</p><h1>${tr("Training")}</h1></div></div>
+  <section class="card">
+    <div class="week">${[1,2,3,4,5,6,0].map(i=>{const p=planFor(i);return `<div class="wday ${p.k} ${i===wd?"today":""}"><span class="ib">${ic(KIND_ICON[p.k]||"bike")}</span>${DAYS[i].slice(0,3)}</div>`}).join("")}</div>
+    <div class="row between"><p class="eyebrow">${ic(KIND_ICON[today.k]||"bike")} Today</p><span class="pill ${today.k==="rest"?"green":today.k==="cycle"?"blue":"amber"}">${esc(today.t)}</span></div>
+    <p class="small">${esc(today.d)}</p>
+  </section>
+  <section class="card">
+    <div class="bento">
+      <div class="tile"><b>${steps}</b><span>${ic("foot")} steps / day ${I("steps")}</span></div>
+      <div class="tile"><b>120 min</b><span>${ic("bike")} cycling / week ${I("cycle")}</span></div>
+      <div class="tile"><b>${on?"3 / wk":"Locked"}</b><span>${ic(on?"dumbbell":"lock")} strength ${I("strength")}</span></div>
+      <div class="tile"><b>10 min</b><span>${ic("walk")} walk after dinner ${I("walk")}</span></div>
+    </div>
+  </section>
+  <section class="card ${on?"":"locked"}">
+    <div class="row between"><p class="eyebrow">${ic(on?"unlock":"lock")} Strength training ${I("unlock")}</p><span class="pill ${on?"green":"grey"}">${on?"Unlocked":"Locked"}</span></div>
+    ${on?`<p class="small">You are ${lost.toFixed(1)} kg down. Three sessions a week, Mon / Wed / Sat. Start creatine now.</p>`:
+    `<p class="small">Unlocks at <b>${unlockAt} kg</b>, after the first ${need} kg from fasting, walking and cycling. No equipment needed until then.</p>
+     <div class="bar"><i style="width:${pct.toFixed(0)}%"></i></div>
+     <div class="row between small muted"><span>${lost.toFixed(1)} of ${need} kg</span><span>${Math.max(0,need-lost).toFixed(1)} kg to go</span></div>`}
+  </section>
+  <section class="card">
+    <p class="eyebrow">${tr("This week")}</p>
+    <div class="scroll"><table class="tbl"><tbody>
+    ${[1,2,3,4,5,6,0].map(i=>{const p=planFor(i);return `<tr class="${i===wd?"today":""}"><td style="width:44px"><b>${DAYS[i].slice(0,3)}</b></td><td><b>${esc(p.t)}</b><br><span class="muted small">${esc(p.d)}</span></td></tr>`}).join("")}
+    </tbody></table></div>
+  </section>
+  <details open><summary><span>Cycling phases ${I("rpe")}</span>${ic("chev","chev")}</summary><div class="body">
+    <div class="scroll"><table class="tbl"><thead><tr><th>Weeks</th><th>Phase</th><th>Rides</th><th>Each ride</th></tr></thead><tbody>
+    ${CYCLE.map(c=>`<tr class="${c===ph?"today":""}"><td class="kcal">${c.w}</td><td><b>${c.n}</b><br><span class="small muted">${c.t}/wk</span></td><td class="small">${c.s}</td><td class="small">${esc(c.d)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="small muted">RPE 3–4: full sentences. 5–6: short sentences. 7–8: a few words. Saddle high enough that the knee stays slightly bent at the bottom. If the left shin or knee is sore the next day, repeat the previous week.</p>
+  </div></details>
+  <details><summary><span>Walking plan ${I("steps")}</span>${ic("chev","chev")}</summary><div class="body">
+    <ul class="small"><li><b>Weeks 1–2:</b> 6,000 steps. 15-min morning walk, two 5-min office walks, 10-min post-dinner walk.</li><li><b>Weeks 3–6:</b> 7,500. Add the 15-min lunch-hour walk.</li><li><b>Week 7+:</b> 8,000–10,000. Add a 45–60-min Sunday walk.</li></ul>
+    <p class="small muted">Add ~500 steps/day per week. If the left leg aches, hold the level for a week instead of regressing.</p>
+  </div></details>
+  <details><summary><span>Strength plan ${on?"":"(preview)"} ${I("strength")}</span>${ic("chev","chev")}</summary><div class="body">
+    <p class="small muted">${on?"Add one rep per set each session until you hit 12, then add 1–2.5 kg and go back to 8.":"This is what starts after the first 5 kg. Equipment later: a pair of adjustable dumbbells, a mat, a sturdy chair, a resistance band."}</p>
+    <div class="scroll"><table class="tbl"><thead><tr><th>Exercise</th><th>Sets × reps</th><th>Leg note</th></tr></thead><tbody>
+    ${STRENGTH.map(r=>`<tr><td>${esc(r[0])}</td><td class="kcal">${esc(r[1])}</td><td class="small muted">${esc(r[2])}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="small muted">Session B for variety: overhead press 3×8–12 · step-ups (low step, both legs) 3×8 · band pull-aparts 3×15 · side plank 3×20–30 s · dead bug 3×10. One deload week every 6–8 weeks ${I("deload")}.</p>
+  </div></details>
+  <details><summary><span>Leg rules ${I("nail")}</span>${ic("chev","chev")}</summary><div class="body">
+    <ul class="small"><li>Walking, cycling and, later, progressive strength work are good for the healed tibia.</li><li>No running, jumping or plyometrics until an orthopaedic surgeon clears them.</li><li>Stop signs: pain at the front of the knee (nail entry), pain at screw sites, swelling past the next morning, a limp, pain that worsens over a week.</li></ul>
+  </div></details>`;
+}
+function vProgress(){
+  const st=S.settings,ws=weighList(),ro=readOnly||!isOwner;
+  const last=ws[ws.length-1],first=ws[0],prev=ws[ws.length-2];
+  const cur=currentWeight();
+  const lost=(st.startWeight-cur),togo=cur-st.targetWeight,total=st.startWeight-st.targetWeight,pct=Math.max(0,Math.min(100,lost/total*100));
+  let rate=null,eta="—";
+  if(ws.length>=2){const days=(new Date(last.date)-new Date(first.date))/864e5;if(days>=6){rate=(first.weight-last.weight)/(days/7);if(rate>0.05){const wk=togo/rate;const d=new Date(last.date+"T00:00:00");d.setDate(d.getDate()+Math.round(wk*7));eta=d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})}else eta="stalled"}}
+  const delta=prev?Number(last.weight)-Number(prev.weight):null;
+  const w=weekNo();
+  const cps=[[4,"4 weeks","80–81.5 kg","−2 to −4 cm waist"],[8,"8 weeks","78–79.5 kg","−4 to −7 cm"],[12,"12 weeks","75.5–77.5 kg","−6 to −10 cm"],[26,"24–28 weeks","70 kg","≈ 85–88 cm"]];
+  return `
+  <div class="hdr"><div><p class="eyebrow">Week ${w} · ${ws.length} weigh-in${ws.length===1?"":"s"}</p><h1>${tr("Progress")}</h1></div>${rate!=null?`<span class="pill ${rate>=0.4?"green":rate>0.05?"amber":"red"}">${ic("trend")} ${rate.toFixed(2)} kg / week ${I("rate")}</span>`:""}</div>
+  <section class="card">
+    <div class="bignum"><b>${cur.toFixed(1)}</b><span>${tr("kg now")}</span>${delta!=null?`<span class="pill ${delta<=0?"green":"red"}">${delta<=0?"▼":"▲"} ${Math.abs(delta).toFixed(1)} since last</span>`:""}</div>
+    <div class="goalbar"><div class="bar"><i style="width:${pct.toFixed(0)}%"></i></div><div class="lbls"><span>${st.startWeight} kg start</span><span>${lost>=0?"−":"+"}${Math.abs(lost).toFixed(1)} kg · ${pct.toFixed(0)}%</span><span>${st.targetWeight} kg goal</span></div></div>
+    <div class="bento">
+      <div class="tile"><b>${Math.max(0,togo).toFixed(1)}</b><span>${tr("kg to go")}</span></div>
+      <div class="tile"><b style="font-size:17px">${eta}</b><span>projected ${st.targetWeight} kg ${I("projected")}</span></div>
+    </div>
+    ${chart(ws)}
+  </section>
+  <section class="card">
+    <p class="eyebrow">${ic("scale")} ${ro?"Weigh-ins":"Log weigh-in"} ${I("waist")}</p>
+    ${ro?"":`<p class="small muted">Monday mornings, after the toilet, before water. Same scale, same floor.</p><form class="form" id="wform" autocomplete="off">
+      <label class="f">Date<input type="date" id="wdate" value="${logDate()}" max="${todayStr()}" required></label>
+      <label class="f">Weight kg<input type="number" id="wkg" step="0.1" min="40" max="200" inputmode="decimal" placeholder="${cur.toFixed(1)}" required></label>
+      <label class="f">Waist cm<input type="number" id="wcm" step="0.5" min="50" max="200" inputmode="decimal" placeholder="optional"></label>
+      <button class="btn primary" type="submit">Save</button>
+    </form>`}
+    ${ws.length?`<div class="log">${ws.slice().reverse().slice(0,12).map((r,i,arr)=>{const n=arr[i+1];const dd=n?Number(r.weight)-Number(n.weight):null;return `<div class="r"><span>${fmtDate(r.date)}</span><span>${Number(r.weight).toFixed(1)} kg</span><span class="${dd!=null&&dd<0?"d":"muted"}">${dd!=null?(dd<=0?"−":"+")+Math.abs(dd).toFixed(1):""}${r.waist?" · "+Number(r.waist).toFixed(1)+" cm":""}</span>${ro?"<span></span>":`<button data-a="delw" data-d="${r.date}" aria-label="delete">✕</button>`}</div>`}).join("")}</div>`:`<p class="small muted">No weigh-ins yet. The first entry sets the baseline and starts the chart.</p>`}
+  </section>
+  <section class="card">
+    <p class="eyebrow">Checkpoints</p>
+    <div class="timeline">${cps.map((c,i)=>`<div class="tl ${w>=c[0]?"hit":""}"><div class="n"><i></i>${i<cps.length-1?"<s></s>":""}</div><div class="c"><b>${c[1]}</b><span>${c[2]} · ${c[3]}</span></div></div>`).join("")}</div>
+    <p class="small muted">Weeks 1–2 show 1.5–3 kg of mostly water. Take a maintenance week every 8–10 weeks ${I("maintenance")}.</p>
+  </section>
+  <details><summary><span>Plateau checklist ${I("plateau")}</span>${ic("chev","chev")}</summary><div class="body"><ul class="small">
+    <li>Audit the 7 days: cheat meals (1), kitchen past 9:30, chai with milk during the fast, cold drinks, naan, second cupped hand.</li>
+    <li>Re-measure oil with a tablespoon for a week.</li>
+    <li>Nuts, dates, dried fruit: one small handful a day.</li>
+    <li>Weekend creep: Sunday must be the light plate.</li>
+    <li>Under 7,000 steps? Add a 15-min walk.</li>
+    <li>Drop the carb portion on rest days (Boti Salad Bowl).</li>
+    <li>Sleep under 7 h? Fix that before cutting food.</li>
+    <li>Below 76 kg maintenance is ≈150 kcal lower: add 2,000 steps or keep the smaller rest-day plate.</li>
+    <li>Still stuck after 6 weeks: TSH, HbA1c, vitamin D, medication review.</li></ul></div></details>
+  ${(typeof window.oneplate==="object"&&!readOnly)?`<section class="card"><p class="eyebrow">${ic("family")} Account · this household ${I("account")}</p>
+    <div class="row">${isOwner?`<button class="btn" data-a="acc_invite">Invite Uzma (contributor)</button><button class="btn" data-a="acc_invite_view">Invite a viewer</button><button class="btn" data-a="acc_export">Export all data</button>`:""}<button class="btn ghost" data-a="acc_signout">Sign out</button>${isOwner?`<button class="btn ghost" style="color:var(--red)" data-a="acc_delete">Delete household</button>`:""}</div>
+    ${S._inviteCode?`<div class="note">Invite code <b style="font-family:var(--mono);font-size:16px">${esc(S._inviteCode)}</b> · valid 7 days. Uzma creates her account at <b>${esc(location.origin)}/account.html</b> and enters it.</div>`:""}
+    <div class="row"><button class="btn" data-a="acc_passkey">${ic("check")} Add a passkey to this device</button></div>
+    <p class="small muted">Live updates: ${window.oneplate.live()?"connected":"polling"}. A passkey lets you sign in with Face ID or fingerprint instead of a password.</p></section>`:""}
+  ${ro?"":`<details><summary><span>Settings</span>${ic("chev","chev")}</summary><div class="body">
+    <form class="form" id="sform" autocomplete="off">
+      <label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight}"></label>
+      <label class="f">Target<input type="number" id="s_tw" step="0.1" value="${st.targetWeight}"></label>
+      <label class="f">Start date<input type="date" id="s_sd" value="${st.startDate}"></label>
+      <label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>
+      <label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>
+      <label class="f">Quran course start date<input type="date" id="s_qs" value="${st.quranStart||st.startDate}"></label>
+      <label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
+      <label class="f">Ramadan mode<select id="s_ram">${[["auto","Auto (by Hijri date)"],["on","On"],["off","Off"]].map(o=>`<option value="${o[0]}" ${(st.ramadan||"auto")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
+      <label class="f">Hijri offset (moon sighting)<select id="s_hoff">${[-2,-1,0,1,2].map(v=>`<option value="${v}" ${Number(st.hijriOffset||0)===v?"selected":""}>${v>0?"+"+v:v} day${Math.abs(v)===1?"":"s"}</option>`).join("")}</select></label>
+      <label class="f">Sunnah fast days<select id="s_trad">${[["sunni","Sunni (Mon/Thu, Ayyam al-Bid, Arafah, Ashura)"],["shia","Shia (Ayyam al-Bid, Arafah)"]].map(o=>`<option value="${o[0]}" ${(st.tradition||"sunni")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
+      <button class="btn" type="submit">Save settings</button>
+    </form>
+  </div></details>`}`;
+}
+function chart(ws){
+  const st=S.settings,W=360,H=190,L=34,R=10,T=12,B=26;
+  const start=new Date(st.startDate+"T00:00:00");
+  const planWeeks=Math.max(8,Math.ceil((st.startWeight-st.targetWeight)/0.5)+2);
+  let endMs=start.getTime()+planWeeks*7*864e5;
+  if(ws.length){endMs=Math.max(endMs,new Date(ws[ws.length-1].date+"T00:00:00").getTime()+14*864e5)}
+  const span=endMs-start.getTime();
+  const ys=[st.startWeight,st.targetWeight].concat(ws.map(w=>Number(w.weight)));
+  const ymin=Math.floor(Math.min.apply(null,ys))-1,ymax=Math.ceil(Math.max.apply(null,ys))+1;
+  const X=ms=>L+(ms-start.getTime())/span*(W-L-R),Y=v=>T+(ymax-v)/(ymax-ymin)*(H-T-B);
+  let g="";for(let v=ymin;v<=ymax;v+=(ymax-ymin>12?4:2)){g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${L-6}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${v}</text>`}
+  const months=[];let m=new Date(start.getFullYear(),start.getMonth()+1,1);while(m.getTime()<endMs){months.push(m);m=new Date(m.getFullYear(),m.getMonth()+1,1)}
+  const xl=months.map(d=>`<text x="${X(d.getTime()).toFixed(1)}" y="${H-8}" text-anchor="middle">${d.toLocaleDateString(undefined,{month:"short"})}</text>`).join("");
+  const expEnd=start.getTime()+((st.startWeight-st.targetWeight)/0.5)*7*864e5;
+  const exp=`<line class="exp" x1="${X(start.getTime()).toFixed(1)}" y1="${Y(st.startWeight).toFixed(1)}" x2="${X(Math.min(expEnd,endMs)).toFixed(1)}" y2="${Y(Math.max(st.targetWeight,st.startWeight-0.5*(Math.min(expEnd,endMs)-start.getTime())/864e5/7)).toFixed(1)}"/>`;
+  const tgt=`<line class="tgt" x1="${L}" x2="${W-R}" y1="${Y(st.targetWeight).toFixed(1)}" y2="${Y(st.targetWeight).toFixed(1)}"/>`;
+  const pts=ws.map(w=>[X(new Date(w.date+"T00:00:00").getTime()),Y(Number(w.weight))]);
+  let act="";if(pts.length){const path=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");const lp=pts[pts.length-1];act=`<path fill="url(#areaGrad)" d="${path} L${lp[0].toFixed(1)} ${(H-B).toFixed(1)} L${pts[0][0].toFixed(1)} ${(H-B).toFixed(1)} Z"/><path class="act" d="${path}"/>`+pts.slice(0,-1).map(p=>`<circle class="pt" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join("")+`<circle class="ptl" cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="4.5"/>`}
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight over time against the expected 0.5 kg per week line"><defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.3"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient></defs>${g}${xl}${tgt}${exp}${act}</svg><div class="mkey"><span><i style="background:var(--accent)"></i>your weigh-ins</span><span><i style="background:var(--muted)"></i>plan, 0.5 kg/week</span><span><i style="background:var(--green)"></i>target</span></div>`;
+}
+function glossaryList(q){q=(q||"").trim().toLowerCase();const keys=Object.keys(G).filter(k=>!["sync","local","viewonly"].includes(k));const hits=q?keys.filter(k=>(G[k][0]+" "+G[k][1]).toLowerCase().includes(q)):keys.slice(0,6);return hits.length?hits.map(k=>`<button data-a="info" data-k="${k}"><b>${esc(G[k][0])}</b><span>${esc(G[k][1])}</span></button>`).join(""):`<p class="small muted">No term matches "${esc(q)}".</p>`}
+function vReference(){
+  const f=S._ff||"all";
+  const items=FAST.filter(i=>f==="all"||i.g===f);
+  return `
+  <div class="hdr" style="margin-top:8px"><h2>${tr("Reference")}</h2></div>
+  <div class="search">${ic("search")}<input type="search" id="gq" placeholder="Search any term: palm, RPE, plateau, creatine…" value="${esc(S._gq||"")}" autocomplete="off"></div>
+  <div class="glist" id="gres">${glossaryList(S._gq)}</div>
+  <section class="card">
+    <p class="eyebrow">${ic("bolt")} The only 5 rules</p>
+    <div class="rules">
+      <div><p><b>One plate, built by hand, once a day.</b> 2 palms protein · 2 fists veg · 1 cupped hand rice or 1 roti · 1 thumb fat · 1 bowl yogurt. Protein first.</p></div>
+      <div><p><b>During the fast, drink only what has nothing in it.</b> Water, black coffee, plain tea.</p></div>
+      <div><p><b>Four palms of protein every day.</b> One in the starter when you reach home, three at dinner.</p></div>
+      <div><p><b>Move every day.</b> 8,000 steps with a walk after dinner, four 30-minute rides a week. Strength joins after the first 5 kg.</p></div>
+      <div><p><b>One cheat meal, Saturday 7 PM, and the kitchen closes at 9:30 PM.</b> Not a cheat day. Not a second dinner.</p></div>
+    </div>
+  </section>
+  <div class="hdr"><h2>Fasting traffic light</h2></div>
+  <p class="small muted">Three ways to define a fast: strict ${I("strict")}, fat-loss ${I("fatloss")}, autophagy ${I("autophagy")}. Fat-loss is the one that matters here.</p>
+  <div class="seg">${[["all","All"],["green","Green"],["amber","Yellow"],["red","Red"]].map(k=>`<button class="${f===k[0]?"on":""}" data-a="ff" data-v="${k[0]}">${k[1]}</button>`).join("")}</div>
+  <div class="list">${items.map(i=>`<div class="item ${i.g}"><div class="t"><b>${esc(i.n)}</b><small>Strict: ${esc(i.s)} · Fat-loss: ${esc(i.f)} · Autophagy: ${esc(i.a)}</small><small>${esc(i.note)}</small></div><span class="kcal">${esc(i.k)} kcal</span></div>`).join("")}</div>
+  <p class="small muted">Green: use freely. Yellow: small calories; fine for fat loss, better in the window. Red: sugar, insulin, hunger an hour later.</p>
+  <details><summary><span>Sunnah of eating · guidance, not rulings ${I("thuluth")}</span>${ic("chev","chev")}</summary><div class="body">
+    <div class="note">"It is sufficient for the son of Adam to eat a few morsels to keep his back straight. If he must, then one third for his food, one third for his drink and one third for his breath." Jami' al-Tirmidhi 2380; Sunan Ibn Majah 3349 (graded sahih by al-Albani).</div>
+    <ul class="small">
+      <li><b>Rule of thirds on the plate:</b> half vegetables, a quarter protein, a quarter grain. Water 20–30 min before, sips during, freely 30–60 min after. About 20 minutes per meal; stop at 70–80 % full. Self-check: "Could I eat more if I had to?" (Tirmidhi 2380)</li>
+      <li><b>Bismillah, right hand, from what is in front of you.</b> (Sahih al-Bukhari 5376; Sahih Muslim 2022)</li>
+      <li><b>Drink sitting, in three breaths, not in one go.</b> (Sahih Muslim 2028)</li>
+      <li><b>Food for two is enough for three.</b> Share the plate; serve less, add if needed. (Sahih al-Bukhari 5392)</li>
+      <li><b>Never criticise food.</b> Eat it or leave it quietly. (Sahih al-Bukhari 5409; Sahih Muslim 2064)</li>
+      <li><b>Praise Allah after eating.</b> Gratitude is part of the meal. (Sahih Muslim 2734)</li>
+      <li><b>Suhoor has blessing in it.</b> Never skip it in Ramadan; take it close to Fajr. (Sahih al-Bukhari 1923; Sahih Muslim 1095)</li>
+      <li><b>Break the fast with dates and water</b>, then pray, then eat. (Sunan Abi Dawud 2356; Jami' al-Tirmidhi 696)</li>
+      <li><b>Chai an hour after the meal, not with it</b>: tea tannins reduce iron absorption. (Nutrition evidence, not a narration.)</li>
+    </ul>
+    <p class="small muted">References as collected in the Qānūn al-Thuluth project; hadith gradings there are pending scholar review except where stated. Narrations are presented as the Prophetic tradition of eating, not as medicine. For rulings on fasting or food, ask a qualified scholar.</p>
+  </div></details>
+  <details><summary><span>Ramadan plan ${I("ramadan")}</span>${ic("chev","chev")}</summary><div class="body">
+    <p class="small">The app switches to Ramadan mode by the Hijri date (or force it in Settings). Goal in Ramadan: hold your weight, keep protein, keep walking. Fat loss resumes after Eid.</p>
+    <div class="scroll"><table class="tbl"><tbody>
+      ${[["Fajr − 60","Suhoor alarm"],["Suhoor","Slow carbs (daliya, whole-wheat roti, barley talbina) + protein (eggs, yogurt, daal) + fluid-rich foods. 2–3 glasses spread out. Low salt, nothing fried."],["Imsak","Last sips, 10 min before Fajr"],["Day","Water none; walk in the shade; no hard training"],["Maghrib","1–3 dates + 250 ml water, then pray"],["+20–30 min","OnePlate iftar: soup or salad first, normal dinner portion, 20 minutes. One small fried item a week at most."],["+1 h","400 ml water, two glasses spaced"],["After Taraweeh","Fruit, yogurt or milk if hungry. 400 ml water. Easy 30-min ride or walk if energy allows."],["Before sleep","250 ml water. Lights out early; suhoor comes fast."]].map(r=>`<tr><td class="kcal" style="white-space:nowrap">${r[0]}</td><td class="small">${esc(r[1])}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="small"><b>Weekly themes:</b> week 1 rhythm (suhoor daily, dates and water, pray); week 2 the Thuluth iftar (soup first, normal portion, wait 20 min); week 3 hydration (spread water, fewer salty and fried foods); week 4 lighter meals for the last ten nights, plan Eid without overeating.</p>
+    <p class="small muted">Stop signs while fasting: dizziness, fainting, very dark urine or no urine for 6+ hours, vomiting, confusion. Break the fast, drink, eat, and see a doctor. Fasting with diabetes medication, pregnancy or any daily medicine needs a clinician's say first.</p>
+  </div></details>
+  <details><summary><span>Cheat meal rules ${I("cheat")}</span>${ic("chev","chev")}</summary><div class="body">
+    <p class="small">Saturday 7 PM, in place of dinner, finished by 8:30. One meal, not a day.</p>
+    <ul class="small"><li><b>Biryani:</b> 2 heaped cupped hands rice max, all the chicken you want, salad and raita first.</li><li><b>Pizza:</b> 3 thin slices (2 thick) with a salad. No garlic bread, no stuffed crust.</li><li><b>Burger:</b> single patty. If fries, one fist, shared.</li><li><b>BBQ:</b> unlimited tikka and kebab, one naan.</li><li><b>Nihari:</b> one bowl, pour off the oil, half to one naan.</li></ul>
+    <p class="small muted">Protein first, salad before the main, one plate no refill, water or diet drink, 20 minutes minimum, 15-min walk after. Expect +1–2 kg Sunday from salt; gone by Tuesday.</p>
+  </div></details>
+  <details><summary><span>Eating out ranking</span>${ic("chev","chev")}</summary><div class="body">
+    <ol class="small"><li>Chicken tikka</li><li>Seekh kebab</li><li>Grilled fish</li><li>Daal (less tarka)</li><li>Chicken karahi (leave the oil pool)</li><li>Haleem (skip poured oil, ½ naan)</li><li>Pulao (1 cupped hand)</li><li>Biryani</li><li>Nihari</li><li>Burger</li><li>Pizza</li><li>Fried chicken</li></ol>
+    <p class="small muted">Decide before you arrive. Roti instead of naan. Share rice dishes and take extra chicken. Weddings count as that week's cheat meal.</p>
+  </div></details>
+  <details><summary><span>Supplements</span>${ic("chev","chev")}</summary><div class="body"><ul class="small">
+    <li><b>Whey</b> ${I("whey")}: yes. 1 scoop as the starter or with dinner.</li><li><b>Creatine monohydrate</b> ${I("creatine")}: yes, 3–5 g daily once strength unlocks. Expect 1–2 kg water in week 1.</li><li><b>Vitamin D3</b> ${I("vitd")}: yes, 1,000–2,000 IU with dinner; test if you can.</li><li><b>Magnesium:</b> optional, 200–400 mg glycinate at night for cramps or sleep.</li><li><b>Omega-3:</b> optional, 1–2 g EPA+DHA if you don't eat oily fish twice a week.</li><li><b>Electrolytes</b> ${I("electrolytes")}: no product needed; ¼ tsp salt in 1 L water.</li></ul>
+    <p class="small muted">Skip fat burners, keto pills, ACV gummies, green-tea extract, detox teas, BCAAs.</p></div></details>
+  <details><summary><span>Warning signs</span>${ic("chev","chev")}</summary><div class="body"><ul class="small">
+    <li><b>Fatigue over a week:</b> add a cupped hand of carbs for a week; check sleep; consider an earlier starter.</li><li><b>Dizziness standing:</b> salt in water morning and afternoon; persistent → doctor.</li><li><b>Performance down 2 weeks:</b> carbs on all training days, deload week.</li><li><b>Soreness past 48 h:</b> confirm 4–5 palms protein; repeat last week's training.</li><li><b>Sleep disrupted:</b> earlier dinner, no caffeine after 2 PM, yogurt at 9 PM is fine.</li><li><b>Strength dropping, arms thinner:</b> 5 palms, maintenance week.</li><li><b>Persistent left-leg pain, swelling, night pain:</b> stop impact and heavy leg loading; orthopaedic review and X-ray.</li><li><b>Numbness, tingling, left-leg weakness:</b> medical review promptly.</li></ul>
+    <p class="small muted">The fix is almost never a longer fast or a smaller plate. It is more protein, more sleep, a maintenance week, or a doctor.</p></div></details>
+  <details><summary><span>Daily routine</span>${ic("chev","chev")}</summary><div class="body"><div class="scroll"><table class="tbl"><tbody>
+    ${[["6:45","Wake. 500 ml water + pinch of salt."],["7:00","15–20-min walk."],["7:25","Black coffee #1."],["8:00","Leave."],["9:30","Coffee #2 or green tea."],["10:30","Water. 5-min walk."],["12:30","Lunch-hour walk 15 min, then black tea."],["14:00","Last caffeine."],["15:30","Herbal tea. 5-min walk."],["16:30","Water."],["18:00","Leave work. Water on the bike."],["19:00","Home. Protein starter. Fast ends."],["19:30","Cycle 30 min or walk."],["20:00","OnePlate dinner, protein first, 20 min."],["20:45","10–15-min walk."],["21:30","Kitchen closed. Fast starts."],["22:00","Screens dim. Calf stretch."],["22:45","Lights out."]].map(r=>`<tr><td class="kcal">${r[0]}</td><td class="small">${esc(r[1])}</td></tr>`).join("")}
+  </tbody></table></div></div></details>
+  <details><summary><span>When to see a doctor first</span>${ic("chev","chev")}</summary><div class="body"><ul class="small"><li>Diabetes, blood pressure, heart, kidney, liver or gout history, or any daily medication.</li><li>Baseline bloods: CBC, fasting glucose/HbA1c, lipids, vitamin D, B12, TSH, liver and kidney, uric acid. Repeat vitamin D and lipids at 12 weeks.</li><li>Orthopaedic review before any running, jumping or sport on the nailed leg ${I("nail")}.</li></ul><p class="small muted">OnePlate is educational and does not replace individual medical advice.</p></div></details>`;
+}
+

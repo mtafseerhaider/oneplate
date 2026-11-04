@@ -4,7 +4,7 @@ import { loadConfig } from "../src/config.js";
 import { createPool } from "../src/db/pool.js";
 import { migrate } from "../src/db/migrate.js";
 import { ChangeBus } from "../src/events.js";
-import { MemoryMailer } from "../src/mail.js";
+import { MemoryMailer, createMailer, SmtpMailer } from "../src/mail.js";
 const cfg = loadConfig({ ...process.env, NODE_ENV: "test", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
 const db = createPool(cfg.DATABASE_URL); let app: Awaited<ReturnType<typeof buildApp>>; const mailer = new MemoryMailer(); const bus = new ChangeBus(cfg.DATABASE_URL);
 const cookieOf = (res: any) => String(res.headers["set-cookie"]).split(";")[0];
@@ -56,6 +56,10 @@ describe("OnePlate API", () => {
     const lo = await app.inject({ method: "POST", url: "/auth/passkey/login/options" }); expect(lo.statusCode).toBe(200); expect(typeof lo.json().options.challenge).toBe("string");
     const unknown = await app.inject({ method: "POST", url: "/auth/passkey/login/verify", payload: { challengeId: lo.json().challengeId, response: { id: "nope", rawId: "bm9wZQ", type: "public-key", response: {}, clientExtensionResults: {} } } }); expect(unknown.statusCode).toBe(400);
     const anon = await app.inject({ method: "POST", url: "/auth/passkey/register/options" }); expect(anon.statusCode).toBe(401);
+  });
+  it("builds the SMTP mailer from configuration", () => {
+    expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
+    expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);
   });
   it("exports and audits", async () => {
     const ex = await app.inject({ method: "GET", url: `/households/${hid}/export`, headers: { cookie: owner } }); expect(ex.json().documents.length).toBeGreaterThan(1);

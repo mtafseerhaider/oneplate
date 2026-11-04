@@ -1,0 +1,26 @@
+{
+ "js": [
+  "00-part.js",
+  "01-i18n.js",
+  "02-glossary.js",
+  "03-content-fast.js",
+  "04-foods.js",
+  "05-state.js",
+  "06-helpers.js",
+  "07-icons.js",
+  "08-derived.js",
+  "09-views-today-plate.js",
+  "10-family.js",
+  "11-islamic.js",
+  "12-meals-views.js",
+  "13-render-events-learn.js",
+  "14-learn-content.js",
+  "15-learn-views.js",
+  "16-quran-plan.js",
+  "17-quran-view.js",
+  "18-mizan-volumes.js",
+  "19-quran-progress.js",
+  "20-editor-handlers.js"
+ ],
+ "tail": ""
+}

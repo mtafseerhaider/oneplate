@@ -5,7 +5,9 @@
   "packageManager": "pnpm@10.28.0",
   "engines": { "node": ">=22" },
   "scripts": {
-    "build": "pnpm -r --filter ./packages/* --filter ./apps/* build",
+    "build": "node scripts/build-app.mjs && pnpm -r --filter ./packages/* --filter ./apps/* build",
+    "build:app": "node scripts/build-app.mjs",
+    "check:app": "node scripts/build-app.mjs --check",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "dev:api": "pnpm --filter @oneplate/api dev",
