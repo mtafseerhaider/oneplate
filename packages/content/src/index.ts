@@ -12,3 +12,4 @@ export * from "./fast-items.js";
 export * from "./misc.js";
 export * from "./surah-index.js";
 export * from "./reviews.js";
+export * from "./course-v2-keys.js";

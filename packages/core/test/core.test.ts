@@ -37,8 +37,8 @@ describe("wellbeing", () => {
   it("scores a day", () => { const d = { date: "2026-11-04", water: 4, palms: 4, starter: true, train: true, walk: true, steps: true, closed: true, mood: 4, grat: "x", learn: { tafseer: true }, circle: true }; expect(doneCount(d)).toBe(7); expect(wholeSelf(d, "tafseer", false).score).toBe(4); });
   it("streaks count consecutive closed kitchens", () => { expect(streak({ "2026-11-03": { date: "2026-11-03", closed: true }, "2026-11-02": { date: "2026-11-02", closed: true } }, "2026-11-04")).toBe(2); });
 });
-import { buildCourse, courseStats, migrateProgress, contentKey, reviewOf, reviewCounts } from "../src/index.js";
-import { SURAH_INDEX, QPLAN, QURAN_VERSES } from "@oneplate/content";
+import { buildCourse, courseStats, progressByKey, contentKey, reviewOf, reviewCounts } from "../src/index.js";
+import { SURAH_INDEX, QPLAN, QURAN_VERSES, COURSE_V1_KEYS, COURSE_V2_KEYS } from "@oneplate/content";
 describe("quran course", () => {
   const course = buildCourse(SURAH_INDEX, QPLAN, 365);
   it("covers the whole Quran once, in order, in 365 readings", () => {
@@ -50,9 +50,10 @@ describe("quran course", () => {
     for (const c of QPLAN) { const r = course.find(x => x.s === c.s && x.f === c.f && x.t === c.t)!; expect(r.cur).toBe(true); expect(r.mz).toBe(c.mz); }
     const plain = course.find(r => !r.cur)!; expect(plain.sum.length).toBeGreaterThan(20); expect(plain.mz).toMatch(/Al-Mizan/); expect(plain.n).toContain(plain.surah);
   });
-  it("migrates index-based progress by passage reference", () => {
-    const oldKeys = QPLAN.map(c => `quran-${c.s}-${c.f}-${c.t}`); const m = migrateProgress(oldKeys, course, { done: { "0": "2026-11-01", "1": "2026-11-02", "99": "x" }, flag: { "1": true, "0": false } });
-    expect(m.done["0"]).toBe("2026-11-01"); const i1 = course.findIndex(r => r.key === oldKeys[1]); expect(m.done[String(i1)]).toBe("2026-11-02"); expect(m.flag[String(i1)]).toBe(true); expect(Object.keys(m.done).length).toBe(2);
+  it("moves index-based progress of either older version onto keys", () => {
+    expect(COURSE_V1_KEYS.length).toBe(67); for (const [i, k] of COURSE_V1_KEYS.entries()) expect(contentKey("quran", QPLAN[i])).toBe(k); const m = progressByKey(COURSE_V1_KEYS, { done: { "0": "2026-11-01", "1": "2026-11-02", "99": "x" }, flag: { "1": true, "0": false } });
+    expect(m).toEqual({ done: { "quran-1-1-7": "2026-11-01", "quran-2-1-5": "2026-11-02" }, flag: { "quran-2-1-5": true }, v: 3 });
+    expect(COURSE_V2_KEYS.length).toBe(365); expect(COURSE_V2_KEYS[0]).toBe("quran-1-1-7"); const m2 = progressByKey(COURSE_V2_KEYS, { done: { "2": "2026-11-03", "quran-5-1-3": "2026-11-04" } }); expect(m2.done["quran-2-6-29"]).toBe("2026-11-03"); expect(m2.done["quran-5-1-3"]).toBe("2026-11-04");
   });
   it("gives stable content keys and layered review status", () => {
     expect(contentKey("quran", QPLAN[0])).toBe("quran-1-1-7"); expect(contentKey("surah", { n: 36 })).toBe("surah-36");

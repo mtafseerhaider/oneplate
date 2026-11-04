@@ -37,14 +37,14 @@ export function buildCourse(surahs: SurahLike[], curated: CuratedLike[], days = 
   });
 }
 export function courseStats(course: Reading[]) { const verses = course.reduce((a, r) => a + r.t - r.f + 1, 0); const lens = course.map(r => r.t - r.f + 1).sort((a, b) => a - b); return { readings: course.length, verses, curated: course.filter(r => r.cur).length, surahs: new Set(course.map(r => r.s)).size, longest: lens[lens.length - 1] ?? 0, median: lens[Math.floor(lens.length / 2)] ?? 0 }; }
-/** Maps progress recorded against an older course (by index) onto the current one, by passage reference; readings that no longer exist are dropped. */
-export function migrateProgress(oldKeys: string[], course: Reading[], prog: { done?: Record<string, string>; flag?: Record<string, boolean> }): { done: Record<string, string>; flag: Record<string, boolean> } {
-  const idx = new Map(course.map((r, i) => [r.key, i])); const out = { done: {} as Record<string, string>, flag: {} as Record<string, boolean> };
-  for (const [k, v] of Object.entries(prog.done ?? {})) { const ni = idx.get(oldKeys[Number(k)] ?? ""); if (ni !== undefined) out.done[String(ni)] = v; }
-  for (const k of Object.keys(prog.flag ?? {})) { const ni = idx.get(oldKeys[Number(k)] ?? ""); if (ni !== undefined && out.done[String(ni)]) out.flag[String(ni)] = true; }
+/** Progress is stored by reading key (quran-s-f-t), so the course can change without moving anyone's marks. Older versions stored it by index: v1 against the 67 curated readings, v2 against the first 365-reading course; this turns either into keys with the matching frozen key list. Nothing is dropped. */
+export interface Progress { done: Record<string, string>; flag: Record<string, boolean>; v: number }
+export function progressByKey(oldKeys: string[], prog: { done?: Record<string, string>; flag?: Record<string, boolean> }): Progress {
+  const out: Progress = { done: {}, flag: {}, v: 3 };
+  for (const [k, v] of Object.entries(prog.done ?? {})) { const key = /^\d+$/.test(k) ? oldKeys[Number(k)] : k; if (key) out.done[key] = v; }
+  for (const [k, on] of Object.entries(prog.flag ?? {})) { const key = /^\d+$/.test(k) ? oldKeys[Number(k)] : k; if (key && on && out.done[key]) out.flag[key] = true; }
   return out;
 }
-
 /* ---------- Content keys and review status ---------- */
 /** Stable id for a content item: readings and surahs by reference, everything else by a short hash of its text, so reordering a list never moves a review. */
 export function contentKey(kind: string, item: any): string {

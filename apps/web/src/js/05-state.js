@@ -18,10 +18,11 @@ function removeWeigh(d){delete S.weighins[d];saveLocal();dbDelete("weighins/"+d)
 function persistMeal(id){saveLocal();dbWrite("meals/"+id,S.meals[id])}
 function persistFamily(id){saveLocal();dbWrite("family/"+id,S.family[id])}
 function persistQnote(k){saveLocal();dbWrite("qnotes/"+k,S.qnotes[k])}
-/* The course grew from 67 curated readings (progress keyed by index) to the whole Quran in 365 readings. Progress and notes recorded against the old course are moved by passage reference, once, and written back by the owner. */
+/* Progress is keyed by passage. v1 was keyed by index into the 67 curated readings, v2 by index into the first 365-reading course; both move to keys once (with the frozen key lists) and the owner writes the result back. Page notes keyed by old index move the same way. */
 function migrateCourse(write){
   let changed=false;
-  if(!S.qprog||Number(S.qprog.v||1)<2){S.qprog=Object.assign(core.migrateProgress(QPLAN_V1_KEYS,QPLAN,S.qprog||{}),{v:2});changed=true}
+  const v=Number((S.qprog||{}).v||1);
+  if(v<3){S.qprog=core.progressByKey(v<2?QPLAN_V1_KEYS:COURSE_V2_KEYS,S.qprog||{});changed=true}
   for(const k of Object.keys(S.qnotes||{})){if(!/^\d+$/.test(k))continue;const nk=QPLAN_V1_KEYS[Number(k)];const n=S.qnotes[k];delete S.qnotes[k];if(nk&&(n.page||n.note)){S.qnotes[nk]=Object.assign({},n,{i:nk});if(write&&isOwner&&!readOnly)dbWrite("qnotes/"+nk,S.qnotes[nk])}if(write&&isOwner&&!readOnly)dbDelete("qnotes/"+k);changed=true}
   if(changed&&write&&isOwner&&!readOnly){persistQprog()}
   return changed;

@@ -42,9 +42,9 @@ test("progress grid: states cycle and bulk update marks a range", async () => {
   assert.equal(await page.evaluate(() => qCount()), 10); assert.equal(await page.evaluate(() => qState(3)), "read");
 });
 test("quran course: whole Quran in 365 readings, old progress migrates by passage", async () => {
-  const st = await page.evaluate(() => core.courseStats(QPLAN)); assert.equal(st.readings, 365); assert.equal(st.verses, 6236); assert.equal(st.curated, 67);
-  const m = await page.evaluate(() => { S.qprog = { done: { "0": "2026-10-01", "1": "2026-10-02" }, flag: { "1": true } }; S.qnotes = { "1": { i: "1", page: "55" } }; migrateCourse(false); return { v: S.qprog.v, d0: qState(0), d1: qState(QPLAN.findIndex(r => r.key === "quran-2-1-5")), note: S.qnotes["quran-2-1-5"] && S.qnotes["quran-2-1-5"].page, old: S.qnotes["1"] }; });
-  assert.equal(m.v, 2); assert.equal(m.d0, "read"); assert.equal(m.d1, "revisit"); assert.equal(m.note, "55"); assert.equal(m.old, undefined);
+  const st = await page.evaluate(() => Object.assign(core.courseStats(QPLAN), { n: QPLAN_CURATED.length })); assert.equal(st.readings, 365); assert.equal(st.verses, 6236); assert.equal(st.curated, st.n);
+  const m = await page.evaluate(() => { S.qprog = { done: { "0": "2026-10-01", "1": "2026-10-02" }, flag: { "1": true } }; S.qnotes = { "1": { i: "1", page: "55" } }; migrateCourse(false); const v2 = core.progressByKey(COURSE_V2_KEYS, { done: { "2": "2026-10-03" }, v: 2 }); if (v2.done["quran-2-6-29"] !== "2026-10-03") throw new Error("v2 migration"); return { v: S.qprog.v, d0: qState(0), d1: qState(QPLAN.findIndex(r => r.key === "quran-2-1-5")), note: S.qnotes["quran-2-1-5"] && S.qnotes["quran-2-1-5"].page, old: S.qnotes["1"] }; });
+  assert.equal(m.v, 3); assert.equal(m.d0, "read"); assert.equal(m.d1, "revisit"); assert.equal(m.note, "55"); assert.equal(m.old, undefined);
   await page.evaluate(() => { tab = "learn"; render(); }); assert.equal(await page.$$eval(".qc", els => els.length), 365);
   await page.click("details:has(#qsurah) summary"); await page.selectOption("#qsurah", "114"); await page.waitForTimeout(100); assert.match(await page.$eval("details .tbl", e => e.textContent), /114:1–6/);
 });
