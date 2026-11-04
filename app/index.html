@@ -298,6 +298,12 @@ closed:["Kitchen closed","No more food after 9:30 PM. Water or plain tea only. T
 walk:["Post-dinner walk","A gentle 10 to 15 minute walk within half an hour of finishing dinner. It lowers blood sugar after the meal and helps digestion."],
 water:["Water bottles","Count each 700 ml bottle you finish. Four bottles is 2.8 L, five is 3.5 L. Aim for four on a normal day and five on a hot day or a motorcycle commute in the heat. A pinch of salt in the first bottle of the morning prevents dizziness."],
 streak:["Streak","How many days in a row the kitchen was closed by 9:30 PM. The one habit that keeps a one-meal day from drifting into late-night eating. Missing a day resets it; that is fine, just start again."],
+hijri:["Hijri date","The Islamic lunar date, from the Umm al-Qura calendar on this phone (or an arithmetic calendar if the phone lacks it). Local moon sighting can differ by a day: set the offset in Settings."],
+sunnahfast:["Sunnah fast day","A day on which voluntary fasting is recommended in the tradition: Mondays and Thursdays, the 13th to 15th of each Hijri month (Ayyam al-Bid), the Day of Arafah and Ashura. You fast daily anyway; whether and how to carry a voluntary intention is a question for a scholar, not this app."],
+ramadan:["Ramadan mode","The app follows the Hijri date and switches the fast to Fajr-to-Maghrib for your city, with suhoor and iftar guidance. Goal in Ramadan is to hold weight, not lose it. Force it on or off in Settings if your community's moon sighting differs."],
+suhoor:["Suhoor","The pre-dawn meal. It ends at Fajr. Slow carbs plus protein plus water spread out, low salt. The Prophet (peace be upon him) said there is blessing in suhoor (Bukhari 1923)."],
+iftar:["Iftar","Breaking the fast at Maghrib: dates and water first, then prayer, then the main plate 20–30 minutes later at your normal dinner portion."],
+thuluth:["Rule of thirds (Qānūn al-Thuluth)","From the hadith: one third for food, one third for drink, one third for breath (Tirmidhi 2380). In practice: half the plate vegetables, a quarter protein, a quarter grain; water before the meal, sips during; about 20 minutes per meal; stop at 70–80 % full."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -336,50 +342,50 @@ function I(k){return `<span class="info" role="button" tabindex="0" data-a="info
 /* ---------- food database: values per hand portion / unit ---------- */
 const UNITS={palm:["palm","palms"],fist:["fist","fists"],hand:["cupped hand","cupped hands"],thumb:["thumb","thumbs"],bowl:["bowl","bowls"],roti:["roti","rotis"],naan:["naan","naans"],egg:["egg","eggs"],piece:["piece","pieces"],scoop:["scoop","scoops"],handful:["handful","handfuls"],slice:["slice","slices"],glass:["glass","glasses"],item:["",""]};
 const FOODS={
-chk_breast:{n:"Chicken breast, grilled",short:"grilled chicken breast",u:"palm",cat:"protein",kcal:165,p:31,c:0,f:3.5},
-chk_thigh:{n:"Chicken leg / thigh, cooked",short:"chicken (leg or thigh)",u:"palm",cat:"protein",kcal:210,p:26,c:0,f:12},
-chk_karahi:{n:"Chicken karahi",short:"chicken karahi",u:"palm",cat:"protein",kcal:250,p:26,c:5,f:14},
-chk_curry:{n:"Chicken shorba / haandi",short:"chicken curry",u:"palm",cat:"protein",kcal:230,p:25,c:5,f:12},
-chk_tikka:{n:"Chicken tikka / boti",short:"chicken tikka",u:"palm",cat:"protein",kcal:190,p:30,c:2,f:7},
-malai_boti:{n:"Malai boti",short:"malai boti",u:"palm",cat:"protein",kcal:260,p:26,c:3,f:16},
-beef_lean:{n:"Beef, lean grilled (boti / pasanda)",short:"grilled lean beef",u:"palm",cat:"protein",kcal:220,p:30,c:0,f:11},
-keema:{n:"Beef keema",short:"keema",u:"palm",cat:"protein",kcal:250,p:22,c:4,f:16},
-seekh:{n:"Seekh kebab (beef)",short:"seekh kebab",u:"piece",cat:"protein",kcal:140,p:11,c:2,f:9.5},
-chapli:{n:"Chapli kebab",short:"chapli kebab",u:"piece",cat:"protein",kcal:230,p:14,c:6,f:17},
-shami:{n:"Shami kebab",short:"shami kebab",u:"piece",cat:"protein",kcal:130,p:9,c:8,f:7},
-mutton:{n:"Mutton / palak gosht",short:"mutton",u:"palm",cat:"protein",kcal:260,p:25,c:0,f:17},
-fish_grill:{n:"Fish, grilled",short:"grilled fish",u:"palm",cat:"protein",kcal:160,p:27,c:0,f:5},
-fish_curry:{n:"Fish curry / masala",short:"fish curry",u:"palm",cat:"protein",kcal:220,p:25,c:4,f:11},
-egg:{n:"Egg (boiled or fried in shared oil)",short:"",u:"egg",cat:"protein",kcal:75,p:6,c:0.5,f:5},
-paneer:{n:"Paneer",short:"paneer",u:"palm",cat:"protein",kcal:265,p:18,c:3,f:20},
-whey:{n:"Whey protein in water",short:"whey",u:"scoop",cat:"protein",kcal:120,p:25,c:3,f:1.5},
-daal:{n:"Daal (masoor / mash / chana)",short:"daal",u:"bowl",cat:"plus",kcal:200,p:12,c:28,f:5},
-chana:{n:"Chana (chickpeas)",short:"chana",u:"bowl",cat:"plus",kcal:220,p:12,c:35,f:4},
-haleem:{n:"Haleem",short:"haleem",u:"bowl",cat:"plus",kcal:320,p:18,c:30,f:14},
-nihari:{n:"Nihari",short:"nihari",u:"bowl",cat:"protein",kcal:450,p:30,c:8,f:33},
-yogurt:{n:"Yogurt, plain (dahi)",short:"yogurt",u:"bowl",cat:"plus",kcal:130,p:8,c:9,f:7},
-raita:{n:"Raita",short:"raita",u:"bowl",cat:"plus",kcal:110,p:6,c:8,f:5},
-milk:{n:"Milk",short:"milk",u:"glass",cat:"plus",kcal:125,p:7,c:10,f:7},
-salad:{n:"Salad / kachumber",short:"salad",u:"fist",cat:"veg",kcal:25,p:1,c:5,f:0},
-sabzi:{n:"Cooked sabzi (bhindi, gobi, mixed), measured oil",short:"sabzi",u:"fist",cat:"veg",kcal:90,p:2.5,c:9,f:5},
-palak:{n:"Spinach / palak, cooked",short:"palak",u:"fist",cat:"veg",kcal:60,p:3,c:5,f:3},
-roti:{n:"Roti, medium, no ghee",short:"",u:"roti",cat:"carb",kcal:120,p:4,c:25,f:1.5},
-naan:{n:"Naan",short:"",u:"naan",cat:"carb",kcal:300,p:9,c:55,f:5},
-rice:{n:"Rice, plain boiled",short:"rice",u:"hand",cat:"carb",kcal:170,p:3.5,c:37,f:0.5},
-pulao:{n:"Pulao rice",short:"pulao rice",u:"hand",cat:"carb",kcal:200,p:4,c:34,f:6},
-biryani:{n:"Biryani rice",short:"biryani rice",u:"hand",cat:"carb",kcal:230,p:5,c:35,f:8},
-potato:{n:"Potato, boiled",short:"boiled potato",u:"hand",cat:"carb",kcal:120,p:2.5,c:27,f:0},
-fries:{n:"French fries",short:"fries",u:"fist",cat:"carb",kcal:150,p:2,c:19,f:7},
-pizza:{n:"Pizza slice",short:"pizza",u:"slice",cat:"carb",kcal:280,p:12,c:34,f:11},
-burger:{n:"Burger, single patty",short:"burger",u:"item",cat:"protein",kcal:520,p:26,c:42,f:27},
-oil:{n:"Oil / ghee / butter",short:"oil",u:"thumb",cat:"fat",kcal:120,p:0,c:0,f:14},
-olive:{n:"Olive oil + lemon dressing",short:"olive oil",u:"thumb",cat:"fat",kcal:120,p:0,c:0,f:14},
-cream:{n:"Cream",short:"cream",u:"thumb",cat:"fat",kcal:50,p:0.5,c:1,f:5},
-chutney:{n:"Mint chutney",short:"mint chutney",u:"thumb",cat:"fat",kcal:20,p:0.5,c:3,f:0.5},
-almonds:{n:"Almonds (10)",short:"almonds",u:"handful",cat:"fat",kcal:70,p:2.5,c:2.5,f:6},
-fruit:{n:"Fruit (banana, apple, orange)",short:"fruit",u:"piece",cat:"plus",kcal:90,p:1,c:23,f:0},
-dates:{n:"Dates (3)",short:"dates",u:"handful",cat:"plus",kcal:70,p:0.5,c:18,f:0},
-colddrink:{n:"Cold drink, 250 ml",short:"cold drink",u:"glass",cat:"plus",kcal:105,p:0,c:26,f:0}
+chk_breast:{ur:"مرغی کا سینہ",n:"Chicken breast, grilled",short:"grilled chicken breast",u:"palm",cat:"protein",kcal:165,p:31,c:0,f:3.5},
+chk_thigh:{ur:"مرغی کی ران",n:"Chicken leg / thigh, cooked",short:"chicken (leg or thigh)",u:"palm",cat:"protein",kcal:210,p:26,c:0,f:12},
+chk_karahi:{ur:"چکن کڑاہی",n:"Chicken karahi",short:"chicken karahi",u:"palm",cat:"protein",kcal:250,p:26,c:5,f:14},
+chk_curry:{ur:"چکن شوربہ / ہانڈی",n:"Chicken shorba / haandi",short:"chicken curry",u:"palm",cat:"protein",kcal:230,p:25,c:5,f:12},
+chk_tikka:{ur:"چکن تکہ / بوٹی",n:"Chicken tikka / boti",short:"chicken tikka",u:"palm",cat:"protein",kcal:190,p:30,c:2,f:7},
+malai_boti:{ur:"ملائی بوٹی",n:"Malai boti",short:"malai boti",u:"palm",cat:"protein",kcal:260,p:26,c:3,f:16},
+beef_lean:{ur:"گائے کا گوشت (بوٹی)",n:"Beef, lean grilled (boti / pasanda)",short:"grilled lean beef",u:"palm",cat:"protein",kcal:220,p:30,c:0,f:11},
+keema:{ur:"قیمہ",n:"Beef keema",short:"keema",u:"palm",cat:"protein",kcal:250,p:22,c:4,f:16},
+seekh:{ur:"سیخ کباب",n:"Seekh kebab (beef)",short:"seekh kebab",u:"piece",cat:"protein",kcal:140,p:11,c:2,f:9.5},
+chapli:{ur:"چپلی کباب",n:"Chapli kebab",short:"chapli kebab",u:"piece",cat:"protein",kcal:230,p:14,c:6,f:17},
+shami:{ur:"شامی کباب",n:"Shami kebab",short:"shami kebab",u:"piece",cat:"protein",kcal:130,p:9,c:8,f:7},
+mutton:{ur:"بکرے کا گوشت",n:"Mutton / palak gosht",short:"mutton",u:"palm",cat:"protein",kcal:260,p:25,c:0,f:17},
+fish_grill:{ur:"گرل مچھلی",n:"Fish, grilled",short:"grilled fish",u:"palm",cat:"protein",kcal:160,p:27,c:0,f:5},
+fish_curry:{ur:"مچھلی کا سالن",n:"Fish curry / masala",short:"fish curry",u:"palm",cat:"protein",kcal:220,p:25,c:4,f:11},
+egg:{ur:"انڈا",n:"Egg (boiled or fried in shared oil)",short:"",u:"egg",cat:"protein",kcal:75,p:6,c:0.5,f:5},
+paneer:{ur:"پنیر",n:"Paneer",short:"paneer",u:"palm",cat:"protein",kcal:265,p:18,c:3,f:20},
+whey:{ur:"وہے پروٹین",n:"Whey protein in water",short:"whey",u:"scoop",cat:"protein",kcal:120,p:25,c:3,f:1.5},
+daal:{ur:"دال",n:"Daal (masoor / mash / chana)",short:"daal",u:"bowl",cat:"plus",kcal:200,p:12,c:28,f:5},
+chana:{ur:"چنے",n:"Chana (chickpeas)",short:"chana",u:"bowl",cat:"plus",kcal:220,p:12,c:35,f:4},
+haleem:{ur:"حلیم",n:"Haleem",short:"haleem",u:"bowl",cat:"plus",kcal:320,p:18,c:30,f:14},
+nihari:{ur:"نہاری",n:"Nihari",short:"nihari",u:"bowl",cat:"protein",kcal:450,p:30,c:8,f:33},
+yogurt:{ur:"دہی",n:"Yogurt, plain (dahi)",short:"yogurt",u:"bowl",cat:"plus",kcal:130,p:8,c:9,f:7},
+raita:{ur:"رائتہ",n:"Raita",short:"raita",u:"bowl",cat:"plus",kcal:110,p:6,c:8,f:5},
+milk:{ur:"دودھ",n:"Milk",short:"milk",u:"glass",cat:"plus",kcal:125,p:7,c:10,f:7},
+salad:{ur:"سلاد / کچومر",n:"Salad / kachumber",short:"salad",u:"fist",cat:"veg",kcal:25,p:1,c:5,f:0},
+sabzi:{ur:"سبزی",n:"Cooked sabzi (bhindi, gobi, mixed), measured oil",short:"sabzi",u:"fist",cat:"veg",kcal:90,p:2.5,c:9,f:5},
+palak:{ur:"پالک",n:"Spinach / palak, cooked",short:"palak",u:"fist",cat:"veg",kcal:60,p:3,c:5,f:3},
+roti:{ur:"روٹی",n:"Roti, medium, no ghee",short:"",u:"roti",cat:"carb",kcal:120,p:4,c:25,f:1.5},
+naan:{ur:"نان",n:"Naan",short:"",u:"naan",cat:"carb",kcal:300,p:9,c:55,f:5},
+rice:{ur:"سادہ چاول",n:"Rice, plain boiled",short:"rice",u:"hand",cat:"carb",kcal:170,p:3.5,c:37,f:0.5},
+pulao:{ur:"پلاؤ",n:"Pulao rice",short:"pulao rice",u:"hand",cat:"carb",kcal:200,p:4,c:34,f:6},
+biryani:{ur:"بریانی",n:"Biryani rice",short:"biryani rice",u:"hand",cat:"carb",kcal:230,p:5,c:35,f:8},
+potato:{ur:"ابلا آلو",n:"Potato, boiled",short:"boiled potato",u:"hand",cat:"carb",kcal:120,p:2.5,c:27,f:0},
+fries:{ur:"فرائز",n:"French fries",short:"fries",u:"fist",cat:"carb",kcal:150,p:2,c:19,f:7},
+pizza:{ur:"پیزا",n:"Pizza slice",short:"pizza",u:"slice",cat:"carb",kcal:280,p:12,c:34,f:11},
+burger:{ur:"برگر",n:"Burger, single patty",short:"burger",u:"item",cat:"protein",kcal:520,p:26,c:42,f:27},
+oil:{ur:"تیل / گھی",n:"Oil / ghee / butter",short:"oil",u:"thumb",cat:"fat",kcal:120,p:0,c:0,f:14},
+olive:{ur:"زیتون کا تیل",n:"Olive oil + lemon dressing",short:"olive oil",u:"thumb",cat:"fat",kcal:120,p:0,c:0,f:14},
+cream:{ur:"کریم",n:"Cream",short:"cream",u:"thumb",cat:"fat",kcal:50,p:0.5,c:1,f:5},
+chutney:{ur:"پودینے کی چٹنی",n:"Mint chutney",short:"mint chutney",u:"thumb",cat:"fat",kcal:20,p:0.5,c:3,f:0.5},
+almonds:{ur:"بادام",n:"Almonds (10)",short:"almonds",u:"handful",cat:"fat",kcal:70,p:2.5,c:2.5,f:6},
+fruit:{ur:"پھل",n:"Fruit (banana, apple, orange)",short:"fruit",u:"piece",cat:"plus",kcal:90,p:1,c:23,f:0},
+dates:{ur:"کھجور",n:"Dates (3)",short:"dates",u:"handful",cat:"plus",kcal:70,p:0.5,c:18,f:0},
+colddrink:{ur:"کولڈ ڈرنک",n:"Cold drink, 250 ml",short:"cold drink",u:"glass",cat:"plus",kcal:105,p:0,c:26,f:0}
 };
 const BASE_MEALS=[
 {id:"karahi",n:"Chicken Karahi Plate",tag:"chicken",items:[["chk_karahi",2],["salad",2],["roti",1],["yogurt",1]],note:"Chicken and yogurt give the protein; tomato and salad add volume at low calories; one roti keeps the deficit intact. The oil is already inside the karahi, so cook it with a measured tablespoon."},
@@ -475,7 +481,7 @@ const CHECKS=[
 
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{}};
+let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{}};
 let db=null,syncState="wait",readOnly=false,tab=(location.hash||"#today").slice(1);
 if(!["today","plate","train","progress","guide"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -522,6 +528,15 @@ function hhmm(ms){const h=Math.floor(ms/36e5),m=Math.floor(ms%36e5/6e4),s=Math.f
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("show"),1800)}
 function nowHint(){
   const h=new Date().getHours()+new Date().getMinutes()/60;
+  if(ramadanActive()){const ft=fastingTimes(todayStr());if(ft){const fa=ft.fajr.getHours()+ft.fajr.getMinutes()/60,mg=ft.maghrib.getHours()+ft.maghrib.getMinutes()/60;
+    if(h<fa-1)return["Suhoor","Slow carbs (daliya, whole-wheat roti), protein (eggs, yogurt, daal), 2–3 glasses of water spread out. Go easy on salt."];
+    if(h<fa)return["Last sips","Imsak at "+fmtClock(ft.imsak)+". Fast begins at Fajr "+fmtClock(ft.fajr)+"."];
+    if(h<mg-0.5)return["Fasting","Iftar at "+fmtClock(ft.maghrib)+". Keep the day calm; walk in the shade, no heavy training."];
+    if(h<mg)return["Almost iftar","Set out 1–3 dates and water. Normal dinner portion tonight, nothing to make up for."];
+    if(h<mg+0.5)return["Iftar","Dates and water, then pray. Main plate in 20–30 minutes."];
+    if(h<mg+2)return["OnePlate iftar dinner","Soup or salad first, then the normal plate. 20 minutes. 400 ml water over the next hour."];
+    if(h<23)return["After Taraweeh","Fruit, yogurt or milk if hungry. Easy 30-min ride or a walk if you like. 400 ml water, then 250 ml before sleep."];
+    return["Sleep","Suhoor alarm set for Fajr − 60 min."]}}
   if(h<6.75)return["Sleep","Lights out was 10:45 PM. Water with a pinch of salt when you wake."];
   if(h<7.5)return["Wake & walk","500 ml water with a pinch of salt, then a 15–20 min walk."];
   if(h<8)return["Coffee & go","Black coffee #1. Water bottle packed. Leave at 8:00."];
@@ -580,6 +595,43 @@ function swRow(id,label,sub,done,ro,leadIcon,g){return `<div class="crow sw-row 
 function fmtClock(d){return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}
 
 /* ---------- views ---------- */
+/* ---------- Hijri calendar, Sunnah fast days, prayer times (ported from the Qanun al-Thuluth project) ---------- */
+const HIJRI_MONTHS=["Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Ula","Jumada al-Akhirah","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qa'dah","Dhu al-Hijjah"];
+const ISLAMIC_EPOCH=1948439.5;
+function islamicToJd(y,m,d){return d+Math.ceil(29.5*(m-1))+(y-1)*354+Math.floor((3+11*y)/30)+ISLAMIC_EPOCH-1}
+function tabularHijri(dt){const jd=Math.floor(Date.UTC(dt.getUTCFullYear(),dt.getUTCMonth(),dt.getUTCDate())/864e5+2440587.5)+0.5;const year=Math.floor((30*(jd-ISLAMIC_EPOCH)+10646)/10631);const month=Math.min(12,Math.ceil((jd-(29+islamicToJd(year,1,1)))/29.5)+1);const day=jd-islamicToJd(year,month,1)+1;return {year,month,day,cal:"tabular"}}
+let _umf;
+function hijriOf(dateStr){const off=Number((S.settings||{}).hijriOffset||0);const [y,m,d]=dateStr.split("-").map(Number);const dt=new Date(Date.UTC(y,m-1,d,12)-off*864e5);
+  if(_umf===undefined){try{const f=new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn",{timeZone:"UTC",year:"numeric",month:"numeric",day:"numeric"});_umf=f.resolvedOptions().calendar==="islamic-umalqura"?f:null}catch(e){_umf=null}}
+  if(_umf){try{const p=_umf.formatToParts(dt);const n=t=>Number(((p.find(x=>x.type===t)||{}).value||"").replace(/\D/g,""));const r={year:n("year"),month:n("month"),day:n("day"),cal:"umalqura"};if(r.year&&r.month&&r.day)return r}catch(e){}}
+  return tabularHijri(dt)}
+function hijriLabel(h){return h.day+" "+HIJRI_MONTHS[h.month-1]+" "+h.year}
+/* Sunnah fast days: Monday/Thursday, Ayyam al-Bid (13–15, not Ramadan), Arafah (9 Dhu al-Hijjah), Ashura (10 Muharram + 9th). Never suggested: Ramadan, 1 Shawwal, 10–13 Dhu al-Hijjah. The app suggests; it never rules. */
+function sunnahFast(dateStr){const h=hijriOf(dateStr),t=(S.settings||{}).tradition||"sunni";const {month,day}=h;
+  if(month===9)return null;if(month===10&&day===1)return null;if(month===12&&day===10)return null;if(t!=="shia"&&month===12&&day>=11&&day<=13)return null;
+  if(month===12&&day===9)return {k:"arafah",t:"Day of Arafah"};
+  if(t!=="shia"&&month===1&&(day===10||day===9))return {k:"ashura",t:day===10?"Ashura (10 Muharram)":"9 Muharram, with Ashura"};
+  if(day>=13&&day<=15)return {k:"bid",t:"Ayyam al-Bid ("+day+"th)"};
+  const wd=new Date(dateStr+"T12:00:00").getDay();
+  if(t!=="shia"&&(wd===1||wd===4))return {k:"monthu",t:wd===1?"Monday Sunnah fast":"Thursday Sunnah fast"};
+  return null}
+/* Solar position (Meeus) and prayer times, University of Islamic Sciences Karachi method: Fajr 18°, Isha 18°, Maghrib at sunset. */
+const DEG=Math.PI/180,sn=d=>Math.sin(d*DEG),cs=d=>Math.cos(d*DEG);
+function fixAngle(a){const r=a%360;return r<0?r+360:r}
+function julianDay(y,m,d){if(m<=2){y-=1;m+=12}const a=Math.floor(y/100),b=2-a+Math.floor(a/4);return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+b-1524.5}
+function solarPosition(jd){const t=(jd-2451545)/36525;const l0=fixAngle(280.46646+t*(36000.76983+0.0003032*t));const m=fixAngle(357.52911+t*(35999.05029-0.0001537*t));const e=0.016708634-t*(0.000042037+0.0000001267*t);const c=sn(m)*(1.914602-t*(0.004817+0.000014*t))+sn(2*m)*(0.019993-0.000101*t)+sn(3*m)*0.000289;const omega=125.04-1934.136*t;const lambda=l0+c-0.00569-0.00478*sn(omega);const eps0=23+(26+(21.448-t*(46.815+t*(0.00059-t*0.001813)))/60)/60;const eps=eps0+0.00256*cs(omega);const declination=Math.asin(sn(eps)*sn(lambda))/DEG;const y=Math.tan(eps/2*DEG)**2,l0r=l0*DEG,mr=m*DEG;const eot=y*Math.sin(2*l0r)-2*e*Math.sin(mr)+4*e*y*Math.sin(mr)*Math.cos(2*l0r)-0.5*y*y*Math.sin(4*l0r)-1.25*e*e*Math.sin(2*mr);return {declination,eot:(4*eot)/DEG}}
+function hourAngle(alt,lat,decl){const x=(sn(alt)-sn(lat)*sn(decl))/(cs(lat)*cs(decl));if(x<-1||x>1)return NaN;return Math.acos(x)/DEG}
+function prayerTimes(dateStr,lat,lon){const [y,m,d]=dateStr.split("-").map(Number);const jd0=julianDay(y,m,d);const noonAt=h=>12-lon/15-solarPosition(jd0+h/24).eot/60;let noon=12-lon/15;for(let i=0;i<3;i++)noon=noonAt(noon);
+  const atAlt=(alt,side)=>{let t=noon+side*6;for(let i=0;i<4;i++){const {declination}=solarPosition(jd0+t/24);const h=hourAngle(alt,lat,declination);if(isNaN(h))return NaN;t=noonAt(t)+side*h/15}return t};
+  const sunrise=atAlt(-0.8333,-1),sunset=atAlt(-0.8333,1);if(isNaN(sunrise)||isNaN(sunset))return null;const night=24-(sunset-sunrise);
+  let fajr=atAlt(-18,-1);const safeF=sunrise-night/2;if(isNaN(fajr)||safeF>fajr)fajr=safeF;
+  let isha=atAlt(-18,1);const safeI=sunset+night/2;if(isNaN(isha)||safeI<isha)isha=safeI;
+  const base=Date.UTC(y,m-1,d);const at=h=>new Date(base+Math.round(h*60)*6e4);
+  return {fajr:at(fajr),sunrise:at(sunrise),dhuhr:at(noon+1/60),maghrib:at(sunset),isha:at(isha)}}
+const CITIES={karachi:["Karachi",24.8607,67.0011],lahore:["Lahore",31.5204,74.3587],islamabad:["Islamabad",33.6844,73.0479],rawalpindi:["Rawalpindi",33.5651,73.0169],faisalabad:["Faisalabad",31.4504,73.135],multan:["Multan",30.1575,71.5249],peshawar:["Peshawar",34.0151,71.5249],quetta:["Quetta",30.1798,66.975],hyderabad:["Hyderabad",25.396,68.3578],gujranwala:["Gujranwala",32.1877,74.1945],sialkot:["Sialkot",32.4945,74.5229]};
+function fastingTimes(dateStr){const c=CITIES[(S.settings||{}).city]||CITIES.karachi;const t=prayerTimes(dateStr,c[1],c[2]);if(!t)return null;return {city:c[0],fajr:t.fajr,imsak:new Date(t.fajr.getTime()-10*6e4),maghrib:t.maghrib,isha:t.isha}}
+function ramadanActive(){const mode=(S.settings||{}).ramadan||"auto";if(mode==="on")return true;if(mode==="off")return false;return hijriOf(todayStr()).month===9}
+
 /* ---------- meal maths ---------- */
 function normItems(items){return (items||[]).map(it=>Array.isArray(it)?{f:it[0],q:Number(it[1])}:{f:it.f,q:Number(it.q)}).filter(it=>FOODS[it.f]&&it.q>0)}
 function mealCalc(m){let k=0,p=0,c=0,f=0;normItems(m.items).forEach(it=>{const fd=FOODS[it.f];k+=fd.kcal*it.q;p+=fd.p*it.q;c+=fd.c*it.q;f+=fd.f*it.q});return {kcal:Math.round(k/5)*5,p:Math.round(p),c:Math.round(c),f:Math.round(f)}}
@@ -589,7 +641,7 @@ function hands(m){const g={protein:[],veg:[],carb:[],fat:[],plus:[]};normItems(m
 function handLine(m){const g=hands(m);return [].concat(g.protein,g.veg,g.carb,g.fat,g.plus).join(" · ")}
 function allMeals(){const o=S.meals||{};const list=BASE_MEALS.map(b=>{const v=o[b.id];if(v&&v.deleted)return null;return Object.assign({},b,v||{},{base:true})}).filter(Boolean);Object.values(o).forEach(v=>{if(v&&v.id&&/^c_/.test(v.id)&&!v.deleted)list.push(Object.assign({},v,{base:false}))});return list}
 function tonightMeal(){const l=allMeals();if(!l.length)return null;return l[(new Date().getDate()+new Date().getMonth())%l.length]}
-function foodOptions(sel){const cats=[["protein","Protein"],["veg","Vegetables"],["carb","Carbs"],["fat","Fats"],["plus","Daal, dairy & extras"]];return cats.map(c=>`<optgroup label="${c[1]}">${Object.keys(FOODS).filter(k=>FOODS[k].cat===c[0]).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(FOODS[k].n)} · per ${esc((UNITS[FOODS[k].u]||[""])[0]||"item")}</option>`).join("")}</optgroup>`).join("")}
+function foodOptions(sel){const cats=[["protein","Protein"],["veg","Vegetables"],["carb","Carbs"],["fat","Fats"],["plus","Daal, dairy & extras"]];return cats.map(c=>`<optgroup label="${c[1]}">${Object.keys(FOODS).filter(k=>FOODS[k].cat===c[0]).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(FOODS[k].n)} · ${esc(FOODS[k].ur||"")} · per ${esc((UNITS[FOODS[k].u]||[""])[0]||"item")}</option>`).join("")}</optgroup>`).join("")}
 function mealTotals(d){const t=mealCalc(d);const line=handLine(d);return `${mbar(t)}<p class="small"><b>By hand:</b> ${line?esc(line):"<span class='muted'>add foods to see the portions</span>"}</p>`}
 function mealEditor(d){return `
   <section class="card" id="meditor">
@@ -618,12 +670,13 @@ function vToday(){
   const on=!!S.fast.startedAt,goal=S.settings.fastHours||21,dn=doneCount(d),st=streak();
   const h=new Date().getHours()+new Date().getMinutes()/60;
   const tonight=tonightMeal();
+  const hj=hijriOf(t),sf=sunnahFast(t),ram=ramadanActive(),ft=ram?fastingTimes(t):null;
   let kv="";
   if(on){const s=new Date(S.fast.startedAt),e=new Date(s.getTime()+goal*36e5);kv=`<div class="kv"><span>Started</span><b>${s.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(s)}</b><span>Goal at</span><b>${e.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(e)}</b></div>`}
-  else kv=`<div class="kv"><span>Goal</span><b>${goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
+  else kv=`<div class="kv"><span>Goal</span><b id="kvGoal">${ram&&ft?((ft.maghrib-ft.fajr)/36e5).toFixed(1):goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
   return `
-  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date().toLocaleDateString(undefined,{day:"numeric",month:"long"})}</p><h1>${greeting()}</h1></div>
-   <span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div>
+  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date().toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${greeting()}</h1></div>
+   <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
   ${ro?`<div class="note">You are viewing the owner's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:""}
   <section class="card strip">
     <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-dn/7)).toFixed(1)}"/></svg><b>${dn}/7</b></div>
@@ -647,6 +700,16 @@ function vToday(){
       <p class="small muted" style="flex-basis:100%">Enter both times to log a finished fast. Enter only the start to correct the running one.</p>
     </form>`:""}
   </section>
+  ${ram&&ft?`<section class="card" style="border-color:var(--green)">
+    <div class="row between"><p class="eyebrow">${ic("moon")} Ramadan · ${esc(ft.city)} ${I("ramadan")}</p><span class="pill green">${hj.day} Ramadan</span></div>
+    <div class="bento">
+      <div class="tile"><b>${fmtClock(ft.fajr)}</b><span>suhoor ends (Fajr) ${I("suhoor")}</span></div>
+      <div class="tile"><b>${fmtClock(ft.maghrib)}</b><span>iftar (Maghrib) ${I("iftar")}</span></div>
+    </div>
+    <p class="small" id="rCount"></p>
+    ${ro?"":on?"":`<button class="btn wide" data-a="rfajr">${ic("moon")} I'm fasting since Fajr</button>`}
+    <p class="small muted">Imsak ${fmtClock(ft.imsak)} (Fajr − 10 min, a reminder only). Karachi calculation method, Fajr 18°. Local moon sighting may shift the date: adjust the Hijri offset in Settings. The app suggests times; it never rules.</p>
+  </section>`:""}
   <section class="card accent">
     <p class="eyebrow">${ic(hintIcon(h))} Right now</p>
     <h2>${esc(hint[0])}</h2><p class="small">${esc(hint[1])}</p>
@@ -666,6 +729,11 @@ function vToday(){
       ${swRow("steps","8,000 steps","Or your current phase target",d.steps,ro,"foot","steps")}
       ${swRow("closed","Kitchen closed by 9:30 PM","Then start the fast",d.closed,ro,"moon","closed")}
     </div>
+  </section>
+  <section class="card">
+    <div class="row between"><p class="eyebrow">${ic("clock")} Mindful dinner · 20 minutes ${I("thuluth")}</p>${S._meal?`<span class="pill green" id="mealT">00:00</span>`:""}</div>
+    <p class="small" id="mealMsg">${S._meal?"":"Water 20–30 min before. Bismillah. Protein first, roti or rice last, spoon down between bites. Stop at about 80 % full."}</p>
+    ${ro?"":S._meal?`<button class="btn" data-a="mealstop">Finished eating</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} Start the 20-minute meal timer</button>`}
   </section>
   ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
     <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate</p>${ic("chev","")}</div>
@@ -720,6 +788,7 @@ function vPlate(){
   ${list.map(m=>{if(ed&&ed.id===m.id)return mealEditor(ed);const t=mealCalc(m),g=hands(m);return `<details ${S._mopen===m.id?"open":""} data-mid="${m.id}"><summary><span>${esc(m.n)}${m.base?"":` <span class="pill soft" style="font-size:10px;padding:1px 7px">custom</span>`}${m.base&&S.meals[m.id]?` <span class="pill grey" style="font-size:10px;padding:1px 7px">edited</span>`:""}<br><span class="kcal">${t.kcal} kcal · ${t.p} g protein</span></span>${ic("chev","chev")}</summary><div class="body">
     ${mbar(t)}
     <div class="hands"><span>Protein</span><div>${esc(g.protein.join(" · ")||"—")}</div><span>Veg</span><div>${esc(g.veg.join(" · ")||"—")}</div><span>Carbs</span><div>${esc(g.carb.join(" · ")||"—")}</div><span>Fat</span><div>${esc(g.fat.join(" · ")||"—")}</div><span>Plus</span><div>${esc(g.plus.join(" · ")||"—")}</div></div>
+    <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(FOODS[it.f].ur||FOODS[it.f].n)).join(" · "))}</p>
     ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
     ${ro?"":`<div class="row"><button class="btn" type="button" data-a="me_edit" data-id="${m.id}">Edit meal</button></div>`}
     </div></details>`}).join("")}
@@ -834,6 +903,10 @@ function vProgress(){
       <label class="f">Start date<input type="date" id="s_sd" value="${st.startDate}"></label>
       <label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>
       <label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>
+      <label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
+      <label class="f">Ramadan mode<select id="s_ram">${[["auto","Auto (by Hijri date)"],["on","On"],["off","Off"]].map(o=>`<option value="${o[0]}" ${(st.ramadan||"auto")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
+      <label class="f">Hijri offset (moon sighting)<select id="s_hoff">${[-2,-1,0,1,2].map(v=>`<option value="${v}" ${Number(st.hijriOffset||0)===v?"selected":""}>${v>0?"+"+v:v} day${Math.abs(v)===1?"":"s"}</option>`).join("")}</select></label>
+      <label class="f">Sunnah fast days<select id="s_trad">${[["sunni","Sunni (Mon/Thu, Ayyam al-Bid, Arafah, Ashura)"],["shia","Shia (Ayyam al-Bid, Arafah)"]].map(o=>`<option value="${o[0]}" ${(st.tradition||"sunni")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
       <button class="btn" type="submit">Save settings</button>
     </form>
   </div></details>`}`;
@@ -881,6 +954,29 @@ function vGuide(){
   <div class="seg">${[["all","All"],["green","Green"],["amber","Yellow"],["red","Red"]].map(k=>`<button class="${f===k[0]?"on":""}" data-a="ff" data-v="${k[0]}">${k[1]}</button>`).join("")}</div>
   <div class="list">${items.map(i=>`<div class="item ${i.g}"><div class="t"><b>${esc(i.n)}</b><small>Strict: ${esc(i.s)} · Fat-loss: ${esc(i.f)} · Autophagy: ${esc(i.a)}</small><small>${esc(i.note)}</small></div><span class="kcal">${esc(i.k)} kcal</span></div>`).join("")}</div>
   <p class="small muted">Green: use freely. Yellow: small calories; fine for fat loss, better in the window. Red: sugar, insulin, hunger an hour later.</p>
+  <details><summary><span>Sunnah of eating · guidance, not rulings ${I("thuluth")}</span>${ic("chev","chev")}</summary><div class="body">
+    <div class="note">"It is sufficient for the son of Adam to eat a few morsels to keep his back straight. If he must, then one third for his food, one third for his drink and one third for his breath." Jami' al-Tirmidhi 2380; Sunan Ibn Majah 3349 (graded sahih by al-Albani).</div>
+    <ul class="small">
+      <li><b>Rule of thirds on the plate:</b> half vegetables, a quarter protein, a quarter grain. Water 20–30 min before, sips during, freely 30–60 min after. About 20 minutes per meal; stop at 70–80 % full. Self-check: "Could I eat more if I had to?" (Tirmidhi 2380)</li>
+      <li><b>Bismillah, right hand, from what is in front of you.</b> (Sahih al-Bukhari 5376; Sahih Muslim 2022)</li>
+      <li><b>Drink sitting, in three breaths, not in one go.</b> (Sahih Muslim 2028)</li>
+      <li><b>Food for two is enough for three.</b> Share the plate; serve less, add if needed. (Sahih al-Bukhari 5392)</li>
+      <li><b>Never criticise food.</b> Eat it or leave it quietly. (Sahih al-Bukhari 5409; Sahih Muslim 2064)</li>
+      <li><b>Praise Allah after eating.</b> Gratitude is part of the meal. (Sahih Muslim 2734)</li>
+      <li><b>Suhoor has blessing in it.</b> Never skip it in Ramadan; take it close to Fajr. (Sahih al-Bukhari 1923; Sahih Muslim 1095)</li>
+      <li><b>Break the fast with dates and water</b>, then pray, then eat. (Sunan Abi Dawud 2356; Jami' al-Tirmidhi 696)</li>
+      <li><b>Chai an hour after the meal, not with it</b>: tea tannins reduce iron absorption. (Nutrition evidence, not a narration.)</li>
+    </ul>
+    <p class="small muted">References as collected in the Qānūn al-Thuluth project; hadith gradings there are pending scholar review except where stated. Narrations are presented as the Prophetic tradition of eating, not as medicine. For rulings on fasting or food, ask a qualified scholar.</p>
+  </div></details>
+  <details><summary><span>Ramadan plan ${I("ramadan")}</span>${ic("chev","chev")}</summary><div class="body">
+    <p class="small">The app switches to Ramadan mode by the Hijri date (or force it in Settings). Goal in Ramadan: hold your weight, keep protein, keep walking. Fat loss resumes after Eid.</p>
+    <div class="scroll"><table class="tbl"><tbody>
+      ${[["Fajr − 60","Suhoor alarm"],["Suhoor","Slow carbs (daliya, whole-wheat roti, barley talbina) + protein (eggs, yogurt, daal) + fluid-rich foods. 2–3 glasses spread out. Low salt, nothing fried."],["Imsak","Last sips, 10 min before Fajr"],["Day","Water none; walk in the shade; no hard training"],["Maghrib","1–3 dates + 250 ml water, then pray"],["+20–30 min","OnePlate iftar: soup or salad first, normal dinner portion, 20 minutes. One small fried item a week at most."],["+1 h","400 ml water, two glasses spaced"],["After Taraweeh","Fruit, yogurt or milk if hungry. 400 ml water. Easy 30-min ride or walk if energy allows."],["Before sleep","250 ml water. Lights out early; suhoor comes fast."]].map(r=>`<tr><td class="kcal" style="white-space:nowrap">${r[0]}</td><td class="small">${esc(r[1])}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="small"><b>Weekly themes:</b> week 1 rhythm (suhoor daily, dates and water, pray); week 2 the Thuluth iftar (soup first, normal portion, wait 20 min); week 3 hydration (spread water, fewer salty and fried foods); week 4 lighter meals for the last ten nights, plan Eid without overeating.</p>
+    <p class="small muted">Stop signs while fasting: dizziness, fainting, very dark urine or no urine for 6+ hours, vomiting, confusion. Break the fast, drink, eat, and see a doctor. Fasting with diabetes medication, pregnancy or any daily medicine needs a clinician's say first.</p>
+  </div></details>
   <details><summary><span>Cheat meal rules ${I("cheat")}</span>${ic("chev","chev")}</summary><div class="body">
     <p class="small">Saturday 7 PM, in place of dinner, finished by 8:30. One meal, not a day.</p>
     <ul class="small"><li><b>Biryani:</b> 2 heaped cupped hands rice max, all the chicken you want, salad and raita first.</li><li><b>Pizza:</b> 3 thin slices (2 thick) with a salad. No garlic bread, no stuffed crust.</li><li><b>Burger:</b> single patty. If fries, one fist, shared.</li><li><b>BBQ:</b> unlimited tikka and kebab, one naan.</li><li><b>Nihari:</b> one bowl, pour off the oil, half to one naan.</li></ul>
@@ -943,13 +1039,17 @@ function render(){
   tick();
 }
 function tick(){
+  const mt=document.getElementById("mealT");if(mt&&S._meal){const ms=Date.now()-S._meal;mt.textContent=hhmm(ms).slice(3);const mm=document.getElementById("mealMsg");if(mm){mm.textContent=ms<5*6e4?"Bismillah. Protein first. Spoon down between bites.":ms<15*6e4?"Halfway. Small sips of water only. Keep chewing slowly.":ms<20*6e4?"Fullness check: could you eat more if you had to? If yes, you have had enough. Wait 15 minutes before any seconds.":"20 minutes done. Alhamdulillah. Walk in 30 minutes; chai at least an hour after eating."}}
+  const rc=document.getElementById("rCount");if(rc){const ft=fastingTimes(todayStr());if(ft){const now=Date.now();if(now<ft.fajr){rc.textContent="Suhoor ends in "+hhmm(ft.fajr-now).slice(0,5)+" h"}else if(now<ft.maghrib){rc.textContent="Iftar in "+hhmm(ft.maghrib-now).slice(0,5)+" h"}else{const ft2=fastingTimes(todayStr(new Date(now+864e5)));rc.textContent="Fast over for today. Next suhoor ends "+(ft2?fmtClock(ft2.fajr):"")}}}
   const bar=document.getElementById("ringBar");if(!bar)return;
   const t=document.getElementById("ringTime"),s=document.getElementById("ringSub");
   if(!S.fast.startedAt){bar.style.strokeDashoffset=326.7;return}
-  const ms=Date.now()-new Date(S.fast.startedAt).getTime(),goal=(S.settings.fastHours||21)*36e5,frac=Math.min(1,ms/goal);
+  let goal=(S.settings.fastHours||21)*36e5;if(ramadanActive()){const ft=fastingTimes(todayStr());if(ft)goal=ft.maghrib-ft.fajr}
+  const ms=Date.now()-new Date(S.fast.startedAt).getTime(),frac=Math.min(1,ms/goal);
   bar.style.strokeDashoffset=(326.7*(1-frac)).toFixed(1);
   t.textContent=hhmm(Math.max(0,ms));
   s.textContent=ms>=goal?"goal reached":(hhmm(goal-ms).slice(0,5)+" to go");
+  const gl=document.getElementById("kvGoal");if(gl)gl.textContent=(goal/36e5).toFixed(1)+" h";
 }
 setInterval(tick,1000);
 function openInfo(k){const g=G[k];if(!g)return;document.getElementById("sheetTitle").textContent=g[0];document.getElementById("sheetBody").textContent=g[1];document.getElementById("sheet").classList.add("show");document.getElementById("scrim").classList.add("show");document.getElementById("sheetClose").focus()}
@@ -968,6 +1068,9 @@ document.addEventListener("click",e=>{
   if(a==="ff"){S._ff=b.dataset.v;render();return}
   if(readOnly){toast("View only");return}
   if(a==="ftimes"){S._ft=!S._ft;render();return}
+  if(a==="rfajr"){const ft=fastingTimes(t);if(ft){S.fast={startedAt:ft.fajr.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fasting since Fajr "+fmtClock(ft.fajr));render()}return}
+  if(a==="mealstart"){S._meal=Date.now();render();return}
+  if(a==="mealstop"){const m=Math.round((Date.now()-S._meal)/6e4);S._meal=null;toast(m>=15?"Meal took "+m+" min. Well paced.":"Meal took "+m+" min. Try to slow down tomorrow.");render();return}
   if(a==="ftcancel"){S._ft=false;render();return}
   if(/^me_/.test(a)){mealAction(a,b);return}
   if(a==="startfast"){S.fast={startedAt:new Date().toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fast started");render();return}
@@ -982,7 +1085,7 @@ document.addEventListener("submit",e=>{
   if(readOnly){e.preventDefault();return}
   if(e.target.id==="fform"){e.preventDefault();const sv=document.getElementById("f_start").value,ev=document.getElementById("f_end").value;if(!sv)return;const st=new Date(sv);if(isNaN(st))return;if(ev){const en=new Date(ev);if(isNaN(en)||en<=st){toast("End must be after start");return}const h=(en-st)/36e5;if(h>72){toast("That is longer than 72 h; check the dates");return}S.fast={startedAt:null,lastHours:Math.round(h*10)/10,lastEndedAt:en.toISOString()};persistFast();const k=todayStr(en),dd=day(k);dd.fastH=Math.round(h*10)/10;persistDay(k);toast("Logged "+h.toFixed(1)+" h fast")}else{if(st>new Date()){toast("Start is in the future");return}S.fast={startedAt:st.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Start time set")}S._ft=false;render();return}
   if(e.target.id==="wform"){e.preventDefault();const d=document.getElementById("wdate").value,kg=parseFloat(document.getElementById("wkg").value),cm=parseFloat(document.getElementById("wcm").value);if(!d||!(kg>0))return;const r={date:d,weight:Math.round(kg*10)/10};if(cm>0)r.waist=Math.round(cm*2)/2;S.weighins[d]=r;persistWeigh(d);toast("Saved "+kg.toFixed(1)+" kg"+(strengthOn()?" · strength unlocked!":""));render()}
-  if(e.target.id==="sform"){e.preventDefault();const sw=parseFloat(document.getElementById("s_sw").value),tw=parseFloat(document.getElementById("s_tw").value),sd=document.getElementById("s_sd").value,fh=parseInt(document.getElementById("s_fh").value,10),uk=parseFloat(document.getElementById("s_uk").value);if(sw>0)S.settings.startWeight=sw;if(tw>0)S.settings.targetWeight=tw;if(sd)S.settings.startDate=sd;if(fh>=14&&fh<=24)S.settings.fastHours=fh;if(uk>0)S.settings.unlockKg=uk;persistSettings();toast("Settings saved");render()}
+  if(e.target.id==="sform"){e.preventDefault();const sw=parseFloat(document.getElementById("s_sw").value),tw=parseFloat(document.getElementById("s_tw").value),sd=document.getElementById("s_sd").value,fh=parseInt(document.getElementById("s_fh").value,10),uk=parseFloat(document.getElementById("s_uk").value);if(sw>0)S.settings.startWeight=sw;if(tw>0)S.settings.targetWeight=tw;if(sd)S.settings.startDate=sd;if(fh>=14&&fh<=24)S.settings.fastHours=fh;if(uk>0)S.settings.unlockKg=uk;const cty=document.getElementById("s_city"),ram=document.getElementById("s_ram"),hoff=document.getElementById("s_hoff"),trad=document.getElementById("s_trad");if(cty&&CITIES[cty.value])S.settings.city=cty.value;if(ram)S.settings.ramadan=ram.value;if(hoff)S.settings.hijriOffset=Number(hoff.value);if(trad)S.settings.tradition=trad.value;persistSettings();toast("Settings saved");render()}
 });
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(VIEWS[h]&&h!==tab){tab=h;render()}});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});

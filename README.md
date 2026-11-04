@@ -43,3 +43,13 @@ Educational content, not individual medical advice. Review with your physician, 
 A phone-first companion app lives in [`app/index.html`](app/index.html): a live fast timer, daily check-ins (water, protein palms, starter, session, post-dinner walk, kitchen closed), the plate builder with all 16 dinners, the phased training plan, a weigh-in log with a chart against the 0.5 kg/week line, and the fasting traffic-light guide.
 
 It is published as a private Claude Artifact, which works on iOS, Android and desktop browsers from one link (the page switches to a sidebar layout on wide screens) with no app store or hosting setup. Weigh-ins and check-ins sync across devices through the Claude account that owns the artifact. The same file can also be served by GitHub Pages if you ever want a public URL; in that mode data stays on each device.
+
+## Borrowed from Qānūn al-Thuluth
+
+Parts of the app are adapted from the [qanun-al-thuluth](https://github.com/mtafseerhaider/qanun-al-thuluth) family-nutrition project, which encodes the Prophetic rule of thirds:
+
+- **Hijri date and Sunnah fast days** (Monday/Thursday, Ayyam al-Bid, Arafah, Ashura) on the Today tab, with a moon-sighting offset. Ported from its `prayer/hijri.ts` and `prayer/voluntary-fasts.ts`.
+- **Ramadan mode** with Fajr and Maghrib for eleven Pakistani cities (University of Islamic Sciences Karachi method), a Fajr-to-Maghrib fast ring, suhoor and iftar guidance, hydration windows and weekly themes. Ported from its `prayer/astronomy.ts`, `prayer/times.ts` and `prayer/cities.ts`, and the Ramadan module in `docs/15`.
+- **The 20-minute mindful dinner timer** with the fullness check at 15 minutes, from its `constants/thuluth.ts` and the rule-of-thirds recommendations.
+- **Urdu names on every food** in the meal editor and meal list, following its ingredient catalog.
+- **Sunnah of eating guidance** in the Guide with the hadith references its content team collected. The app cites; it never rules.
