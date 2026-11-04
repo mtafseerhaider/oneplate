@@ -36,6 +36,7 @@
     invite: (level, memberId, email) => ensureHousehold().then(() => j("POST", `/households/${state.hid}/invites`, { level, memberId, email: email || undefined })),
     exportHousehold: () => ensureHousehold().then(() => j("GET", `/households/${state.hid}/export`)),
     deleteHousehold: () => ensureHousehold().then(() => j("DELETE", `/households/${state.hid}`)),
-    signOut: () => j("POST", "/auth/logout").then(() => { location.href = "./account.html"; }) };
+    signOut: () => j("POST", "/auth/logout").then(() => { location.href = "./account.html"; }),
+    addPasskey: async () => { const PK = window.SimpleWebAuthnBrowser; if (!PK || !PK.browserSupportsWebAuthn()) throw new Error("This browser has no passkey support"); const o = await j("POST", "/auth/passkey/register/options"); const resp = await PK.startRegistration({ optionsJSON: o.options }); return j("POST", "/auth/passkey/register/verify", { challengeId: o.challengeId, response: resp, label: navigator.platform }); } };
   window.claude = { use: async (name) => { try { await ensureHousehold(); } catch (e) { if (e.code === "not_granted") { location.href = "./account.html"; return null; } return null; } return name === "db" ? db : name === "user" ? user : null; } };
 })();

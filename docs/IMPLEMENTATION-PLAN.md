@@ -18,10 +18,13 @@ Done in this commit:
 - Export my household and delete my household from inside the app (owner only, delete needs a second tap).
 - Email delivery behind a Mailer interface: password reset by one-hour token, invite emails; console transport locally, memory transport in tests.
 - Invite Uzma from the app's Account card; sign out.
+Also done:
+- Passkey sign-in (WebAuthn, discoverable credentials): add a passkey from the Account card, sign in with Face ID or fingerprint from the sign-in page; verified end to end with a virtual authenticator.
+- Urdu interface as a per-device choice (toggle in the top bar): right-to-left layout, Noto Nastaliq Urdu, about 100 interface strings; the content libraries stay in English until the phase 4 content edition.
+- Accessibility: skip link, main landmark, labelled navigation, every icon button labelled, visible focus, reduced-motion respected.
 Still to do:
-- Passkey sign-in on supported devices.
-- Accessibility pass and Urdu interface strings (RTL) using the existing Urdu food names as the seed.
 - SMTP or provider transport for the Mailer (one class), and a real domain for the reset links.
+- Translate the remaining long-form screens (Train and Learn body text) once a reviewer for the Urdu copy is available.
 
 ## Phase 2: Decompose the UI (3–4 weeks)
 - Move the single-file UI into `apps/web/src` modules by tab, keeping the design tokens. The artifact build becomes a bundler target that inlines the result, so `app/index.html` is generated, not hand-edited.

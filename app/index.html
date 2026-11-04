@@ -1,6 +1,6 @@
 <title>OnePlate</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap">
 <style>
 /* Layout: glanceable daily dashboard. Phone: sticky top bar, scrolling bento cards, bottom tab bar. Desktop: top bar, left sidebar, two-column bento. Saffron accent on a soft warm-green ground; semantic green/amber/red kept separate from the accent. */
 :root{
@@ -275,22 +275,37 @@ ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
   .sheet .grab{display:none}
   .toast{bottom:32px}
 }
+html.ur body,html.ur h1,html.ur h2,html.ur h3,html.ur .tabs button,html.ur button.btn,html.ur .eyebrow,html.ur details summary{font-family:"Noto Nastaliq Urdu","IBM Plex Sans",system-ui,sans-serif}
+html.ur body{line-height:1.9;font-size:15.5px}
+html.ur .eyebrow{letter-spacing:0;text-transform:none;font-size:12.5px}
+html.ur .tabs button{text-transform:none;letter-spacing:0;font-size:11.5px}
+html.ur .kcal,html.ur .mkey,html.ur .stat b,html.ur .tile b,html.ur .ring .lbl,html.ur .log .r,html.ur input,html.ur .qc{direction:ltr;unicode-bidi:isolate}
+.skip{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip:focus{width:auto;height:auto;clip:auto;inset-inline-start:16px;top:8px;background:var(--panel);color:var(--fg);padding:8px 12px;border-radius:8px;z-index:50}
+.langbtn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--muted);font:600 11px var(--body);padding:4px 8px;border-radius:999px;cursor:pointer;margin-inline-start:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <div id="app">
+  <a href="#view" class="skip">Skip to content</a>
   <header class="top">
     <div class="brand"><i></i>OnePlate</div>
-    <span id="syncChip" class="chip wait">Loading</span>
+    <span style="display:flex;align-items:center"><span id="syncChip" class="chip wait">Loading</span><button class="langbtn" id="langBtn" data-a="lang" aria-label="Switch language">اردو</button></span>
   </header>
-  <main><div class="wrap" id="view"></div></main>
-  <nav class="tabs" id="tabs"></nav>
+  <main id="main" aria-live="polite"><div class="wrap" id="view" tabindex="-1"></div></main>
+  <nav class="tabs" id="tabs" aria-label="Sections"></nav>
 </div>
 <div class="toast" id="toast"></div>
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="grab"></div><button class="x" id="sheetClose" aria-label="Close">✕</button><h3 id="sheetTitle"></h3><p id="sheetBody"></p></div>
 
 <script>
+
+/* ---------- interface language (per device): English or Urdu. Content libraries stay in English; see docs/IMPLEMENTATION-PLAN.md phase 4. ---------- */
+const UR={"Today":"آج","Plate":"پلیٹ","Family":"خاندان","Train":"ورزش","Progress":"پیش رفت","Learn":"سیکھیں","Good morning":"صبح بخیر","Good afternoon":"دوپہر بخیر","Good evening":"شام بخیر","Catching up":"پچھلے دن کا اندراج","Fast":"روزہ","Fasting":"روزہ جاری","Eating window":"کھانے کا وقت","Start fast now":"ابھی روزہ شروع کریں","End fast, eat":"روزہ ختم، کھائیں","Cancel":"منسوخ","Set times":"وقت درج کریں","Right now":"ابھی","Today's session":"آج کی ورزش","Check-ins":"روزانہ کے نشان","All done":"سب ہو گیا","Logging for":"اندراج برائے","Back to today":"واپس آج پر","Water":"پانی","Protein palms":"پروٹین کی ہتھیلیاں","Protein starter at home":"گھر پہنچ کر پروٹین اسٹارٹر","Walk after dinner":"رات کے کھانے کے بعد چہل قدمی","8,000 steps":"8,000 قدم","Kitchen closed by 9:30 PM":"رات 9:30 تک باورچی خانہ بند","Whole self today":"آج کی مکمل حالت","Body":"جسم","Mind":"ذہن","Heart":"دل","Soul":"روح","Mood":"مزاج","Low":"کم","Meh":"ٹھیک ٹھاک","OK":"ٹھیک","Good":"اچھا","Great":"بہترین","Sleep last night":"گزشتہ رات کی نیند","Three things I am grateful for":"تین چیزیں جن کا شکر ہے","Verse of the day read":"آج کی آیت پڑھ لی","Open today's learning":"آج کا سبق کھولیں","Mindful dinner · 20 minutes":"سوچ سمجھ کر کھانا · 20 منٹ","Start the 20-minute meal timer":"20 منٹ کا ٹائمر شروع کریں","Finished eating":"کھانا ختم","Tonight's plate":"آج رات کی پلیٹ","The Plate":"پلیٹ","Build by hand, no scales":"ہاتھ کے ناپ سے، ترازو کے بغیر","Protein":"پروٹین","Vegetables":"سبزیاں","Carbs":"کاربوہائیڈریٹ","Fat":"چکنائی","Tonight's suggestion":"آج رات کی تجویز","dinners":"رات کے کھانے","Edit meal":"کھانا بدلیں","Set as tonight's plate":"آج رات کی پلیٹ بنائیں","New meal":"نیا کھانا","Save meal":"کھانا محفوظ کریں","Family rules":"خاندانی اصول","Tonight for everyone":"آج رات سب کے لیے","Cook:":"پکائیں:","Edit":"ترمیم","Save":"محفوظ کریں","Log":"درج کریں","Training":"ورزش","This week":"اس ہفتے","Strength training":"طاقت کی ورزش","Locked":"مقفل","Unlocked":"کھل گئی","Log weigh-in":"وزن درج کریں","Weigh-ins":"وزن کے اندراج","kg now":"کلو اب","kg to go":"کلو باقی","Checkpoints":"سنگِ میل","Settings":"ترتیبات","Verse of the day":"آج کی آیت","Word of the day":"آج کا لفظ","Story of the day":"آج کی کہانی","Idea of the day":"آج کا خیال","Dua of the day":"آج کی دعا","Poem of the day":"آج کا شعر","Question of the day":"آج کا سوال","Today's Quran reading":"آج کی قرآن خوانی","Family circle tonight · 5 minutes":"آج رات خاندانی حلقہ · 5 منٹ","We did the family circle":"ہم نے خاندانی حلقہ کر لیا","Mark today's learning done":"آج کا سبق مکمل","Done today":"آج ہو گیا","Read it":"پڑھ لیا","Read, revisit later":"پڑھا، دوبارہ دیکھوں گا","Not yet":"ابھی نہیں","Reference":"حوالہ","Synced":"ہم آہنگ","This device only":"صرف اس آلے پر","View only":"صرف دیکھنے کے لیے","Family editor":"خاندانی ایڈیٹر","Loading":"لوڈ ہو رہا ہے","week":"ہفتہ","seconds if hungry":"بھوک ہو تو مزید","Growing · never restricted":"بڑھ رہا ہے · کوئی پابندی نہیں","Fat loss":"چربی کم کرنا","Maintain":"برقرار رکھنا"};
+let LANG="en";try{LANG=localStorage.getItem("oneplate.lang")||"en"}catch(e){}
+function tr(s){return LANG==="ur"&&UR[s]?UR[s]:s}
+function applyLang(){document.documentElement.lang=LANG;document.documentElement.dir=LANG==="ur"?"rtl":"ltr";document.documentElement.classList.toggle("ur",LANG==="ur")}
 /* ---------- plain-language glossary (tap the i icons) ---------- */
 const G={
 palm:["Palm of protein","A piece of cooked meat, fish, eggs or paneer about the size and thickness of your palm, without the fingers. Roughly 100 to 120 g, about 25 to 30 g of protein."],
@@ -541,7 +556,7 @@ function persistFamily(id){saveLocal();dbWrite("family/"+id,S.family[id])}
 function persistQnote(i){saveLocal();dbWrite("qnotes/"+i,S.qnotes[i])}
 function persistQprog(){saveLocal();dbWrite("quran/progress",S.qprog)}
 function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
-function setChip(){const c=document.getElementById("syncChip");const fam=!readOnly&&!isOwner;const k=readOnly?"viewonly":fam?"familyeditor":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":fam?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":fam?"Family editor":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
+function setChip(){const c=document.getElementById("syncChip");const fam=!readOnly&&!isOwner;const k=readOnly?"viewonly":fam?"familyeditor":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":fam?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=tr(readOnly?"View only":fam?"Family editor":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"");const lb=document.getElementById("langBtn");if(lb)lb.textContent=LANG==="ur"?"EN":"اردو"}
 
 async function connect(){
   try{ db=await window.claude.use("db"); }catch(e){ db=null; }
@@ -564,8 +579,8 @@ async function connect(){
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function day(d){ if(!S.days[d])S.days[d]={date:d,water:0,palms:0}; return S.days[d]; }
 function logDate(){const v=S._ld;return (v&&v<=todayStr())?v:todayStr()}
-function logBar(t){if(t===todayStr())return "";const dt=new Date(t+"T12:00:00");return `<div class="note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>${ic("clock")} Logging for <b>${dt.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</b>. Everything you enter below goes to that day.</span><button class="btn" data-a="backtoday">Back to today</button></div>`}
-function logPicker(t){return `<label class="f" style="flex:0 0 auto;min-width:0"><span style="font-size:11px">Logging for</span><input type="date" id="logDate" value="${t}" max="${todayStr()}" style="width:150px;padding:6px 10px"></label>`}
+function logBar(t){if(t===todayStr())return "";const dt=new Date(t+"T12:00:00");return `<div class="note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>${ic("clock")} Logging for <b>${dt.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</b>. Everything you enter below goes to that day.</span><button class="btn" data-a="backtoday">${tr("Back to today")}</button></div>`}
+function logPicker(t){return `<label class="f" style="flex:0 0 auto;min-width:0"><span style="font-size:11px">${tr("Logging for")}</span><input type="date" id="logDate" value="${t}" max="${todayStr()}" style="width:150px;padding:6px 10px"></label>`}
 function weekNo(){const a=new Date(S.settings.startDate+"T00:00:00"),b=new Date(todayStr()+"T00:00:00");return Math.max(1,Math.floor((b-a)/864e5/7)+1)}
 function phase(w){return w<=3?CYCLE[0]:w<=7?CYCLE[1]:w<=12?CYCLE[2]:CYCLE[3]}
 function weighList(){return Object.values(S.weighins).filter(w=>!w.m||w.m==="tafseer").sort((a,b)=>a.date<b.date?-1:1)}
@@ -690,15 +705,15 @@ function vFamily(){
   const ms=members(),ro=readOnly,tonight=tonightMeal(),ed=S._fedit;
   const missing=ms.filter(m=>m.role==="child"&&!m.dob).map(m=>m.name);
   return `
-  <div class="hdr"><div><p class="eyebrow">${ms.length} members · one pot, four plates</p><h1>Family</h1></div></div>
+  <div class="hdr"><div><p class="eyebrow">${ms.length} members · one pot, four plates</p><h1>${tr("Family")}</h1></div></div>
   ${missing.length&&!ro?`<div class="note">Set a date of birth for ${esc(missing.join(" and "))} so portions, fasting guidance and growth logs fit their age. Tap a card, then Edit.</div>`:""}
   <section class="card">
-    <p class="eyebrow">${ic("plate")} Family rules ${I("familyrules")}</p>
+    <p class="eyebrow">${ic("plate")} ${tr("Family rules")} ${I("familyrules")}</p>
     <ul class="small"><li><b>Children are never restricted.</b> No calories, no diet talk, no fasting under 7. Their first serving is a start; seconds whenever they are hungry.</li><li><b>One pot.</b> Everyone eats the same OnePlate dinner; only the portion changes.</li><li><b>Together, screens away, about 20 minutes.</b> Bismillah first. Nobody criticises the food.</li><li><b>Water before, sips during.</b> Chai for adults an hour after. Milk for children after the meal, not before.</li></ul>
   </section>
   ${tonight?`<section class="card accent">
-    <p class="eyebrow">${ic("home")} Tonight for everyone · ${esc(tonight.n)} ${I("cookfor")}</p>
-    <p class="small"><b>Cook:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
+    <p class="eyebrow">${ic("home")} ${tr("Tonight for everyone")} · ${esc(tonight.n)} ${I("cookfor")}</p>
+    <p class="small"><b>${tr("Cook:")}</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
     <div class="hands">${ms.map(m=>`<span>${esc(m.name)}</span><div>${memberPortions(tonight,m).length?esc(memberPortions(tonight,m).join(" · "))+(m.role==="child"?" <span class='muted'>+ seconds if hungry</span>":""):"<span class='muted'>milk-based; ask the paediatrician</span>"}</div>`).join("")}</div>
   </section>`:""}
   ${ms.map(m=>{const st=stageOf(m),ws=memberWeighs(m.id),last=ws[ws.length-1],ad=m.role==="adult",g=ad?null:childGuide(m);const editing=ed===m.id;
@@ -803,7 +818,7 @@ function vToday(){
   if(on){const s=new Date(S.fast.startedAt),e=new Date(s.getTime()+goal*36e5);kv=`<div class="kv"><span>Started</span><b>${s.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(s)}</b><span>Goal at</span><b>${e.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(e)}</b></div>`}
   else kv=`<div class="kv"><span>Goal</span><b id="kvGoal">${ram&&ft?((ft.maghrib-ft.fajr)/36e5).toFixed(1):goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
   return `
-  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?greeting():"Catching up"}</h1></div>
+  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?tr(greeting()):tr("Catching up")}</h1></div>
    <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
   ${ro?`<div class="note">You are viewing Tafseer's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab, your own journal on the <b>Learn</b> tab, and edit meals on the <b>Plate</b> tab.</div>`:""}
   ${logBar(t)}
@@ -813,13 +828,13 @@ function vToday(){
     <div class="streak">${ic("flame")}${st}<small style="font-weight:500">day${st===1?"":"s"}</small> ${I("streak")}</div>
   </section>
   <section class="card">
-    <div class="row between"><p class="eyebrow">${ic("clock")} Fast ${I("fast")}</p><span class="status ${on?"on":""}"><i></i>${on?"Fasting":"Eating window"}</span></div>
+    <div class="row between"><p class="eyebrow">${ic("clock")} ${tr("Fast")} ${I("fast")}</p><span class="status ${on?"on":""}"><i></i>${tr(on?"Fasting":"Eating window")}</span></div>
     <div class="hero">
       <div class="ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent-2)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient></defs><circle class="track" cx="60" cy="60" r="52"/><circle class="bar" id="ringBar" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
         <div class="lbl">${on?`<b id="ringTime"></b><span id="ringSub"></span>`:`${ic("moon")}<span id="ringSub">not fasting</span><b id="ringTime" hidden></b>`}</div></div>
       <div class="side">
         ${kv}
-        ${roMe?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} End fast, eat</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="cancelfast">Cancel</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} Start fast now</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="startfast930">From 9:30 PM</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`}
+        ${roMe?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} ${tr("End fast, eat")}</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="cancelfast">${tr("Cancel")}</button><button class="btn ghost" data-a="ftimes">${tr("Set times")}</button></div>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} ${tr("Start fast now")}</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="startfast930">From 9:30 PM</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`}
       </div>
     </div>
     ${S._ft&&!roMe?`<form class="form" id="fform" autocomplete="off" style="border-top:1px solid var(--line);padding-top:12px">
@@ -840,34 +855,34 @@ function vToday(){
     <p class="small muted">Imsak ${fmtClock(ft.imsak)} (Fajr − 10 min, a reminder only). Karachi calculation method, Fajr 18°. Local moon sighting may shift the date: adjust the Hijri offset in Settings. The app suggests times; it never rules.</p>
   </section>`:""}
   ${isToday?`<section class="card accent">
-    <p class="eyebrow">${ic(hintIcon(h))} Right now</p>
+    <p class="eyebrow">${ic(hintIcon(h))} ${tr("Right now")}</p>
     <h2>${esc(hint[0])}</h2><p class="small">${esc(hint[1])}</p>
   </section>`:""}
   <section class="card">
-    <div class="row between"><p class="eyebrow">${ic(KIND_ICON[plan.k]||"bike")} Today's session ${I(plan.k==="strength"?"strength":plan.k==="cycle"?"cycle":"recovery")}</p><span class="pill ${plan.k==="rest"?"green":plan.k==="cycle"?"blue":"amber"}">${esc(plan.t)}</span></div>
+    <div class="row between"><p class="eyebrow">${ic(KIND_ICON[plan.k]||"bike")} ${tr("Today's session")} ${I(plan.k==="strength"?"strength":plan.k==="cycle"?"cycle":"recovery")}</p><span class="pill ${plan.k==="rest"?"green":plan.k==="cycle"?"blue":"amber"}">${esc(plan.t)}</span></div>
     <p class="small">${esc(plan.d)}</p>
   </section>
   <section class="card">
-    <div class="row between"><p class="eyebrow">Check-ins · ${dn} of 7 ${I("backdate")}</p>${roMe?"":`<div class="row" style="gap:8px">${logPicker(t)}<button class="btn ghost" data-a="habits_all">${ic("check")} All done</button></div>`}</div>
+    <div class="row between"><p class="eyebrow">${tr("Check-ins")} · ${dn} / 7 ${I("backdate")}</p>${roMe?"":`<div class="row" style="gap:8px">${logPicker(t)}<button class="btn ghost" data-a="habits_all">${ic("check")} ${tr("All done")}</button></div>`}</div>
     <div class="checks">
-      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
-      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
-      ${swRow("starter","Protein starter at home","≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,roMe,"home","starter")}
+      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>${tr("Water")} ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
+      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>${tr("Protein palms")} ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
+      ${swRow("starter",tr("Protein starter at home"),"≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,roMe,"home","starter")}
       ${swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,roMe,KIND_ICON[plan.k]||"bike","cycle")}
-      ${swRow("walk","Walk after dinner","10–15 min within 30 min of the last bite",d.walk,roMe,"walk","walk")}
-      ${swRow("steps","8,000 steps","Or your current phase target",d.steps,roMe,"foot","steps")}
-      ${swRow("closed","Kitchen closed by 9:30 PM","Then start the fast",d.closed,roMe,"moon","closed")}
+      ${swRow("walk",tr("Walk after dinner"),"10–15 min within 30 min of the last bite",d.walk,roMe,"walk","walk")}
+      ${swRow("steps",tr("8,000 steps"),"Or your current phase target",d.steps,roMe,"foot","steps")}
+      ${swRow("closed",tr("Kitchen closed by 9:30 PM"),"Then start the fast",d.closed,roMe,"moon","closed")}
     </div>
   </section>
   ${quranCard(d,roMe,true)}
   ${wellbeingCard(d,roMe)}
   <section class="card">
-    <div class="row between"><p class="eyebrow">${ic("clock")} Mindful dinner · 20 minutes ${I("thuluth")}</p>${S._meal?`<span class="pill green" id="mealT">00:00</span>`:""}</div>
+    <div class="row between"><p class="eyebrow">${ic("clock")} ${tr("Mindful dinner · 20 minutes")} ${I("thuluth")}</p>${S._meal?`<span class="pill green" id="mealT">00:00</span>`:""}</div>
     <p class="small" id="mealMsg">${S._meal?"":"Water 20–30 min before. Bismillah. Protein first, roti or rice last, spoon down between bites. Stop at about 80 % full."}</p>
-    ${roMe?"":S._meal?`<button class="btn" data-a="mealstop">Finished eating</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} Start the 20-minute meal timer</button>`}
+    ${roMe?"":S._meal?`<button class="btn" data-a="mealstop">${tr("Finished eating")}</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} ${tr("Start the 20-minute meal timer")}</button>`}
   </section>
   ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
-    <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate${(d.meal&&d.meal===tonight.id)?" · chosen":" · suggested"}</p>${ic("chev","")}</div>
+    <div class="row between"><p class="eyebrow">${ic("plate")} ${tr("Tonight's plate")}${(d.meal&&d.meal===tonight.id)?" · chosen":" · suggested"}</p>${ic("chev","")}</div>
     <h3>${esc(tonight.n)}</h3>
     <p class="small muted">${esc(handLine(tonight))} · ${mealCalc(tonight).kcal} kcal</p>
     <p class="small muted"><b>Cook for the family:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
@@ -892,7 +907,7 @@ function vPlate(){
   const list=meals.filter(m=>filt==="all"||m.tag===filt);
   const ed=S._medit;
   return `
-  <div class="hdr"><div><p class="eyebrow">Build by hand, no scales</p><h1>The Plate</h1></div></div>
+  <div class="hdr"><div><p class="eyebrow">${tr("Build by hand, no scales")}</p><h1>${tr("The Plate")}</h1></div></div>
   <section class="card">
     <div class="platewrap">${plateSvg()}
       <div class="legend">
@@ -914,7 +929,7 @@ function vPlate(){
     <div class="list">${STARTERS.map(s=>`<div class="item"><div class="t"><b>${esc(s.n)}</b></div><span class="kcal">${s.kcal} kcal · P ${s.p}</span></div>`).join("")}</div>
     <p class="small muted">Dinner at 8:00 PM. Kitchen closed 9:30 PM.</p>
   </section>
-  <div class="hdr"><h2>${meals.length} dinners</h2>${ro?`<span class="small muted">${list.length} shown</span>`:`<button class="btn" type="button" data-a="me_new">+ New meal</button>`}</div>
+  <div class="hdr"><h2>${meals.length} ${tr("dinners")}</h2>${ro?`<span class="small muted">${list.length} shown</span>`:`<button class="btn" type="button" data-a="me_new">+ ${tr("New meal")}</button>`}</div>
   ${ed&&!ed.id?mealEditor(ed):""}
   <div class="seg">${["all","chicken","beef","fish","meatless","other"].map(k=>`<button class="${filt===k?"on":""}" data-a="mf" data-v="${k}">${k}</button>`).join("")}</div>
   ${list.map(m=>{if(ed&&ed.id===m.id)return mealEditor(ed);const t=mealCalc(m),g=hands(m);return `<details ${S._mopen===m.id?"open":""} data-mid="${m.id}"><summary><span>${esc(m.n)}${m.base?"":` <span class="pill soft" style="font-size:10px;padding:1px 7px">custom</span>`}${m.base&&S.meals[m.id]?` <span class="pill grey" style="font-size:10px;padding:1px 7px">edited</span>`:""}<br><span class="kcal">${t.kcal} kcal · ${t.p} g protein</span></span>${ic("chev","chev")}</summary><div class="body">
@@ -923,7 +938,7 @@ function vPlate(){
     <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(FOODS[it.f].ur||FOODS[it.f].n)).join(" · "))}</p>
     <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Family portions · cook: ${esc(cookQuantities(m).join(" · "))}</span>${ic("chev","chev")}</summary><div class="body"><div class="hands">${members().map(mm=>`<span>${esc(mm.name)}</span><div class="small">${memberPortions(m,mm).length?esc(memberPortions(m,mm).join(" · "))+(mm.role==="child"?" + seconds if hungry":""):"milk-based"}</div>`).join("")}</div></div></details>
     ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
-    ${ro?"":`<div class="row"><button class="btn ${(S.days[logDate()]||{}).meal===m.id?"primary":""}" type="button" data-a="tonight" data-id="${m.id}">${(S.days[logDate()]||{}).meal===m.id?ic("check")+" Tonight's plate":"Set as tonight's plate"}</button><button class="btn ghost" type="button" data-a="me_edit" data-id="${m.id}">Edit meal</button></div>`}
+    ${ro?"":`<div class="row"><button class="btn ${(S.days[logDate()]||{}).meal===m.id?"primary":""}" type="button" data-a="tonight" data-id="${m.id}">${(S.days[logDate()]||{}).meal===m.id?ic("check")+" "+tr("Tonight's plate"):tr("Set as tonight's plate")}</button><button class="btn ghost" type="button" data-a="me_edit" data-id="${m.id}">${tr("Edit meal")}</button></div>`}
     </div></details>`}).join("")}
   ${list.length?"":`<p class="small muted">No meals of this type yet.</p>`}
   <div class="note">Three cooking rules: measure oil with a tablespoon, roti without ghee, salad on the plate first.</div>`;
@@ -935,7 +950,7 @@ function vTrain(){
   const unlockAt=(Number(S.settings.startWeight)-need).toFixed(1);
   const today=planFor(wd);
   return `
-  <div class="hdr"><div><p class="eyebrow">Week ${w} · ${esc(ph.n)} phase ${I("phase")}</p><h1>Training</h1></div></div>
+  <div class="hdr"><div><p class="eyebrow">Week ${w} · ${esc(ph.n)} phase ${I("phase")}</p><h1>${tr("Training")}</h1></div></div>
   <section class="card">
     <div class="week">${[1,2,3,4,5,6,0].map(i=>{const p=planFor(i);return `<div class="wday ${p.k} ${i===wd?"today":""}"><span class="ib">${ic(KIND_ICON[p.k]||"bike")}</span>${DAYS[i].slice(0,3)}</div>`}).join("")}</div>
     <div class="row between"><p class="eyebrow">${ic(KIND_ICON[today.k]||"bike")} Today</p><span class="pill ${today.k==="rest"?"green":today.k==="cycle"?"blue":"amber"}">${esc(today.t)}</span></div>
@@ -957,7 +972,7 @@ function vTrain(){
      <div class="row between small muted"><span>${lost.toFixed(1)} of ${need} kg</span><span>${Math.max(0,need-lost).toFixed(1)} kg to go</span></div>`}
   </section>
   <section class="card">
-    <p class="eyebrow">This week</p>
+    <p class="eyebrow">${tr("This week")}</p>
     <div class="scroll"><table class="tbl"><tbody>
     ${[1,2,3,4,5,6,0].map(i=>{const p=planFor(i);return `<tr class="${i===wd?"today":""}"><td style="width:44px"><b>${DAYS[i].slice(0,3)}</b></td><td><b>${esc(p.t)}</b><br><span class="muted small">${esc(p.d)}</span></td></tr>`}).join("")}
     </tbody></table></div>
@@ -994,12 +1009,12 @@ function vProgress(){
   const w=weekNo();
   const cps=[[4,"4 weeks","80–81.5 kg","−2 to −4 cm waist"],[8,"8 weeks","78–79.5 kg","−4 to −7 cm"],[12,"12 weeks","75.5–77.5 kg","−6 to −10 cm"],[26,"24–28 weeks","70 kg","≈ 85–88 cm"]];
   return `
-  <div class="hdr"><div><p class="eyebrow">Week ${w} · ${ws.length} weigh-in${ws.length===1?"":"s"}</p><h1>Progress</h1></div>${rate!=null?`<span class="pill ${rate>=0.4?"green":rate>0.05?"amber":"red"}">${ic("trend")} ${rate.toFixed(2)} kg / week ${I("rate")}</span>`:""}</div>
+  <div class="hdr"><div><p class="eyebrow">Week ${w} · ${ws.length} weigh-in${ws.length===1?"":"s"}</p><h1>${tr("Progress")}</h1></div>${rate!=null?`<span class="pill ${rate>=0.4?"green":rate>0.05?"amber":"red"}">${ic("trend")} ${rate.toFixed(2)} kg / week ${I("rate")}</span>`:""}</div>
   <section class="card">
-    <div class="bignum"><b>${cur.toFixed(1)}</b><span>kg now</span>${delta!=null?`<span class="pill ${delta<=0?"green":"red"}">${delta<=0?"▼":"▲"} ${Math.abs(delta).toFixed(1)} since last</span>`:""}</div>
+    <div class="bignum"><b>${cur.toFixed(1)}</b><span>${tr("kg now")}</span>${delta!=null?`<span class="pill ${delta<=0?"green":"red"}">${delta<=0?"▼":"▲"} ${Math.abs(delta).toFixed(1)} since last</span>`:""}</div>
     <div class="goalbar"><div class="bar"><i style="width:${pct.toFixed(0)}%"></i></div><div class="lbls"><span>${st.startWeight} kg start</span><span>${lost>=0?"−":"+"}${Math.abs(lost).toFixed(1)} kg · ${pct.toFixed(0)}%</span><span>${st.targetWeight} kg goal</span></div></div>
     <div class="bento">
-      <div class="tile"><b>${Math.max(0,togo).toFixed(1)}</b><span>kg to go</span></div>
+      <div class="tile"><b>${Math.max(0,togo).toFixed(1)}</b><span>${tr("kg to go")}</span></div>
       <div class="tile"><b style="font-size:17px">${eta}</b><span>projected ${st.targetWeight} kg ${I("projected")}</span></div>
     </div>
     ${chart(ws)}
@@ -1032,7 +1047,8 @@ function vProgress(){
   ${(typeof window.oneplate==="object"&&!readOnly)?`<section class="card"><p class="eyebrow">${ic("family")} Account · this household ${I("account")}</p>
     <div class="row">${isOwner?`<button class="btn" data-a="acc_invite">Invite Uzma (contributor)</button><button class="btn" data-a="acc_invite_view">Invite a viewer</button><button class="btn" data-a="acc_export">Export all data</button>`:""}<button class="btn ghost" data-a="acc_signout">Sign out</button>${isOwner?`<button class="btn ghost" style="color:var(--red)" data-a="acc_delete">Delete household</button>`:""}</div>
     ${S._inviteCode?`<div class="note">Invite code <b style="font-family:var(--mono);font-size:16px">${esc(S._inviteCode)}</b> · valid 7 days. Uzma creates her account at <b>${esc(location.origin)}/account.html</b> and enters it.</div>`:""}
-    <p class="small muted">Live updates: ${window.oneplate.live()?"connected":"polling"}.</p></section>`:""}
+    <div class="row"><button class="btn" data-a="acc_passkey">${ic("check")} Add a passkey to this device</button></div>
+    <p class="small muted">Live updates: ${window.oneplate.live()?"connected":"polling"}. A passkey lets you sign in with Face ID or fingerprint instead of a password.</p></section>`:""}
   ${ro?"":`<details><summary><span>Settings</span>${ic("chev","chev")}</summary><div class="body">
     <form class="form" id="sform" autocomplete="off">
       <label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight}"></label>
@@ -1074,7 +1090,7 @@ function vReference(){
   const f=S._ff||"all";
   const items=FAST.filter(i=>f==="all"||i.g===f);
   return `
-  <div class="hdr" style="margin-top:8px"><h2>Reference</h2></div>
+  <div class="hdr" style="margin-top:8px"><h2>${tr("Reference")}</h2></div>
   <div class="search">${ic("search")}<input type="search" id="gq" placeholder="Search any term: palm, RPE, plateau, creatine…" value="${esc(S._gq||"")}" autocomplete="off"></div>
   <div class="glist" id="gres">${glossaryList(S._gq)}</div>
   <section class="card">
@@ -1504,7 +1520,7 @@ function qSet(idxs,state){S.qprog=S.qprog||{};S.qprog.done=Object.assign({},S.qp
 function qCount(){let n=0;for(let i=0;i<QPLAN.length;i++)if(qState(i))n++;return n}
 function qGrid(ro){const cur=qIndex(logDate());return `<div class="qgrid">${QPLAN.map((e,i)=>{const st=qState(i);return `<button class="qc ${st} ${i===cur?"cur":""}" ${ro?"disabled":""} data-a="qcell" data-i="${i}" title="${esc(qRef(e))} · ${esc(e.n)}" aria-label="Reading ${i+1}, ${st||"not read"}">${i+1}</button>`}).join("")}</div>
   <div class="row" style="gap:10px;font-size:12px;color:var(--muted)"><span><i class="qk read"></i> read</span><span><i class="qk revisit"></i> revisit</span><span><i class="qk cur"></i> today</span><span><i class="qk"></i> not yet</span></div>`}
-function qStateButtons(i,ro){if(ro)return "";const st=qState(i);return `<div class="seg qstate"><button class="${st==="read"?"on":""}" data-a="qmark" data-i="${i}" data-s="read">${ic("check")} Read it</button><button class="${st==="revisit"?"on":""}" data-a="qmark" data-i="${i}" data-s="revisit">${ic("flame")} Read, revisit later</button><button class="${st===""?"on":""}" data-a="qmark" data-i="${i}" data-s="">Not yet</button></div>`}
+function qStateButtons(i,ro){if(ro)return "";const st=qState(i);return `<div class="seg qstate"><button class="${st==="read"?"on":""}" data-a="qmark" data-i="${i}" data-s="read">${ic("check")} ${tr("Read it")}</button><button class="${st==="revisit"?"on":""}" data-a="qmark" data-i="${i}" data-s="revisit">${ic("flame")} ${tr("Read, revisit later")}</button><button class="${st===""?"on":""}" data-a="qmark" data-i="${i}" data-s="">${tr("Not yet")}</button></div>`}
 function qBulk(ro){if(ro)return "";const n=QPLAN.length;return `<details class="flat" style="box-shadow:none" data-qbulk ${S._qbulk?"open":""}><summary style="font-size:13px;padding:9px 0"><span>Bulk update</span>${ic("chev","chev")}</summary><div class="body">
   <div class="form"><label class="f" style="flex:0 1 90px">From<input type="number" id="qb_from" min="1" max="${n}" value="1"></label><label class="f" style="flex:0 1 90px">To<input type="number" id="qb_to" min="1" max="${n}" value="${qIndex(logDate())+1}"></label><button class="btn" type="button" data-a="qbulk" data-s="read">Mark as read</button><button class="btn" type="button" data-a="qbulk" data-s="revisit">Mark to revisit</button><button class="btn ghost" type="button" data-a="qbulk" data-s="">Clear range</button></div>
   <div class="row"><button class="btn" type="button" data-a="qbulkto">${ic("check")} Everything up to today as read</button><button class="btn ghost" type="button" data-a="qclear">Clear all progress</button></div>
@@ -1526,21 +1542,21 @@ function vLearn(){
   const jr=((d.journal||{})[mId])||{};
   const rv=[1,7,30].map(b=>({b,v:pick(VERSES,0,b),w:pick(WORDS,0,b)}));
   return `
-  <div class="hdr"><div><p class="eyebrow">${theme} week · ${hijriLabel(hijriOf(t))} · day ${dayOfYear()+1}</p><h1>Learn</h1></div><div class="row" style="gap:8px">${readOnly?"":logPicker(t)}<span class="pill soft">${ic("book")} ${esc(theme)} ${I("theme")}</span></div></div>
+  <div class="hdr"><div><p class="eyebrow">${theme} week · ${hijriLabel(hijriOf(t))} · day ${dayOfYear()+1}</p><h1>${tr("Learn")}</h1></div><div class="row" style="gap:8px">${readOnly?"":logPicker(t)}<span class="pill soft">${ic("book")} ${esc(theme)} ${I("theme")}</span></div></div>
   ${logBar(t)}
   <div class="seg">${members().map(x=>`<button class="${x.id===mId?"on":""}" data-a="lm" data-v="${x.id}">${esc(x.name)}</button>`).join("")}</div>
   <p class="small muted">${kid?`${esc(m.name)}'s layer: every item explained for a child, to read together. Tap a name above to switch.`:`${esc(m.name)}'s daily set. Two layers for every item: the children's version is under their names.`} ${I("twolayer")}</p>
   ${kid?"":quranCard(d,ro)}
-  ${lcard("book","Verse of the day "+I("verse"),`<p class="small muted">Quran ${esc(V.r)} · ${esc(V.c)}</p><h3>${esc(V.m)}</h3><p class="small">${esc(kid?V.k:V.a)}</p><p class="small"><b>Do:</b> ${esc(V.do)}</p>`)}
-  ${lcard("bolt","Word of the day "+I("word"),`<div class="row between"><h3>${esc(W.t)} <span class="muted" dir="rtl">${esc(W.ar)}</span></h3><span class="kcal">root ${esc(W.rt)}</span></div><p class="small">${esc(kid?W.k:W.m)}</p><p class="small muted">${esc(W.u)}</p>`)}
+  ${lcard("book",tr("Verse of the day")+" "+I("verse"),`<p class="small muted">Quran ${esc(V.r)} · ${esc(V.c)}</p><h3>${esc(V.m)}</h3><p class="small">${esc(kid?V.k:V.a)}</p><p class="small"><b>Do:</b> ${esc(V.do)}</p>`)}
+  ${lcard("bolt",tr("Word of the day")+" "+I("word"),`<div class="row between"><h3>${esc(W.t)} <span class="muted" dir="rtl">${esc(W.ar)}</span></h3><span class="kcal">root ${esc(W.rt)}</span></div><p class="small">${esc(kid?W.k:W.m)}</p><p class="small muted">${esc(W.u)}</p>`)}
   ${lcard("moon","Teaching · the Prophet and the Ahl al-Bayt "+I("teaching"),`<p class="small muted">${esc(T.w)}</p><h3 style="font-weight:500">"${esc(T.q)}"</h3><p class="small">${esc(kid?T.k:T.a)}</p><p class="small muted">${esc(T.src)} · ${esc(T.v)}</p>`)}
-  ${lcard("home","Story of the day "+I("story"),`<h3>${esc(ST.t)}</h3><p class="small muted">Quran ${esc(ST.r)}</p><p class="small">${esc(kid?ST.k:ST.s)}</p><p class="small"><b>Moral:</b> ${esc(ST.m)}</p><p class="small"><b>Together:</b> ${esc(ST.f)}</p>`)}
+  ${lcard("home",tr("Story of the day")+" "+I("story"),`<h3>${esc(ST.t)}</h3><p class="small muted">Quran ${esc(ST.r)}</p><p class="small">${esc(kid?ST.k:ST.s)}</p><p class="small"><b>Moral:</b> ${esc(ST.m)}</p><p class="small"><b>Together:</b> ${esc(ST.f)}</p>`)}
   ${kid?"":lcard("book","Surah of the day "+I("surah"),`<h3>${SU.n}. ${esc(SU.a)} <span class="muted" style="font-weight:400">· ${esc(SU.t)}</span></h3><p class="small muted">${SU.v} verses · ${esc(SU.p)}</p><p class="small">${esc(SU.s)}</p><p class="small"><b>Lesson:</b> ${esc(SU.l)}</p><p class="small muted"><b>For the children:</b> ${esc(SU.k)}</p>`)}
-  ${lcard("sun","Idea of the day "+I("idea"),`<h3>${esc(ID.t)}</h3><p class="small muted">${esc(ID.w)}</p><p class="small">${esc(kid?ID.k:ID.i)}</p><p class="small"><b>Apply:</b> ${esc(ID.d)}</p>`)}
+  ${lcard("sun",tr("Idea of the day")+" "+I("idea"),`<h3>${esc(ID.t)}</h3><p class="small muted">${esc(ID.w)}</p><p class="small">${esc(kid?ID.k:ID.i)}</p><p class="small"><b>Apply:</b> ${esc(ID.d)}</p>`)}
   ${kid?"":lcard("book","Book of the day "+I("bookday"),`<h3>${esc(B.t)}</h3><p class="small muted">${esc(B.w)} · ${esc(B.y)}</p><p class="small"><b>Why it matters:</b> ${esc(B.why)}</p><p class="small"><b>Core idea:</b> ${esc(B.core)}</p><p class="small"><b>Takeaway:</b> ${esc(B.take)}</p><p class="small muted"><b>Next step:</b> ${esc(B.next)}</p>`)}
-  ${lcard("egg","Dua of the day "+I("dua"),`<h3 style="font-weight:500">${esc(DU.t)}</h3><p class="small">${esc(DU.m)}</p><p class="small muted">${esc(DU.r)} · ${esc(DU.w)}</p>`)}
-  ${lcard("flame","Poem of the day "+I("poem"),`<p style="white-space:pre-line;font-family:var(--display);font-size:16px;line-height:1.4">${esc(P.l)}</p><p class="small muted">${esc(P.w)} · ${esc(P.s)}</p>${kid?`<p class="small">${esc(P.k)}</p>`:""}`)}
-  ${lcard("clock","Question of the day "+I("question"),`<h3 style="font-weight:500">${esc(kid?pick(KID_Q):Q)}</h3>${kid?"":`<p class="small muted">From the Quran program's Track 8: reflection should lead to action.</p>`}`,
+  ${lcard("egg",tr("Dua of the day")+" "+I("dua"),`<h3 style="font-weight:500">${esc(DU.t)}</h3><p class="small">${esc(DU.m)}</p><p class="small muted">${esc(DU.r)} · ${esc(DU.w)}</p>`)}
+  ${lcard("flame",tr("Poem of the day")+" "+I("poem"),`<p style="white-space:pre-line;font-family:var(--display);font-size:16px;line-height:1.4">${esc(P.l)}</p><p class="small muted">${esc(P.w)} · ${esc(P.s)}</p>${kid?`<p class="small">${esc(P.k)}</p>`:""}`)}
+  ${lcard("clock",tr("Question of the day")+" "+I("question"),`<h3 style="font-weight:500">${esc(kid?pick(KID_Q):Q)}</h3>${kid?"":`<p class="small muted">From the Quran program's Track 8: reflection should lead to action.</p>`}`,
     ro?(done?`<span class="pill green">${ic("check")} done</span>`:""):`<button class="btn ${done?"":"primary"}" data-a="learndone" data-m="${mId}">${done?ic("check")+" Done today":"Mark today's learning done"}</button>`)}
   ${kid?"":`<section class="card"><p class="eyebrow">${ic("book")} Reflection journal · ${esc(m.name)} ${I("journal")}</p>
     ${ro?(Object.keys(jr).length?`<div class="hands">${["learned","surprised","question","action"].map(k=>jr[k]?`<span>${k}</span><div class="small">${esc(jr[k])}</div>`:"").join("")}</div>`:`<p class="small muted">No entry today.</p>`):`<div class="form" style="flex-direction:column;align-items:stretch">
@@ -1551,9 +1567,9 @@ function vLearn(){
     </div><p class="small muted">Saves when you leave a field. The Bayan template: learned, surprised, questions, applications, next actions.</p>`}
   </section>`}
   <section class="card accent">
-    <div class="row between"><p class="eyebrow">${ic("family")} Family circle tonight · 5 minutes ${I("circle")}</p>${circle?`<span class="pill green">${ic("check")} done</span>`:""}</div>
+    <div class="row between"><p class="eyebrow">${ic("family")} ${tr("Family circle tonight · 5 minutes")} ${I("circle")}</p>${circle?`<span class="pill green">${ic("check")} done</span>`:""}</div>
     <ol class="small"><li><b>Verse:</b> ${esc(V.k)}</li><li><b>Story:</b> ${esc(ST.t)}. ${esc(ST.m)}</li><li><b>Ask Abbas and Eliyya:</b> ${esc(pick(KID_Q))}</li><li><b>Dua together:</b> ${esc(pick(DUAS.slice(0,10)).t)}</li></ol>
-    ${readOnly?"":`<button class="btn ${circle?"":"primary"} wide" data-a="circle">${circle?"Undo":"We did the family circle"}</button>`}
+    ${readOnly?"":`<button class="btn ${circle?"":"primary"} wide" data-a="circle">${circle?tr("Cancel"):tr("We did the family circle")}</button>`}
   </section>
   ${quranIndex()}
   <details><summary><span>Review: 1, 7 and 30 days ago ${I("spaced")}</span>${ic("chev","chev")}</summary><div class="body">
@@ -1570,13 +1586,13 @@ function wellbeingCard(d,ro){
   const dim=(ok,label,icon)=>`<span class="pill ${ok?"green":"grey"}">${ic(icon)} ${label}</span>`;
   const MOODS=["Low","Meh","OK","Good","Great"];
   return `<section class="card">
-    <div class="row between"><p class="eyebrow">${ic("sun")} Whole self today ${I("wholeself")}</p><span class="kcal">${[body,mind,heart,soul,fam].filter(Boolean).length}/5</span></div>
-    <div class="row" style="gap:6px">${dim(body,"Body","bike")}${dim(mind,"Mind","book")}${dim(heart,"Heart","flame")}${dim(soul,"Soul","moon")}${dim(fam,"Family","family")}</div>
-    <div class="crow"><span class="lead" style="color:var(--red)">${ic("flame")}</span><div class="t"><b>Mood ${I("mood")}</b><div class="seg" style="margin-top:4px">${MOODS.map((x,i)=>`<button class="${d.mood===i+1?"on":""}" ${ro?"disabled":""} data-a="mood" data-v="${i+1}">${x}</button>`).join("")}</div></div></div>
-    <div class="crow"><span class="lead">${ic("bed")}</span><div class="t"><b>Sleep last night</b><small>Target 7.5–8 h, lights out 10:45</small></div>${ro?`<b class="kcal">${d.sleep?d.sleep+" h":"—"}</b>`:`<input type="number" id="sleepH" step="0.5" min="0" max="14" value="${d.sleep||""}" placeholder="h" style="width:72px">`}</div>
-    <div class="crow"><span class="lead" style="color:var(--green)">${ic("check")}</span><div class="t"><b>Three things I am grateful for</b>${ro?`<small>${esc(d.grat||"—")}</small>`:`<input type="text" id="gratIn" value="${esc(d.grat||"")}" placeholder="family, health, today's bread…" maxlength="200" style="margin-top:4px">`}</div></div>
-    <div class="crow sw-row ${soul?"done":""}" role="switch" aria-checked="${soul}" ${ro?"":`tabindex="0" data-a="soul"`}><span class="lead" style="color:var(--accent-text)">${ic("moon")}</span><div class="t"><b>Verse of the day read</b><small>Quran ${esc(V.r)}: ${esc(V.m.length>70?V.m.slice(0,70)+"…":V.m)}</small></div><span class="sw"><i></i></span></div>
-    <div class="row"><button class="btn ghost" data-a="tab" data-v="learn">${ic("book")} Open today's learning</button></div>
+    <div class="row between"><p class="eyebrow">${ic("sun")} ${tr("Whole self today")} ${I("wholeself")}</p><span class="kcal">${[body,mind,heart,soul,fam].filter(Boolean).length}/5</span></div>
+    <div class="row" style="gap:6px">${dim(body,tr("Body"),"bike")}${dim(mind,tr("Mind"),"book")}${dim(heart,tr("Heart"),"flame")}${dim(soul,tr("Soul"),"moon")}${dim(fam,tr("Family"),"family")}</div>
+    <div class="crow"><span class="lead" style="color:var(--red)">${ic("flame")}</span><div class="t"><b>${tr("Mood")} ${I("mood")}</b><div class="seg" style="margin-top:4px">${MOODS.map((x,i)=>`<button class="${d.mood===i+1?"on":""}" ${ro?"disabled":""} data-a="mood" data-v="${i+1}">${tr(x)}</button>`).join("")}</div></div></div>
+    <div class="crow"><span class="lead">${ic("bed")}</span><div class="t"><b>${tr("Sleep last night")}</b><small>Target 7.5–8 h, lights out 10:45</small></div>${ro?`<b class="kcal">${d.sleep?d.sleep+" h":"—"}</b>`:`<input type="number" id="sleepH" step="0.5" min="0" max="14" value="${d.sleep||""}" placeholder="h" style="width:72px">`}</div>
+    <div class="crow"><span class="lead" style="color:var(--green)">${ic("check")}</span><div class="t"><b>${tr("Three things I am grateful for")}</b>${ro?`<small>${esc(d.grat||"—")}</small>`:`<input type="text" id="gratIn" value="${esc(d.grat||"")}" placeholder="family, health, today's bread…" maxlength="200" style="margin-top:4px">`}</div></div>
+    <div class="crow sw-row ${soul?"done":""}" role="switch" aria-checked="${soul}" ${ro?"":`tabindex="0" data-a="soul"`}><span class="lead" style="color:var(--accent-text)">${ic("moon")}</span><div class="t"><b>${tr("Verse of the day read")}</b><small>Quran ${esc(V.r)}: ${esc(V.m.length>70?V.m.slice(0,70)+"…":V.m)}</small></div><span class="sw"><i></i></span></div>
+    <div class="row"><button class="btn ghost" data-a="tab" data-v="learn">${ic("book")} ${tr("Open today's learning")}</button></div>
   </section>`;
 }
 
@@ -1621,7 +1637,7 @@ function render(){
   const scroll=v.parentElement.scrollTop;
   v.innerHTML=VIEWS[tab]();
   v.parentElement.scrollTop=scroll;
-  document.getElementById("tabs").innerHTML=["today","plate","family","train","progress","learn"].map(k=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}" aria-label="${k}" aria-current="${k===tab?"page":"false"}"><span class="ib">${ic(TAB_ICON[k])}</span>${k}</button>`).join("");
+  document.getElementById("tabs").innerHTML=["today","plate","family","train","progress","learn"].map(k=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}" aria-label="${k}" aria-current="${k===tab?"page":"false"}"><span class="ib">${ic(TAB_ICON[k])}</span>${tr(k[0].toUpperCase()+k.slice(1))}</button>`).join("");
   tick();
 }
 function tick(){
@@ -1649,6 +1665,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
   const a=b.dataset.a,t=logDate();
   if(a==="info"){e.preventDefault();e.stopPropagation();openInfo(b.dataset.k);return}
+  if(a==="lang"){LANG=LANG==="ur"?"en":"ur";try{localStorage.setItem("oneplate.lang",LANG)}catch(x){}applyLang();setChip();render();return}
   if(a==="tab"){tab=b.dataset.v;history.replaceState(null,"","#"+tab);render();document.querySelector("main").scrollTop=0;return}
   if(a==="mf"){S._mf=b.dataset.v;render();return}
   if(a==="ff"){S._ff=b.dataset.v;render();return}
@@ -1679,6 +1696,7 @@ document.addEventListener("click",e=>{
   if(a==="acc_invite"||a==="acc_invite_view"){window.oneplate.invite(a==="acc_invite"?"contributor":"viewer",a==="acc_invite"?"uzma":null).then(r=>{S._inviteCode=r.code;render()}).catch(e=>toast(e.message));return}
   if(a==="acc_export"){window.oneplate.exportHousehold().then(d=>{const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});const u=URL.createObjectURL(blob);const x=document.createElement("a");x.href=u;x.download="oneplate-export-"+todayStr()+".json";document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);toast("Exported "+d.documents.length+" records")}).catch(e=>toast(e.message));return}
   if(a==="acc_signout"){window.oneplate.signOut();return}
+  if(a==="acc_passkey"){window.oneplate.addPasskey().then(()=>toast("Passkey added")).catch(e=>toast(e.message||"Passkey not added"));return}
   if(a==="acc_delete"){if(S._delconfirm){window.oneplate.deleteHousehold().then(()=>{localStorage.removeItem(LS);location.href="./account.html"}).catch(e=>toast(e.message))}else{S._delconfirm=true;toast("Tap again within 5 s to delete everything");setTimeout(()=>{S._delconfirm=false},5000)}return}
   if(a==="soul"){const d=day(t);d.soul=!d.soul;persistDay(t);render();return}
   if(a==="delw"){removeWeigh(b.dataset.d);toast("Removed");render();return}
@@ -1698,6 +1716,6 @@ document.addEventListener("submit",e=>{
 window.addEventListener("hashchange",()=>{let h=location.hash.slice(1);if(h==="guide")h="learn";if(VIEWS[h]&&h!==tab){tab=h;render()}});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
 
-loadLocal();render();setChip();
+applyLang();loadLocal();render();setChip();
 if(window.claude&&window.claude.use){connect()}else{syncState="local";setChip()}
 </script>

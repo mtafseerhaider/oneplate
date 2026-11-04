@@ -13,6 +13,7 @@ import { canWrite, validateFamilyDoc, type Actor, type Level } from "./auth/poli
 import { ChangeBus, type Change } from "./events.js";
 import { createMailer, type Mailer } from "./mail.js";
 import { createHash, randomBytes } from "node:crypto";
+import { registerPasskeyRoutes } from "./auth/passkeys.js";
 
 declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string } }
 
@@ -66,6 +67,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     await db.query("update users set password_hash=$1, updated_at=now() where id=$2", [await hashPassword(p.data.password), r.rows[0]!.user_id]); await db.query("update password_resets set used_at=now() where token_hash=$1", [h]); await db.query("delete from sessions where user_id=$1", [r.rows[0]!.user_id]);
     req.userId = r.rows[0]!.user_id; await audit(req, "password.reset"); return { ok: true };
   });
+  registerPasskeyRoutes(app, cfg, db, { setSession, audit: async (r, a) => { await audit(r, a); } });
   app.post("/auth/logout", async (req, reply) => { const sid = req.cookies[COOKIE]; if (sid) await db.query("delete from sessions where id=$1", [sid]); reply.clearCookie(COOKIE, { path: "/" }); return { ok: true }; });
   app.get("/auth/me", async (req, reply) => {
     if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });

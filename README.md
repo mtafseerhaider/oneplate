@@ -64,7 +64,7 @@ cp infra/.env.example infra/.env   # set SESSION_SECRET and POSTGRES_PASSWORD
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-Then open https://localhost, create the first account (that is the household owner), and use the Account card on the Progress tab to create an invite code for Uzma, who registers with it as a Contributor. Changes appear on every signed-in device within a second over Server-Sent Events; password reset links are printed in the API log until an SMTP transport is configured.
+Then open https://localhost, create the first account (that is the household owner), and use the Account card on the Progress tab to create an invite code for Uzma, who registers with it as a Contributor. Sign in with a passkey (Face ID or fingerprint) once one is added from the Account card. The top-bar toggle switches the interface to Urdu, right to left, per device. Changes appear on every signed-in device within a second over Server-Sent Events; password reset links are printed in the API log until an SMTP transport is configured.
 
 Development without Docker (needs Node 22, pnpm 10 and a local PostgreSQL):
 

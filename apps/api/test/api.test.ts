@@ -50,6 +50,13 @@ describe("OnePlate API", () => {
     const w = await app.inject({ method: "PUT", url: `/households/${hid}/docs/meals/c_test`, headers: { cookie: owner }, payload: { body: { id: "c_test", n: "Test", tag: "other", items: [] } } }); expect(w.statusCode).toBe(200);
     await new Promise(r => setTimeout(r, 300)); unsub(); expect(got.some(c => c.collection === "meals" && c.doc_id === "c_test")).toBe(true);
   });
+  it("issues passkey options and rejects forged responses", async () => {
+    const ro = await app.inject({ method: "POST", url: "/auth/passkey/register/options", headers: { cookie: owner } }); expect(ro.statusCode).toBe(200); expect(ro.json().options.rp.id).toBe("localhost"); expect(ro.json().options.authenticatorSelection.residentKey).toBe("required");
+    const forged = await app.inject({ method: "POST", url: "/auth/passkey/register/verify", headers: { cookie: owner }, payload: { challengeId: ro.json().challengeId, response: { id: "x", rawId: "eA", type: "public-key", response: { clientDataJSON: "e30", attestationObject: "AAAA" }, clientExtensionResults: {} } } }); expect(forged.statusCode).toBe(400);
+    const lo = await app.inject({ method: "POST", url: "/auth/passkey/login/options" }); expect(lo.statusCode).toBe(200); expect(typeof lo.json().options.challenge).toBe("string");
+    const unknown = await app.inject({ method: "POST", url: "/auth/passkey/login/verify", payload: { challengeId: lo.json().challengeId, response: { id: "nope", rawId: "bm9wZQ", type: "public-key", response: {}, clientExtensionResults: {} } } }); expect(unknown.statusCode).toBe(400);
+    const anon = await app.inject({ method: "POST", url: "/auth/passkey/register/options" }); expect(anon.statusCode).toBe(401);
+  });
   it("exports and audits", async () => {
     const ex = await app.inject({ method: "GET", url: `/households/${hid}/export`, headers: { cookie: owner } }); expect(ex.json().documents.length).toBeGreaterThan(1);
     const a = await db.query("select count(*)::int as n from audit_events where household_id=$1", [hid]); expect(a.rows[0].n).toBeGreaterThan(3);
