@@ -10,10 +10,14 @@ import type { Config } from "./config.js";
 import type { Db } from "./db/pool.js";
 import { hashPassword, verifyPassword, newSessionId, newInviteCode } from "./auth/password.js";
 import { canWrite, validateFamilyDoc, type Actor, type Level } from "./auth/policy.js";
+import { ChangeBus, type Change } from "./events.js";
+import { createMailer, type Mailer } from "./mail.js";
+import { createHash, randomBytes } from "node:crypto";
 
 declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string } }
 
-export async function buildApp(cfg: Config, db: Db): Promise<FastifyInstance> {
+export interface AppDeps { bus?: ChangeBus; mailer?: Mailer }
+export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: { level: cfg.LOG_LEVEL, ...(cfg.NODE_ENV === "development" ? { transport: { target: "pino-pretty" } } : {}) }, trustProxy: true });
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: cfg.CORS_ORIGIN.split(","), credentials: true });
@@ -22,6 +26,9 @@ export async function buildApp(cfg: Config, db: Db): Promise<FastifyInstance> {
   await app.register(swagger, { openapi: { info: { title: "OnePlate API", version: "0.1.0" } } });
   await app.register(swaggerUi, { routePrefix: "/docs" });
   const COOKIE = "op_session";
+  const mailer = deps.mailer ?? createMailer(cfg.MAIL_TRANSPORT, m => app.log.info(m));
+  const bus = deps.bus ?? null;
+  app.decorate("mailer", mailer);
   const audit = (req: any, action: string, extra: Partial<{ collection: string; doc_id: string; version: number }> = {}) => db.query("insert into audit_events(household_id,user_id,action,collection,doc_id,version,ip) values($1,$2,$3,$4,$5,$6,$7)", [req.householdId ?? null, req.userId ?? null, action, extra.collection ?? null, extra.doc_id ?? null, extra.version ?? null, req.ip]).catch(e => app.log.warn(e, "audit failed"));
 
   app.get("/health", async () => ({ status: "ok" }));
@@ -46,6 +53,19 @@ export async function buildApp(cfg: Config, db: Db): Promise<FastifyInstance> {
     if (!r.rowCount || !(await verifyPassword(p.data.password, r.rows[0]!.password_hash))) return reply.code(401).send({ error: { code: "BAD_CREDENTIALS", message: "wrong email or password" } });
     await setSession(reply, r.rows[0]!.id, req.headers["user-agent"]); req.userId = r.rows[0]!.id; await audit(req, "login"); return { id: r.rows[0]!.id };
   });
+  app.post("/auth/forgot", { config: { rateLimit: { max: 5, timeWindow: "1 hour" } } }, async (req, reply) => {
+    const p = z.object({ email: z.string().email() }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "email required" } });
+    const u = await db.query<{ id: string }>("select id from users where email=$1", [p.data.email.toLowerCase()]);
+    if (u.rowCount) { const token = randomBytes(24).toString("base64url"); await db.query("insert into password_resets(token_hash,user_id,expires_at) values($1,$2,now()+interval '1 hour')", [createHash("sha256").update(token).digest("hex"), u.rows[0]!.id]); await mailer.send({ to: p.data.email, subject: "Reset your OnePlate password", text: `Open this link within an hour to choose a new password:\n${cfg.PUBLIC_URL}/account.html?reset=${token}` }); }
+    return { ok: true }; // never reveal whether the email exists
+  });
+  app.post("/auth/reset", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (req, reply) => {
+    const p = z.object({ token: z.string().min(10), password: z.string().min(8).max(200) }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "token and a password of 8+ characters required" } });
+    const h = createHash("sha256").update(p.data.token).digest("hex"); const r = await db.query<{ user_id: string }>("select user_id from password_resets where token_hash=$1 and used_at is null and expires_at>now()", [h]);
+    if (!r.rowCount) return reply.code(400).send({ error: { code: "INVALID_TOKEN", message: "this link is invalid or has expired" } });
+    await db.query("update users set password_hash=$1, updated_at=now() where id=$2", [await hashPassword(p.data.password), r.rows[0]!.user_id]); await db.query("update password_resets set used_at=now() where token_hash=$1", [h]); await db.query("delete from sessions where user_id=$1", [r.rows[0]!.user_id]);
+    req.userId = r.rows[0]!.user_id; await audit(req, "password.reset"); return { ok: true };
+  });
   app.post("/auth/logout", async (req, reply) => { const sid = req.cookies[COOKIE]; if (sid) await db.query("delete from sessions where id=$1", [sid]); reply.clearCookie(COOKIE, { path: "/" }); return { ok: true }; });
   app.get("/auth/me", async (req, reply) => {
     if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });
@@ -68,8 +88,10 @@ export async function buildApp(cfg: Config, db: Db): Promise<FastifyInstance> {
   };
   app.post("/households/:hid/invites", { preHandler: withHousehold }, async (req: any, reply) => {
     if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } });
-    const p = z.object({ level: z.enum(["contributor", "viewer"]), memberId: z.string().max(40).nullable().default(null), days: z.number().int().min(1).max(30).default(7) }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "level required" } });
-    const code = newInviteCode(); await db.query("insert into invites(code,household_id,level,member_id,expires_at) values($1,$2,$3,$4,now()+($5||' days')::interval)", [code, req.householdId, p.data.level, p.data.memberId, String(p.data.days)]); await audit(req, "invite.create"); return { code, expiresInDays: p.data.days };
+    const p = z.object({ level: z.enum(["contributor", "viewer"]), memberId: z.string().max(40).nullable().default(null), days: z.number().int().min(1).max(30).default(7), email: z.string().email().optional() }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "level required" } });
+    const code = newInviteCode(); await db.query("insert into invites(code,household_id,level,member_id,expires_at) values($1,$2,$3,$4,now()+($5||' days')::interval)", [code, req.householdId, p.data.level, p.data.memberId, String(p.data.days)]); await audit(req, "invite.create");
+    if (p.data.email) await mailer.send({ to: p.data.email, subject: "You are invited to OnePlate", text: `Create your account at ${cfg.PUBLIC_URL}/account.html and enter the invite code ${code}. It expires in ${p.data.days} days.` });
+    return { code, expiresInDays: p.data.days };
   });
   app.post("/invites/:code/accept", { preHandler: requireUser }, async (req: any, reply) => {
     const inv = await db.query<{ household_id: string; level: Level; member_id: string | null }>("select household_id,level,member_id from invites where code=$1 and used_by is null and expires_at>now()", [req.params.code]);
@@ -104,15 +126,24 @@ export async function buildApp(cfg: Config, db: Db): Promise<FastifyInstance> {
       if (existing && p.data.ifVersion !== undefined && p.data.ifVersion !== existing.version) { await c.query("rollback"); return reply.code(409).send({ error: { code: "CONFLICT", message: "document changed", currentVersion: existing.version, body: existing.body } }); }
       const v = existing ? existing.version + 1 : 1;
       await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,$2,$3,$4,$5,$6) on conflict (household_id,collection,doc_id) do update set body=excluded.body, version=excluded.version, updated_by=excluded.updated_by, updated_at=now()", [req.householdId, collection, docId, p.data.body, v, req.userId]);
-      await c.query("commit"); await audit(req, "doc.write", { collection, doc_id: docId, version: v }); return { version: v };
+      await ChangeBus.publish(c, { hid: req.householdId, collection, doc_id: docId, version: v }); await c.query("commit"); await audit(req, "doc.write", { collection, doc_id: docId, version: v }); return { version: v };
     } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
   });
   app.delete("/households/:hid/docs/:collection/:docId", { preHandler: withHousehold }, async (req: any, reply) => {
     const { collection, docId } = req.params; const ex = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection=$2 and doc_id=$3", [req.householdId, collection, docId]);
     if (!ex.rowCount) return { ok: true }; if (!canWrite(req.actor, collection, docId, {}, ex.rows[0]!.body)) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "your access level cannot delete this" } });
-    await db.query("delete from documents where household_id=$1 and collection=$2 and doc_id=$3", [req.householdId, collection, docId]); await audit(req, "doc.delete", { collection, doc_id: docId }); return { ok: true };
+    await db.query("delete from documents where household_id=$1 and collection=$2 and doc_id=$3", [req.householdId, collection, docId]); await ChangeBus.publish(db, { hid: req.householdId, collection, doc_id: docId, version: 0, deleted: true }); await audit(req, "doc.delete", { collection, doc_id: docId }); return { ok: true };
   });
   app.get("/households/:hid/changes", { preHandler: withHousehold }, async (req: any) => { const since = new Date(String(req.query.since ?? 0)); const r = await db.query("select collection,doc_id,body,version,updated_at from documents where household_id=$1 and updated_at>$2 order by updated_at limit 1000", [req.householdId, isNaN(since.getTime()) ? new Date(0) : since]); return { docs: r.rows, serverTime: new Date().toISOString() }; });
+  app.get("/households/:hid/events", { preHandler: withHousehold }, async (req: any, reply) => {
+    reply.raw.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive", "x-accel-buffering": "no", "access-control-allow-origin": req.headers.origin ?? "*", "access-control-allow-credentials": "true" });
+    reply.raw.write(`retry: 5000\nevent: hello\ndata: ${JSON.stringify({ serverTime: new Date().toISOString(), live: !!bus })}\n\n`);
+    const send = (c: Change) => reply.raw.write(`event: change\ndata: ${JSON.stringify(c)}\n\n`);
+    const unsub = bus ? bus.subscribe(req.householdId, send) : () => {};
+    const beat = setInterval(() => reply.raw.write(": ping\n\n"), 25000);
+    req.raw.on("close", () => { clearInterval(beat); unsub(); });
+    await new Promise(() => {}); // held open until the client disconnects
+  });
   app.setErrorHandler((err: any, _req, reply) => { app.log.error(err); reply.code((err as any).statusCode ?? 500).send({ error: { code: "INTERNAL", message: (err as any).statusCode ? err.message : "something went wrong" } }); });
   return app;
 }

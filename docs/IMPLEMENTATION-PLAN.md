@@ -11,12 +11,17 @@ Each phase ends with something that runs. Estimates assume part-time work.
 - `infra`: Docker Compose, Caddy, backup script, `.env.example`.
 - Exit: `docker compose up` on a laptop gives a working OnePlate at `https://localhost` with sign-up, household creation and an invite for Uzma.
 
-## Phase 1: Product hardening (2–3 weeks)
-- Replace polling with Server-Sent Events; conflict toasts in the UI.
-- Export my household (JSON) and delete my household endpoints and screens.
-- Email delivery (invite emails, password reset) behind an interface; console transport locally.
+## Phase 1: Product hardening
+Done in this commit:
+- Live updates over Server-Sent Events, backed by Postgres LISTEN/NOTIFY so several API instances share one stream; polling stays as the fallback.
+- Conflicts refresh the document from the server and tell the user, instead of failing silently.
+- Export my household and delete my household from inside the app (owner only, delete needs a second tap).
+- Email delivery behind a Mailer interface: password reset by one-hour token, invite emails; console transport locally, memory transport in tests.
+- Invite Uzma from the app's Account card; sign out.
+Still to do:
 - Passkey sign-in on supported devices.
 - Accessibility pass and Urdu interface strings (RTL) using the existing Urdu food names as the seed.
+- SMTP or provider transport for the Mailer (one class), and a real domain for the reset links.
 
 ## Phase 2: Decompose the UI (3–4 weeks)
 - Move the single-file UI into `apps/web/src` modules by tab, keeping the design tokens. The artifact build becomes a bundler target that inlines the result, so `app/index.html` is generated, not hand-edited.

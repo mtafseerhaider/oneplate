@@ -3,11 +3,13 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { createPool } from "../src/db/pool.js";
 import { migrate } from "../src/db/migrate.js";
+import { ChangeBus } from "../src/events.js";
+import { MemoryMailer } from "../src/mail.js";
 const cfg = loadConfig({ ...process.env, NODE_ENV: "test", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
-const db = createPool(cfg.DATABASE_URL); let app: Awaited<ReturnType<typeof buildApp>>;
+const db = createPool(cfg.DATABASE_URL); let app: Awaited<ReturnType<typeof buildApp>>; const mailer = new MemoryMailer(); const bus = new ChangeBus(cfg.DATABASE_URL);
 const cookieOf = (res: any) => String(res.headers["set-cookie"]).split(";")[0];
-beforeAll(async () => { await db.query("drop schema public cascade; create schema public"); await migrate(db); app = await buildApp(cfg, db); });
-afterAll(async () => { await app.close(); await db.end(); });
+beforeAll(async () => { await db.query("drop schema public cascade; create schema public"); await migrate(db); await bus.start(); app = await buildApp(cfg, db, { bus, mailer }); });
+afterAll(async () => { await app.close(); await bus.stop(); await db.end(); });
 describe("OnePlate API", () => {
   let owner = "", wife = "", hid = "";
   it("registers, creates a household, invites a contributor", async () => {
@@ -32,6 +34,21 @@ describe("OnePlate API", () => {
     const dayW = await app.inject({ method: "PUT", url: `/households/${hid}/docs/days/2026-11-04`, headers: { cookie: wife }, payload: { body: { date: "2026-11-04", water: 6, journal: { uzma: { learned: "x" } } }, ifVersion: 3 } }); expect(dayW.statusCode).toBe(403);
     const child = await app.inject({ method: "PUT", url: `/households/${hid}/docs/family/abbas`, headers: { cookie: owner }, payload: { body: { id: "abbas", role: "child", targetWeight: 20 } } }); expect(child.statusCode).toBe(422);
     const stranger = await app.inject({ method: "GET", url: `/households/${hid}/docs/days` }); expect(stranger.statusCode).toBe(401);
+  });
+  it("resets a password by emailed token and emails invites", async () => {
+    const f = await app.inject({ method: "POST", url: "/auth/forgot", payload: { email: "uzma@example.com" } }); expect(f.statusCode).toBe(200);
+    const mail = mailer.sent.find(m => m.subject.includes("Reset")); expect(mail).toBeTruthy(); const token = mail!.text.split("reset=")[1]!.trim();
+    const bad = await app.inject({ method: "POST", url: "/auth/reset", payload: { token: "nope-nope-nope", password: "whatever123" } }); expect(bad.statusCode).toBe(400);
+    const ok = await app.inject({ method: "POST", url: "/auth/reset", payload: { token, password: "a brand new password" } }); expect(ok.statusCode).toBe(200);
+    const old = await app.inject({ method: "POST", url: "/auth/login", payload: { email: "uzma@example.com", password: "another good one" } }); expect(old.statusCode).toBe(401);
+    const fresh = await app.inject({ method: "POST", url: "/auth/login", payload: { email: "uzma@example.com", password: "a brand new password" } }); expect(fresh.statusCode).toBe(200); wife = cookieOf(fresh);
+    const inv = await app.inject({ method: "POST", url: `/households/${hid}/invites`, headers: { cookie: owner }, payload: { level: "viewer", email: "cousin@example.com" } }); expect(inv.statusCode).toBe(200); expect(mailer.sent.some(m => m.to === "cousin@example.com" && m.text.includes(inv.json().code))).toBe(true);
+    const unknown = await app.inject({ method: "POST", url: "/auth/forgot", payload: { email: "nobody@example.com" } }); expect(unknown.statusCode).toBe(200);
+  });
+  it("broadcasts document changes through the change bus", async () => {
+    const got: any[] = []; const unsub = bus.subscribe(hid, c => got.push(c));
+    const w = await app.inject({ method: "PUT", url: `/households/${hid}/docs/meals/c_test`, headers: { cookie: owner }, payload: { body: { id: "c_test", n: "Test", tag: "other", items: [] } } }); expect(w.statusCode).toBe(200);
+    await new Promise(r => setTimeout(r, 300)); unsub(); expect(got.some(c => c.collection === "meals" && c.doc_id === "c_test")).toBe(true);
   });
   it("exports and audits", async () => {
     const ex = await app.inject({ method: "GET", url: `/households/${hid}/export`, headers: { cookie: owner } }); expect(ex.json().documents.length).toBeGreaterThan(1);

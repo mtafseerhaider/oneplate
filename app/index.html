@@ -342,6 +342,7 @@ mizan:["Al-Mizan","Tafsir al-Mizan by Allamah Muhammad Husayn Tabataba'i (d. 198
 mizanvol:["Volume references","The English al-Mizan is 40 volumes: 1 to 13 by WOFIS in Rizvi's translation, 14 to 40 by Tawheed Institute Australia, about two English volumes per Arabic volume. The volume shown is taken from publisher and bookseller listings; a volume marked 'inferred' is worked out from the neighbouring volumes. Page numbers for a passage are not published anywhere, so record the page from your own copy in the field; it syncs and shows in the course index."],
 qprogress:["Recording progress","Three states per reading: read, read but worth revisiting, or not yet. Tap the big buttons for today, or tap any square in the grid to cycle it. Bulk update marks a range at once, or everything up to today, for catching up or reading ahead. Progress is stored once per reading, not per day, so it survives the course repeating."],
 backdate:["Logging a past day","Missed a day? Pick the date in 'Logging for' and everything you enter, check-ins, mood, sleep, gratitude, the verse read, the journal, learning done and the family circle, is saved to that day. The Learn tab shows that day's readings so the journal matches. Tap 'Back to today' when done. Weigh-ins and growth entries already carry their own date."],
+account:["Account","Only on the self-hosted OnePlate. Invite codes let Uzma register as a contributor; Export downloads every record of the household as JSON; Delete removes the household and all its data permanently after a second tap."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -528,7 +529,7 @@ function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMont
 function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{};S.qnotes=j.qnotes||{};S.qprog=j.qprog||{done:{},flag:{}}}}catch(e){}}
 function saveLocal(){if(readOnly)return;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const queues={};
-function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
+function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else if(e&&e.code==="conflict"){toast("Changed on another device · refreshed");render()}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
 function dbDelete(path){ if(!db||readOnly)return; const run=()=>db.doc(path).delete().catch(e=>console.warn("db delete",path,e)); queues[path]=(queues[path]||Promise.resolve()).then(run); }
 function persistSettings(){saveLocal();dbWrite("settings/main",S.settings)}
 function persistFast(){saveLocal();dbWrite("fast/current",S.fast)}
@@ -1028,6 +1029,10 @@ function vProgress(){
     <li>Sleep under 7 h? Fix that before cutting food.</li>
     <li>Below 76 kg maintenance is ≈150 kcal lower: add 2,000 steps or keep the smaller rest-day plate.</li>
     <li>Still stuck after 6 weeks: TSH, HbA1c, vitamin D, medication review.</li></ul></div></details>
+  ${(typeof window.oneplate==="object"&&!readOnly)?`<section class="card"><p class="eyebrow">${ic("family")} Account · this household ${I("account")}</p>
+    <div class="row">${isOwner?`<button class="btn" data-a="acc_invite">Invite Uzma (contributor)</button><button class="btn" data-a="acc_invite_view">Invite a viewer</button><button class="btn" data-a="acc_export">Export all data</button>`:""}<button class="btn ghost" data-a="acc_signout">Sign out</button>${isOwner?`<button class="btn ghost" style="color:var(--red)" data-a="acc_delete">Delete household</button>`:""}</div>
+    ${S._inviteCode?`<div class="note">Invite code <b style="font-family:var(--mono);font-size:16px">${esc(S._inviteCode)}</b> · valid 7 days. Uzma creates her account at <b>${esc(location.origin)}/account.html</b> and enters it.</div>`:""}
+    <p class="small muted">Live updates: ${window.oneplate.live()?"connected":"polling"}.</p></section>`:""}
   ${ro?"":`<details><summary><span>Settings</span>${ic("chev","chev")}</summary><div class="body">
     <form class="form" id="sform" autocomplete="off">
       <label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight}"></label>
@@ -1671,6 +1676,10 @@ document.addEventListener("click",e=>{
   if(a==="qclear"){if(S._qconfirm){S.qprog={done:{},flag:{}};Object.keys(S.days).forEach(k=>{if(S.days[k].quran){S.days[k].quran=false;persistDay(k)}});persistQprog();S._qconfirm=false;toast("Progress cleared");render()}else{S._qconfirm=true;toast("Tap again to confirm clearing all progress");setTimeout(()=>{S._qconfirm=false},4000)}return}
   if(a==="habits_all"){const dd=b.dataset.d||t,d=day(dd);["starter","train","walk","steps","closed"].forEach(k=>d[k]=true);if((d.water||0)<4)d.water=4;if((d.palms||0)<4)d.palms=4;persistDay(dd);toast("All habits done · "+fmtDate(dd));render();return}
   if(a==="backtoday"){S._ld=null;render();return}
+  if(a==="acc_invite"||a==="acc_invite_view"){window.oneplate.invite(a==="acc_invite"?"contributor":"viewer",a==="acc_invite"?"uzma":null).then(r=>{S._inviteCode=r.code;render()}).catch(e=>toast(e.message));return}
+  if(a==="acc_export"){window.oneplate.exportHousehold().then(d=>{const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});const u=URL.createObjectURL(blob);const x=document.createElement("a");x.href=u;x.download="oneplate-export-"+todayStr()+".json";document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);toast("Exported "+d.documents.length+" records")}).catch(e=>toast(e.message));return}
+  if(a==="acc_signout"){window.oneplate.signOut();return}
+  if(a==="acc_delete"){if(S._delconfirm){window.oneplate.deleteHousehold().then(()=>{localStorage.removeItem(LS);location.href="./account.html"}).catch(e=>toast(e.message))}else{S._delconfirm=true;toast("Tap again within 5 s to delete everything");setTimeout(()=>{S._delconfirm=false},5000)}return}
   if(a==="soul"){const d=day(t);d.soul=!d.soul;persistDay(t);render();return}
   if(a==="delw"){removeWeigh(b.dataset.d);toast("Removed");render();return}
   if(a==="fedit"){S._fedit=b.dataset.id;S._fo=S._fo||{};S._fo[b.dataset.id]=true;render();return}
