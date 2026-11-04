@@ -337,6 +337,7 @@ vitd:["Vitamin D","Needed for bone strength around the healed fracture. Very com
 omad:["OMAD","One Meal A Day. Your original routine. It works, but it makes eating enough protein and recovering from exercise harder. The plan uses a small starter plus one plate instead."],
 sync:["Synced","Your check-ins and weigh-ins are saved to your Claude account, so the same data appears on your iPhone and your Android phone."],
 local:["This device only","Not signed in or offline, so data is saved only in this browser. Sign in to claude.ai and reopen the link to sync."],
+familyeditor:["Family editor","You are signed in as a family member with Contributor access. You can log weigh-ins and growth for Uzma, Abbas and Eliyya, edit their profiles, and add or edit meals. Tafseer's own fast, check-ins, weigh-ins and settings stay his."],
 viewonly:["View only","You can see everything live: the fast timer, today's check-ins, all progress and weigh-ins, the training week and the full meal list. Only the owner can change entries. Use the five tabs at the bottom to navigate."],
 nail:["Titanium nail","The metal rod inside the left shin bone from the fracture. Walking and cycling are good for it. No running or jumping until an orthopaedic surgeon says so."],
 tibia:["Tibia and fibula","The two bones of the lower leg. The tibia is the big shin bone that holds the nail."]
@@ -487,7 +488,7 @@ const CHECKS=[
 /* ---------- state ---------- */
 const LS="oneplate.v1";
 let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{}};
-let db=null,syncState="wait",readOnly=false,tab=(location.hash||"#today").slice(1);
+let db=null,syncState="wait",readOnly=false,isOwner=true,tab=(location.hash||"#today").slice(1);
 if(!["today","plate","family","train","progress","guide"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{}}}catch(e){}}
@@ -503,12 +504,12 @@ function removeWeigh(d){delete S.weighins[d];saveLocal();dbDelete("weighins/"+d)
 function persistMeal(id){saveLocal();dbWrite("meals/"+id,S.meals[id])}
 function persistFamily(id){saveLocal();dbWrite("family/"+id,S.family[id])}
 function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
-function setChip(){const c=document.getElementById("syncChip");const k=readOnly?"viewonly":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
+function setChip(){const c=document.getElementById("syncChip");const fam=!readOnly&&!isOwner;const k=readOnly?"viewonly":fam?"familyeditor":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":fam?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":fam?"Family editor":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
 
 async function connect(){
   try{ db=await window.claude.use("db"); }catch(e){ db=null; }
   if(!db){ syncState="local"; setChip(); render(); return; }
-  try{ const u=await window.claude.use("user"); if(u){ const w=await u.can("data.write"); if(w===false){ readOnly=true; setChip(); render(); } } }catch(e){}
+  try{ const u=await window.claude.use("user"); if(u){ const w=await u.can("data.write"); const o=await u.isOwner(); isOwner=!!o||w===null; if(w===false){ readOnly=true; } setChip(); render(); } }catch(e){}
   let got=0; const timer=setTimeout(()=>{ if(syncState==="wait"){syncState="local";setChip()} },10000);
   const ready=()=>{ got++; if(got>=6){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
   const err=e=>{ console.warn("db",e); clearTimeout(timer); syncState="local"; setChip(); render(); };
@@ -607,8 +608,8 @@ function fmtClock(d){return d.toLocaleTimeString(undefined,{hour:"numeric",minut
 const FAMILY_BASE=[
 {id:"tafseer",name:"Tafseer",rel:"me",role:"adult",sex:"male",goal:"fat_loss"},
 {id:"uzma",name:"Uzma",rel:"wife",role:"adult",sex:"female",goal:"maintain",status:"none"},
-{id:"abbas",name:"Abbas",rel:"son",role:"child",sex:"male",goal:"growth"},
-{id:"eliyya",name:"Eliyya",rel:"daughter",role:"child",sex:"female",goal:"growth"}
+{id:"abbas",name:"Abbas",rel:"son",role:"child",sex:"male",goal:"growth",dob:"2019-02-09"},
+{id:"eliyya",name:"Eliyya",rel:"daughter",role:"child",sex:"female",goal:"growth",dob:"2022-09-18"}
 ];
 function members(){return FAMILY_BASE.map(b=>Object.assign({},b,(S.family||{})[b.id]||{},{id:b.id}))}
 function member(id){return members().find(m=>m.id===id)}
@@ -661,7 +662,7 @@ function vFamily(){
   ${ms.map(m=>{const st=stageOf(m),ws=memberWeighs(m.id),last=ws[ws.length-1],ad=m.role==="adult",g=ad?null:childGuide(m);const editing=ed===m.id;
     return `<details ${(S._fo||{})[m.id]?"open":""} data-fid="${m.id}"><summary><span style="display:flex;align-items:center;gap:10px"><span class="avatar ${m.sex}">${initials(m.name)}</span><span>${esc(m.name)}<br><span class="kcal">${esc(m.rel)} · ${STAGE_LABEL[st]} · ${ageLabel(m)}</span></span></span>${ic("chev","chev")}</summary><div class="body">
     ${editing?memberEditor(m):`
-    <div class="row" style="gap:6px">${ad?`<span class="pill ${m.goal==="fat_loss"?"soft":"green"}">${m.goal==="fat_loss"?"Fat loss":"Maintain"}</span>`:`<span class="pill green">Growing · never restricted</span>`}${m.status&&m.status!=="none"?`<span class="pill blue">${m.status}</span>`:""}${last?`<span class="pill grey">${Number(last.weight).toFixed(1)} kg · ${fmtDate(last.date)}</span>`:""}${ro?"":`<button class="btn ghost" type="button" data-a="fedit" data-id="${m.id}">Edit</button>`}</div>
+    <div class="row" style="gap:6px">${ad?`<span class="pill ${m.goal==="fat_loss"?"soft":"green"}">${m.goal==="fat_loss"?"Fat loss":"Maintain"}</span>`:`<span class="pill green">Growing · never restricted</span>`}${m.status&&m.status!=="none"?`<span class="pill blue">${m.status}</span>`:""}${last?`<span class="pill grey">${Number(last.weight).toFixed(1)} kg · ${fmtDate(last.date)}</span>`:""}${(m.id==="tafseer"?ro||!isOwner:ro)?"":`<button class="btn ghost" type="button" data-a="fedit" data-id="${m.id}">Edit</button>`}</div>
     ${m.id==="tafseer"?`<p class="small muted">Your own plan lives on the Today, Train and Progress tabs.</p>`:""}
     ${ad&&m.id!=="tafseer"?`<p class="small">${m.status==="pregnant"?"Pregnancy: no calorie deficit, no fasting plan without the clinician's say. Protein-rich suhoor if fasting, an extra 300 ml water a day, dates in the last weeks. Warning signs (reduced movements, dizziness, headache, bleeding, dark urine): break the fast and call the clinician.":m.status==="breastfeeding"?"Breastfeeding: no calorie deficit; an extra 700 ml water a day. If fasting, watch the baby's wet nappies (6+ a day); fewer means break the fast and see the clinician.":m.goal==="fat_loss"?"Same OnePlate dinner, same rules: 2 palms protein, 2 fists veg, 1 cupped hand or 1 roti, 1 thumb fat, 1 bowl yogurt. A fasting window is her choice, 14:10 or 16:8 at most, never more than 24 hours. Weekly weigh-in below.":"Same OnePlate dinner with one extra cupped hand of rice or roti. No fasting needed. Weigh-in below if she wants to track."}</p>
       ${miniChart(ws,"weight")}
@@ -753,6 +754,7 @@ function vToday(){
   const t=todayStr(),d=day(t),wd=new Date().getDay(),plan=planFor(wd),w=weekNo(),hint=nowHint(),ro=readOnly;
   const on=!!S.fast.startedAt,goal=S.settings.fastHours||21,dn=doneCount(d),st=streak();
   const h=new Date().getHours()+new Date().getMinutes()/60;
+  const roMe=readOnly||!isOwner;
   const tonight=tonightMeal();
   const hj=hijriOf(t),sf=sunnahFast(t),ram=ramadanActive(),ft=ram?fastingTimes(t):null;
   let kv="";
@@ -761,7 +763,7 @@ function vToday(){
   return `
   <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date().toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${greeting()}</h1></div>
    <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
-  ${ro?`<div class="note">You are viewing the owner's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:""}
+  ${ro?`<div class="note">You are viewing Tafseer's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab and edit meals on the <b>Plate</b> tab.</div>`:""}
   <section class="card strip">
     <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-dn/7)).toFixed(1)}"/></svg><b>${dn}/7</b></div>
     <div class="txt"><b>${dn===7?"Perfect day":dn>=4?"Good day so far":"Today's habits"}</b><small>${dn} of 7 done · water, protein, starter, session, walk, steps, kitchen closed</small></div>
@@ -774,10 +776,10 @@ function vToday(){
         <div class="lbl">${on?`<b id="ringTime"></b><span id="ringSub"></span>`:`${ic("moon")}<span id="ringSub">not fasting</span><b id="ringTime" hidden></b>`}</div></div>
       <div class="side">
         ${kv}
-        ${ro?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} End fast, eat</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="cancelfast">Cancel</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} Start fast now</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="startfast930">From 9:30 PM</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`}
+        ${roMe?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} End fast, eat</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="cancelfast">Cancel</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} Start fast now</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="startfast930">From 9:30 PM</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`}
       </div>
     </div>
-    ${S._ft&&!ro?`<form class="form" id="fform" autocomplete="off" style="border-top:1px solid var(--line);padding-top:12px">
+    ${S._ft&&!roMe?`<form class="form" id="fform" autocomplete="off" style="border-top:1px solid var(--line);padding-top:12px">
       <label class="f">Fast started<input type="datetime-local" id="f_start" value="${dtl(S.fast.startedAt||(()=>{const x=new Date();x.setHours(21,30,0,0);if(x>new Date())x.setDate(x.getDate()-1);return x})())}" required></label>
       <label class="f">Fast ended (leave empty if still fasting)<input type="datetime-local" id="f_end" value=""></label>
       <button class="btn primary" type="submit">Save times</button><button class="btn" type="button" data-a="ftcancel">Cancel</button>
@@ -791,7 +793,7 @@ function vToday(){
       <div class="tile"><b>${fmtClock(ft.maghrib)}</b><span>iftar (Maghrib) ${I("iftar")}</span></div>
     </div>
     <p class="small" id="rCount"></p>
-    ${ro?"":on?"":`<button class="btn wide" data-a="rfajr">${ic("moon")} I'm fasting since Fajr</button>`}
+    ${roMe?"":on?"":`<button class="btn wide" data-a="rfajr">${ic("moon")} I'm fasting since Fajr</button>`}
     <p class="small muted">Imsak ${fmtClock(ft.imsak)} (Fajr − 10 min, a reminder only). Karachi calculation method, Fajr 18°. Local moon sighting may shift the date: adjust the Hijri offset in Settings. The app suggests times; it never rules.</p>
   </section>`:""}
   <section class="card accent">
@@ -805,19 +807,19 @@ function vToday(){
   <section class="card">
     <p class="eyebrow">Check-ins</p>
     <div class="checks">
-      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,ro,"")}</div></div>
-      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,ro,"palms")}</div></div>
-      ${swRow("starter","Protein starter at home","≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,ro,"home","starter")}
-      ${swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,ro,KIND_ICON[plan.k]||"bike","cycle")}
-      ${swRow("walk","Walk after dinner","10–15 min within 30 min of the last bite",d.walk,ro,"walk","walk")}
-      ${swRow("steps","8,000 steps","Or your current phase target",d.steps,ro,"foot","steps")}
-      ${swRow("closed","Kitchen closed by 9:30 PM","Then start the fast",d.closed,ro,"moon","closed")}
+      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
+      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
+      ${swRow("starter","Protein starter at home","≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,roMe,"home","starter")}
+      ${swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,roMe,KIND_ICON[plan.k]||"bike","cycle")}
+      ${swRow("walk","Walk after dinner","10–15 min within 30 min of the last bite",d.walk,roMe,"walk","walk")}
+      ${swRow("steps","8,000 steps","Or your current phase target",d.steps,roMe,"foot","steps")}
+      ${swRow("closed","Kitchen closed by 9:30 PM","Then start the fast",d.closed,roMe,"moon","closed")}
     </div>
   </section>
   <section class="card">
     <div class="row between"><p class="eyebrow">${ic("clock")} Mindful dinner · 20 minutes ${I("thuluth")}</p>${S._meal?`<span class="pill green" id="mealT">00:00</span>`:""}</div>
     <p class="small" id="mealMsg">${S._meal?"":"Water 20–30 min before. Bismillah. Protein first, roti or rice last, spoon down between bites. Stop at about 80 % full."}</p>
-    ${ro?"":S._meal?`<button class="btn" data-a="mealstop">Finished eating</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} Start the 20-minute meal timer</button>`}
+    ${roMe?"":S._meal?`<button class="btn" data-a="mealstop">Finished eating</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} Start the 20-minute meal timer</button>`}
   </section>
   ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
     <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate</p>${ic("chev","")}</div>
@@ -937,7 +939,7 @@ function vTrain(){
   </div></details>`;
 }
 function vProgress(){
-  const st=S.settings,ws=weighList(),ro=readOnly;
+  const st=S.settings,ws=weighList(),ro=readOnly||!isOwner;
   const last=ws[ws.length-1],first=ws[0],prev=ws[ws.length-2];
   const cur=currentWeight();
   const lost=(st.startWeight-cur),togo=cur-st.targetWeight,total=st.startWeight-st.targetWeight,pct=Math.max(0,Math.min(100,lost/total*100));
@@ -1153,6 +1155,7 @@ document.addEventListener("click",e=>{
   if(a==="mf"){S._mf=b.dataset.v;render();return}
   if(a==="ff"){S._ff=b.dataset.v;render();return}
   if(readOnly){toast("View only");return}
+  if(!isOwner&&["startfast","startfast930","cancelfast","endfast","dot","tog","mealstart","mealstop","ftimes","ftcancel","rfajr"].includes(a)){toast("Only Tafseer can change this");return}
   if(a==="ftimes"){S._ft=!S._ft;render();return}
   if(a==="rfajr"){const ft=fastingTimes(t);if(ft){S.fast={startedAt:ft.fajr.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fasting since Fajr "+fmtClock(ft.fajr));render()}return}
   if(a==="mealstart"){S._meal=Date.now();render();return}
@@ -1170,6 +1173,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("submit",e=>{
   if(readOnly){e.preventDefault();return}
+  if(!isOwner&&(e.target.id==="wform"||e.target.id==="sform"||e.target.id==="fform"||(e.target.dataset&&e.target.dataset.m==="tafseer"))){e.preventDefault();toast("Only Tafseer can change this");return}
   if(e.target.classList&&e.target.classList.contains("fam-form")){e.preventDefault();const id=e.target.dataset.m;const rec=Object.assign({},S.family[id]||{},{id});e.target.querySelectorAll("[data-k]").forEach(el=>{const k=el.dataset.k;let v=el.value;if(k==="startWeight"||k==="targetWeight"){v=parseFloat(v);if(!(v>0)){delete rec[k];return}}if(k==="name"&&!v.trim())return;rec[k]=v});S.family[id]=rec;persistFamily(id);S._fedit=null;S._fo=S._fo||{};S._fo[id]=true;toast("Saved");render();return}
   if(e.target.classList&&e.target.classList.contains("grow-form")){e.preventDefault();const id=e.target.dataset.m;const g=k=>{const el=e.target.querySelector(`[data-k="${k}"]`);return el?el.value:""};const date=g("date"),kg=parseFloat(g("weight")),h=parseFloat(g("height")),wc=parseFloat(g("waist"));if(!date||!(kg>0))return;const key=id==="tafseer"?date:id+"-"+date;const r={date,weight:Math.round(kg*10)/10};if(id!=="tafseer")r.m=id;if(h>0)r.height=Math.round(h*2)/2;if(wc>0)r.waist=Math.round(wc*2)/2;S.weighins[key]=r;persistWeigh(key);S._fo=S._fo||{};S._fo[id]=true;toast("Logged "+kg.toFixed(1)+" kg");render();return}
   if(e.target.id==="fform"){e.preventDefault();const sv=document.getElementById("f_start").value,ev=document.getElementById("f_end").value;if(!sv)return;const st=new Date(sv);if(isNaN(st))return;if(ev){const en=new Date(ev);if(isNaN(en)||en<=st){toast("End must be after start");return}const h=(en-st)/36e5;if(h>72){toast("That is longer than 72 h; check the dates");return}S.fast={startedAt:null,lastHours:Math.round(h*10)/10,lastEndedAt:en.toISOString()};persistFast();const k=todayStr(en),dd=day(k);dd.fastH=Math.round(h*10)/10;persistDay(k);toast("Logged "+h.toFixed(1)+" h fast")}else{if(st>new Date()){toast("Start is in the future");return}S.fast={startedAt:st.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Start time set")}S._ft=false;render();return}
