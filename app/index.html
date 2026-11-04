@@ -341,6 +341,7 @@ quranplan:["Daily Quran reading","A 67-reading course: one surah or cluster of v
 mizan:["Al-Mizan","Tafsir al-Mizan by Allamah Muhammad Husayn Tabataba'i (d. 1981), twenty volumes in Arabic, whose method is to explain the Quran by the Quran. The notes in the app summarise the main lines of his discussion on each passage as the app's author understands them. They are summaries, not quotations: verify in the printed al-Mizan or its English translations before citing him."],
 mizanvol:["Volume references","The English al-Mizan is 40 volumes: 1 to 13 by WOFIS in Rizvi's translation, 14 to 40 by Tawheed Institute Australia, about two English volumes per Arabic volume. The volume shown is taken from publisher and bookseller listings; a volume marked 'inferred' is worked out from the neighbouring volumes. Page numbers for a passage are not published anywhere, so record the page from your own copy in the field; it syncs and shows in the course index."],
 qprogress:["Recording progress","Three states per reading: read, read but worth revisiting, or not yet. Tap the big buttons for today, or tap any square in the grid to cycle it. Bulk update marks a range at once, or everything up to today, for catching up or reading ahead. Progress is stored once per reading, not per day, so it survives the course repeating."],
+backdate:["Logging a past day","Missed a day? Pick the date in 'Logging for' and everything you enter, check-ins, mood, sleep, gratitude, the verse read, the journal, learning done and the family circle, is saved to that day. The Learn tab shows that day's readings so the journal matches. Tap 'Back to today' when done. Weigh-ins and growth entries already carry their own date."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -441,7 +442,8 @@ const BASE_MEALS=[
 {id:"botisalad",n:"Tikka Boti Salad Bowl",tag:"chicken",items:[["chk_tikka",2],["salad",3],["olive",1],["yogurt",1]],note:"Highest protein, lowest calories. Use on rest days or to speed up a slow week without hunger."},
 {id:"palak",n:"Palak Gosht Plate",tag:"beef",items:[["mutton",2],["palak",2],["salad",1],["roti",1],["yogurt",1]],note:"Spinach adds volume, iron and magnesium. Mutton is fattier, so keep it to once a week and drain the surface oil."},
 {id:"pulao",n:"Controlled Chicken Pulao",tag:"chicken",items:[["chk_thigh",2],["salad",2],["pulao",1],["raita",1]],note:"Family cooks pulao anyway; take more chicken and one cupped hand of rice instead of a mound."},
-{id:"biryani",n:"Controlled Chicken Biryani",tag:"chicken",items:[["chk_thigh",2],["salad",2],["biryani",1],["raita",1]],note:"No food is banned. Protein first, salad second, rice last; stop at one cupped hand."}
+{id:"biryani",n:"Controlled Chicken Biryani",tag:"chicken",items:[["chk_thigh",2],["salad",2],["biryani",1],["raita",1]],note:"No food is banned. Protein first, salad second, rice last; stop at one cupped hand."},
+{id:"steak",n:"Chicken Steak, Daal & Raita",tag:"chicken",items:[["chk_breast",2],["daal",0.5],["raita",1]],note:"Grilled breast is the leanest protein on the list; a small bowl of daal brings fibre and slow carbs in place of roti; raita adds calcium. Add 2 fists of salad if there is any on the table."}
 ];
 const STARTERS=[
 {n:"Bowl of yogurt + 2 boiled eggs",kcal:280,p:20},
@@ -560,6 +562,9 @@ async function connect(){
 /* ---------- helpers ---------- */
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function day(d){ if(!S.days[d])S.days[d]={date:d,water:0,palms:0}; return S.days[d]; }
+function logDate(){const v=S._ld;return (v&&v<=todayStr())?v:todayStr()}
+function logBar(t){if(t===todayStr())return "";const dt=new Date(t+"T12:00:00");return `<div class="note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>${ic("clock")} Logging for <b>${dt.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</b>. Everything you enter below goes to that day.</span><button class="btn" data-a="backtoday">Back to today</button></div>`}
+function logPicker(t){return `<label class="f" style="flex:0 0 auto;min-width:0"><span style="font-size:11px">Logging for</span><input type="date" id="logDate" value="${t}" max="${todayStr()}" style="width:150px;padding:6px 10px"></label>`}
 function weekNo(){const a=new Date(S.settings.startDate+"T00:00:00"),b=new Date(todayStr()+"T00:00:00");return Math.max(1,Math.floor((b-a)/864e5/7)+1)}
 function phase(w){return w<=3?CYCLE[0]:w<=7?CYCLE[1]:w<=12?CYCLE[2]:CYCLE[3]}
 function weighList(){return Object.values(S.weighins).filter(w=>!w.m||w.m==="tafseer").sort((a,b)=>a.date<b.date?-1:1)}
@@ -675,7 +680,7 @@ function memberEditor(m){const ad=m.role==="adult";return `<form class="form fam
   ${ad&&m.id!=="tafseer"?`<label class="f">Start weight kg<input type="number" data-k="startWeight" step="0.1" value="${m.startWeight||""}" placeholder="optional"></label><label class="f">Target kg<input type="number" data-k="targetWeight" step="0.1" value="${m.targetWeight||""}" placeholder="optional"></label>`:""}
   <button class="btn primary" type="submit">Save</button></form>`}
 function growthForm(m){return `<form class="form grow-form" data-m="${m.id}" autocomplete="off">
-  <label class="f">Date<input type="date" data-k="date" value="${todayStr()}" required></label>
+  <label class="f">Date<input type="date" data-k="date" value="${logDate()}" max="${todayStr()}" required></label>
   <label class="f">Weight kg<input type="number" data-k="weight" step="0.1" min="2" max="200" inputmode="decimal" required></label>
   ${m.role==="child"?`<label class="f">Height cm<input type="number" data-k="height" step="0.5" min="40" max="220" inputmode="decimal" placeholder="optional"></label>`:`<label class="f">Waist cm<input type="number" data-k="waist" step="0.5" min="40" max="200" inputmode="decimal" placeholder="optional"></label>`}
   <button class="btn" type="submit">Log</button></form>`}
@@ -761,7 +766,7 @@ function portion(q,fd){const u=UNITS[fd.u]||["",""];return (qtyStr(q)+" "+(q<=1?
 function hands(m){const g={protein:[],veg:[],carb:[],fat:[],plus:[]};normItems(m.items).forEach(it=>{const fd=FOODS[it.f];g[fd.cat].push(portion(it.q,fd))});return g}
 function handLine(m){const g=hands(m);return [].concat(g.protein,g.veg,g.carb,g.fat,g.plus).join(" · ")}
 function allMeals(){const o=S.meals||{};const list=BASE_MEALS.map(b=>{const v=o[b.id];if(v&&v.deleted)return null;return Object.assign({},b,v||{},{base:true})}).filter(Boolean);Object.values(o).forEach(v=>{if(v&&v.id&&/^c_/.test(v.id)&&!v.deleted)list.push(Object.assign({},v,{base:false}))});return list}
-function tonightMeal(){const l=allMeals();if(!l.length)return null;return l[(new Date().getDate()+new Date().getMonth())%l.length]}
+function tonightMeal(){const l=allMeals();if(!l.length)return null;const d=S.days[logDate()];if(d&&d.meal){const m=l.find(x=>x.id===d.meal);if(m)return m}const dt=new Date(logDate()+"T12:00:00");return l[(dt.getDate()+dt.getMonth())%l.length]}
 function foodOptions(sel){const cats=[["protein","Protein"],["veg","Vegetables"],["carb","Carbs"],["fat","Fats"],["plus","Daal, dairy & extras"]];return cats.map(c=>`<optgroup label="${c[1]}">${Object.keys(FOODS).filter(k=>FOODS[k].cat===c[0]).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(FOODS[k].n)} · ${esc(FOODS[k].ur||"")} · per ${esc((UNITS[FOODS[k].u]||[""])[0]||"item")}</option>`).join("")}</optgroup>`).join("")}
 function mealTotals(d){const t=mealCalc(d);const line=handLine(d);return `${mbar(t)}<p class="small"><b>By hand:</b> ${line?esc(line):"<span class='muted'>add foods to see the portions</span>"}</p>`}
 function mealEditor(d){return `
@@ -787,7 +792,7 @@ function mealEditor(d){return `
   </section>`}
 
 function vToday(){
-  const t=todayStr(),d=day(t),wd=new Date().getDay(),plan=planFor(wd),w=weekNo(),hint=nowHint(),ro=readOnly;
+  const t=logDate(),isToday=t===todayStr(),d=day(t),wd=new Date(t+"T12:00:00").getDay(),plan=planFor(wd),w=weekNo(),hint=nowHint(),ro=readOnly;
   const on=!!S.fast.startedAt,goal=S.settings.fastHours||21,dn=doneCount(d),st=streak();
   const h=new Date().getHours()+new Date().getMinutes()/60;
   const roMe=readOnly||!isOwner;
@@ -797,9 +802,10 @@ function vToday(){
   if(on){const s=new Date(S.fast.startedAt),e=new Date(s.getTime()+goal*36e5);kv=`<div class="kv"><span>Started</span><b>${s.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(s)}</b><span>Goal at</span><b>${e.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(e)}</b></div>`}
   else kv=`<div class="kv"><span>Goal</span><b id="kvGoal">${ram&&ft?((ft.maghrib-ft.fajr)/36e5).toFixed(1):goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
   return `
-  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date().toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${greeting()}</h1></div>
+  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?greeting():"Catching up"}</h1></div>
    <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
-  ${ro?`<div class="note">You are viewing Tafseer's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab and edit meals on the <b>Plate</b> tab.</div>`:""}
+  ${ro?`<div class="note">You are viewing Tafseer's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab, your own journal on the <b>Learn</b> tab, and edit meals on the <b>Plate</b> tab.</div>`:""}
+  ${logBar(t)}
   <section class="card strip">
     <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-dn/7)).toFixed(1)}"/></svg><b>${dn}/7</b></div>
     <div class="txt"><b>${dn===7?"Perfect day":dn>=4?"Good day so far":"Today's habits"}</b><small>${dn} of 7 done · water, protein, starter, session, walk, steps, kitchen closed</small></div>
@@ -832,22 +838,16 @@ function vToday(){
     ${roMe?"":on?"":`<button class="btn wide" data-a="rfajr">${ic("moon")} I'm fasting since Fajr</button>`}
     <p class="small muted">Imsak ${fmtClock(ft.imsak)} (Fajr − 10 min, a reminder only). Karachi calculation method, Fajr 18°. Local moon sighting may shift the date: adjust the Hijri offset in Settings. The app suggests times; it never rules.</p>
   </section>`:""}
-  <section class="card accent">
+  ${isToday?`<section class="card accent">
     <p class="eyebrow">${ic(hintIcon(h))} Right now</p>
     <h2>${esc(hint[0])}</h2><p class="small">${esc(hint[1])}</p>
-  </section>
+  </section>`:""}
   <section class="card">
     <div class="row between"><p class="eyebrow">${ic(KIND_ICON[plan.k]||"bike")} Today's session ${I(plan.k==="strength"?"strength":plan.k==="cycle"?"cycle":"recovery")}</p><span class="pill ${plan.k==="rest"?"green":plan.k==="cycle"?"blue":"amber"}">${esc(plan.t)}</span></div>
     <p class="small">${esc(plan.d)}</p>
   </section>
   <section class="card">
-    <div class="row between"><p class="eyebrow">Check-ins · ${dn} of 7</p>${roMe?"":`<div class="row" style="gap:6px"><button class="btn ghost" data-a="habits_all">${ic("check")} All done</button><button class="btn ghost" data-a="catch">${S._catch?"Close":"Catch up"}</button></div>`}</div>
-    ${S._catch&&!roMe?(()=>{const cd=S._catch,c=day(cd);return `<div class="card flat" style="padding:12px 14px"><div class="row between"><p class="eyebrow">Catch up a past day</p><input type="date" id="catchDate" value="${cd}" max="${t}" style="width:160px"></div>
-      <div class="checks">
-      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water bottles</b>${dots("water",c.water||0,6,false,"",cd)}</div></div>
-      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms</b>${dots("palms",c.palms||0,6,false,"palms",cd)}</div></div>
-      ${[["starter","Protein starter","home"],["train","Training session","bike"],["walk","Walk after dinner","walk"],["steps","8,000 steps","foot"],["closed","Kitchen closed by 9:30","moon"]].map(x=>swRow(x[0],x[1],"",c[x[0]],false,x[2],null,cd)).join("")}
-      </div><div class="row"><button class="btn primary" data-a="habits_all" data-d="${cd}">${ic("check")} Everything done that day</button><button class="btn ghost" data-a="catch">Close</button></div></div>`})():""}
+    <div class="row between"><p class="eyebrow">Check-ins · ${dn} of 7 ${I("backdate")}</p>${roMe?"":`<div class="row" style="gap:8px">${logPicker(t)}<button class="btn ghost" data-a="habits_all">${ic("check")} All done</button></div>`}</div>
     <div class="checks">
       <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
       <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
@@ -866,7 +866,7 @@ function vToday(){
     ${roMe?"":S._meal?`<button class="btn" data-a="mealstop">Finished eating</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} Start the 20-minute meal timer</button>`}
   </section>
   ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
-    <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate</p>${ic("chev","")}</div>
+    <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate${(d.meal&&d.meal===tonight.id)?" · chosen":" · suggested"}</p>${ic("chev","")}</div>
     <h3>${esc(tonight.n)}</h3>
     <p class="small muted">${esc(handLine(tonight))} · ${mealCalc(tonight).kcal} kcal</p>
     <p class="small muted"><b>Cook for the family:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
@@ -903,7 +903,7 @@ function vPlate(){
     <p class="small muted">Plus 1 bowl of yogurt ${I("bowl")}. About 800–950 kcal and 60–75 g protein. On a night with no starter, add 1 palm and 1 bowl.</p>
   </section>
   ${tonight?`<section class="card accent">
-    <p class="eyebrow">${ic("plate")} Tonight's suggestion</p>
+    <p class="eyebrow">${ic("plate")} ${((S.days[logDate()]||{}).meal===tonight.id)?"Tonight's plate · chosen":"Tonight's suggestion"}</p>
     <h2>${esc(tonight.n)}</h2>
     ${mbar(mealCalc(tonight))}
     <p class="small">${esc(handLine(tonight))}</p>
@@ -922,7 +922,7 @@ function vPlate(){
     <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(FOODS[it.f].ur||FOODS[it.f].n)).join(" · "))}</p>
     <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Family portions · cook: ${esc(cookQuantities(m).join(" · "))}</span>${ic("chev","chev")}</summary><div class="body"><div class="hands">${members().map(mm=>`<span>${esc(mm.name)}</span><div class="small">${memberPortions(m,mm).length?esc(memberPortions(m,mm).join(" · "))+(mm.role==="child"?" + seconds if hungry":""):"milk-based"}</div>`).join("")}</div></div></details>
     ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
-    ${ro?"":`<div class="row"><button class="btn" type="button" data-a="me_edit" data-id="${m.id}">Edit meal</button></div>`}
+    ${ro?"":`<div class="row"><button class="btn ${(S.days[logDate()]||{}).meal===m.id?"primary":""}" type="button" data-a="tonight" data-id="${m.id}">${(S.days[logDate()]||{}).meal===m.id?ic("check")+" Tonight's plate":"Set as tonight's plate"}</button><button class="btn ghost" type="button" data-a="me_edit" data-id="${m.id}">Edit meal</button></div>`}
     </div></details>`}).join("")}
   ${list.length?"":`<p class="small muted">No meals of this type yet.</p>`}
   <div class="note">Three cooking rules: measure oil with a tablespoon, roti without ghee, salad on the plate first.</div>`;
@@ -1006,7 +1006,7 @@ function vProgress(){
   <section class="card">
     <p class="eyebrow">${ic("scale")} ${ro?"Weigh-ins":"Log weigh-in"} ${I("waist")}</p>
     ${ro?"":`<p class="small muted">Monday mornings, after the toilet, before water. Same scale, same floor.</p><form class="form" id="wform" autocomplete="off">
-      <label class="f">Date<input type="date" id="wdate" value="${todayStr()}" required></label>
+      <label class="f">Date<input type="date" id="wdate" value="${logDate()}" max="${todayStr()}" required></label>
       <label class="f">Weight kg<input type="number" id="wkg" step="0.1" min="40" max="200" inputmode="decimal" placeholder="${cur.toFixed(1)}" required></label>
       <label class="f">Waist cm<input type="number" id="wcm" step="0.5" min="50" max="200" inputmode="decimal" placeholder="optional"></label>
       <button class="btn primary" type="submit">Save</button>
@@ -1468,12 +1468,12 @@ function qDone(){return Object.values(S.days).filter(d=>d.quran).length}
 function qRef(e){return e.s+":"+(e.f===e.t?e.f:e.f+"–"+e.t)}
 function qLink(e){return "https://quran.com/"+e.s+"/"+(e.f===e.t?e.f:e.f+"-"+e.t)}
 function quranCard(d,ro,compact){
-  const e=QPLAN[qIndex()],st=qState(qIndex()),done=st==="read",idx=qIndex()+1,su=SURAHS.find(x=>x.n===e.s),cnt=qCount();
+  const e=QPLAN[qIndex(logDate())],st=qState(qIndex(logDate())),done=st==="read",idx=qIndex(logDate())+1,su=SURAHS.find(x=>x.n===e.s),cnt=qCount();
   if(compact)return `<section class="card ${done?"":"accent"}">
     <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} ${I("quranplan")}</p>${st==="read"?`<span class="pill green">${ic("check")} read</span>`:st==="revisit"?`<span class="pill amber">${ic("flame")} revisit</span>`:""}</div>
     <h3>${esc(e.n)}</h3><p class="small muted">Surah ${e.s}${su?" "+esc(su.a):""}, verses ${esc(qRef(e).split(":")[1])}</p>
     <div class="goalbar"><div class="bar"><i style="width:${(cnt/QPLAN.length*100).toFixed(0)}%"></i></div><div class="lbls"><span>${cnt} of ${QPLAN.length} readings</span><span>${(cnt/QPLAN.length*100).toFixed(0)}%</span></div></div>
-    ${qStateButtons(qIndex(),ro)}
+    ${qStateButtons(qIndex(logDate()),ro)}
     <div class="row"><a class="btn" href="${qLink(e)}" target="_blank" rel="noopener">Read the verses</a><button class="btn ghost" data-a="tab" data-v="learn">Summary and al-Mizan</button></div>
   </section>`;
   return `<section class="card ${done?"":"accent"}">
@@ -1483,11 +1483,11 @@ function quranCard(d,ro,compact){
     <div class="row"><a class="btn primary" href="${qLink(e)}" target="_blank" rel="noopener">${ic("book")} Read ${esc(qRef(e))} on Quran.com</a></div>
     <p class="small"><b>Summary.</b> ${esc(e.sum)}</p>
     <div class="note" style="border-left-color:var(--green)"><b>From al-Mizan ${I("mizan")}</b><br>${esc(e.mz)}</div>
-    <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Where to find it in al-Mizan ${I("mizanvol")}</span>${ic("chev","chev")}</summary><div class="body">${mizanRefBlock(e,qIndex(),ro)}</div></details>
+    <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Where to find it in al-Mizan ${I("mizanvol")}</span>${ic("chev","chev")}</summary><div class="body">${mizanRefBlock(e,qIndex(logDate()),ro)}</div></details>
     <p class="small"><b>Tadabbur.</b> ${esc(e.q)}</p>
     <p class="small muted"><b>For Abbas and Eliyya.</b> ${esc(e.k)}</p>
     <p class="eyebrow">Record progress ${I("qprogress")}</p>
-    ${qStateButtons(qIndex(),ro)}
+    ${qStateButtons(qIndex(logDate()),ro)}
     <div class="goalbar"><div class="bar"><i style="width:${(cnt/QPLAN.length*100).toFixed(0)}%"></i></div><div class="lbls"><span>${cnt} of ${QPLAN.length} readings</span><span>${Object.keys((S.qprog||{}).flag||{}).length} to revisit</span><span>${(cnt/QPLAN.length*100).toFixed(0)}%</span></div></div>
     ${qGrid(ro)}
     ${qBulk(ro)}
@@ -1495,19 +1495,19 @@ function quranCard(d,ro,compact){
 }
 /* ---------- Quran course progress: one document quran/progress {done:{idx:date}, flag:{idx:true}} ---------- */
 function qState(i){const p=S.qprog||{};if((p.flag||{})[i])return "revisit";if((p.done||{})[i])return "read";for(const k in S.days){if(S.days[k].quran&&qIndex(k)===i)return "read"}return ""}
-function qSet(idxs,state){S.qprog=S.qprog||{};S.qprog.done=Object.assign({},S.qprog.done||{});S.qprog.flag=Object.assign({},S.qprog.flag||{});const t=todayStr();idxs.forEach(i=>{i=String(i);delete S.qprog.flag[i];if(state==="read"){S.qprog.done[i]=S.qprog.done[i]||t}else if(state==="revisit"){S.qprog.done[i]=S.qprog.done[i]||t;S.qprog.flag[i]=true}else{delete S.qprog.done[i]}if(Number(i)===qIndex()){const d=day(t);d.quran=state==="read";persistDay(t)}});persistQprog()}
+function qSet(idxs,state){S.qprog=S.qprog||{};S.qprog.done=Object.assign({},S.qprog.done||{});S.qprog.flag=Object.assign({},S.qprog.flag||{});const t=todayStr();idxs.forEach(i=>{i=String(i);delete S.qprog.flag[i];if(state==="read"){S.qprog.done[i]=S.qprog.done[i]||t}else if(state==="revisit"){S.qprog.done[i]=S.qprog.done[i]||t;S.qprog.flag[i]=true}else{delete S.qprog.done[i]}if(Number(i)===qIndex(logDate())){const d=day(t);d.quran=state==="read";persistDay(t)}});persistQprog()}
 function qCount(){let n=0;for(let i=0;i<QPLAN.length;i++)if(qState(i))n++;return n}
-function qGrid(ro){const cur=qIndex();return `<div class="qgrid">${QPLAN.map((e,i)=>{const st=qState(i);return `<button class="qc ${st} ${i===cur?"cur":""}" ${ro?"disabled":""} data-a="qcell" data-i="${i}" title="${esc(qRef(e))} · ${esc(e.n)}" aria-label="Reading ${i+1}, ${st||"not read"}">${i+1}</button>`}).join("")}</div>
+function qGrid(ro){const cur=qIndex(logDate());return `<div class="qgrid">${QPLAN.map((e,i)=>{const st=qState(i);return `<button class="qc ${st} ${i===cur?"cur":""}" ${ro?"disabled":""} data-a="qcell" data-i="${i}" title="${esc(qRef(e))} · ${esc(e.n)}" aria-label="Reading ${i+1}, ${st||"not read"}">${i+1}</button>`}).join("")}</div>
   <div class="row" style="gap:10px;font-size:12px;color:var(--muted)"><span><i class="qk read"></i> read</span><span><i class="qk revisit"></i> revisit</span><span><i class="qk cur"></i> today</span><span><i class="qk"></i> not yet</span></div>`}
 function qStateButtons(i,ro){if(ro)return "";const st=qState(i);return `<div class="seg qstate"><button class="${st==="read"?"on":""}" data-a="qmark" data-i="${i}" data-s="read">${ic("check")} Read it</button><button class="${st==="revisit"?"on":""}" data-a="qmark" data-i="${i}" data-s="revisit">${ic("flame")} Read, revisit later</button><button class="${st===""?"on":""}" data-a="qmark" data-i="${i}" data-s="">Not yet</button></div>`}
 function qBulk(ro){if(ro)return "";const n=QPLAN.length;return `<details class="flat" style="box-shadow:none" data-qbulk ${S._qbulk?"open":""}><summary style="font-size:13px;padding:9px 0"><span>Bulk update</span>${ic("chev","chev")}</summary><div class="body">
-  <div class="form"><label class="f" style="flex:0 1 90px">From<input type="number" id="qb_from" min="1" max="${n}" value="1"></label><label class="f" style="flex:0 1 90px">To<input type="number" id="qb_to" min="1" max="${n}" value="${qIndex()+1}"></label><button class="btn" type="button" data-a="qbulk" data-s="read">Mark as read</button><button class="btn" type="button" data-a="qbulk" data-s="revisit">Mark to revisit</button><button class="btn ghost" type="button" data-a="qbulk" data-s="">Clear range</button></div>
+  <div class="form"><label class="f" style="flex:0 1 90px">From<input type="number" id="qb_from" min="1" max="${n}" value="1"></label><label class="f" style="flex:0 1 90px">To<input type="number" id="qb_to" min="1" max="${n}" value="${qIndex(logDate())+1}"></label><button class="btn" type="button" data-a="qbulk" data-s="read">Mark as read</button><button class="btn" type="button" data-a="qbulk" data-s="revisit">Mark to revisit</button><button class="btn ghost" type="button" data-a="qbulk" data-s="">Clear range</button></div>
   <div class="row"><button class="btn" type="button" data-a="qbulkto">${ic("check")} Everything up to today as read</button><button class="btn ghost" type="button" data-a="qclear">Clear all progress</button></div>
   <p class="small muted">Use this after reading ahead or catching up. Nothing here changes the daily rotation; the course still shows today's reading by date.</p></div></details>`}
 
 function quranIndex(){const cur=qIndex();return `<details><summary><span>The ${QPLAN.length}-day course</span>${ic("chev","chev")}</summary><div class="body"><p class="small muted">One reading a day from your start date (${esc(qStart())}, change it in Settings). The course repeats; the second round is where understanding deepens.</p><div class="scroll"><table class="tbl"><tbody>${QPLAN.map((e,i)=>`<tr class="${i===cur?"today":""}"><td class="kcal">${qState(i)==="read"?"✓":qState(i)==="revisit"?"↻":""} ${i+1}</td><td><b>${esc(qRef(e))}</b> · ${esc(e.n)}<br><span class="small muted">English al-Mizan vol. ${(mizanVol(e.s,e.f)||{}).vol||"?"}${(S.qnotes||{})[String(i)]&&S.qnotes[String(i)].page?" · p. "+esc(S.qnotes[String(i)].page):""}</span></td></tr>`).join("")}</tbody></table></div></div></details>`}
 
-function dayOfYear(d){d=d||new Date();const s=new Date(d.getFullYear(),0,1);return Math.floor((d-s)/864e5)}
+function dayOfYear(d){d=d||new Date(logDate()+"T12:00:00");const s=new Date(d.getFullYear(),0,1);return Math.floor((d-s)/864e5)}
 function pick(arr,off,back){const i=dayOfYear()-(back||0)+(off||0);return arr[((i%arr.length)+arr.length)%arr.length]}
 function weekTheme(){return THEMES[Math.floor(dayOfYear()/7)%THEMES.length]}
 function learnMember(){const ids=members().map(m=>m.id);if(!S._lm||!ids.includes(S._lm))S._lm=isOwner?"tafseer":(readOnly?"uzma":"uzma");return S._lm}
@@ -1515,13 +1515,14 @@ function canWriteFor(id){if(readOnly)return false;if(isOwner)return true;return 
 const KID_Q=["What made you smile today?","Who did you help today?","What is one thing you are thankful for right now?","What was hard today, and what did you do?","What is something new you learned?","Who were you kind to today?","What would you like to ask Allah for tonight?"];
 function lcard(icon,title,body,extra){return `<section class="card"><div class="row between"><p class="eyebrow">${ic(icon)} ${title}</p>${extra||""}</div>${body}</section>`}
 function vLearn(){
-  const t=todayStr(),d=day(t),mId=learnMember(),m=member(mId),kid=m.role==="child",ro=!canWriteFor(mId);
+  const t=logDate(),d=day(t),mId=learnMember(),m=member(mId),kid=m.role==="child",ro=!canWriteFor(mId);
   const V=pick(VERSES),W=pick(WORDS),T=pick(TEACHINGS),ST=pick(STORIES),ID=pick(IDEAS),B=pick(BOOKS),SU=pick(SURAHS),Q=pick(QUESTIONS),DU=kid?pick(DUAS.slice(0,10)):pick(DUAS),P=pick(POEMS);
   const done=!!((d.learn||{})[mId]),circle=!!d.circle,theme=weekTheme();
   const jr=((d.journal||{})[mId])||{};
   const rv=[1,7,30].map(b=>({b,v:pick(VERSES,0,b),w:pick(WORDS,0,b)}));
   return `
-  <div class="hdr"><div><p class="eyebrow">${theme} week · ${hijriLabel(hijriOf(t))} · day ${dayOfYear()+1}</p><h1>Learn</h1></div><span class="pill soft">${ic("book")} ${esc(theme)} ${I("theme")}</span></div>
+  <div class="hdr"><div><p class="eyebrow">${theme} week · ${hijriLabel(hijriOf(t))} · day ${dayOfYear()+1}</p><h1>Learn</h1></div><div class="row" style="gap:8px">${readOnly?"":logPicker(t)}<span class="pill soft">${ic("book")} ${esc(theme)} ${I("theme")}</span></div></div>
+  ${logBar(t)}
   <div class="seg">${members().map(x=>`<button class="${x.id===mId?"on":""}" data-a="lm" data-v="${x.id}">${esc(x.name)}</button>`).join("")}</div>
   <p class="small muted">${kid?`${esc(m.name)}'s layer: every item explained for a child, to read together. Tap a name above to switch.`:`${esc(m.name)}'s daily set. Two layers for every item: the children's version is under their names.`} ${I("twolayer")}</p>
   ${kid?"":quranCard(d,ro)}
@@ -1593,11 +1594,11 @@ function mealAction(a,b){
 }
 document.addEventListener("change",e=>{
   const t=e.target,d=S._medit;
-  if(t.id==="catchDate"){const v=t.value;if(v&&v<=todayStr()){S._catch=v;render()}return}
-  if(t.id==="sleepH"&&isOwner&&!readOnly){const dd=day(todayStr());const v=parseFloat(t.value);if(v>=0&&v<=14)dd.sleep=v;else delete dd.sleep;persistDay(todayStr());toast("Sleep saved");return}
-  if(t.id==="gratIn"&&isOwner&&!readOnly){const dd=day(todayStr());dd.grat=t.value.trim();persistDay(todayStr());if(dd.grat)toast("Alhamdulillah");render();return}
+  if(t.id==="logDate"){const v=t.value;S._ld=(v&&v<todayStr())?v:null;render();return}
+  if(t.id==="sleepH"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);const v=parseFloat(t.value);if(v>=0&&v<=14)dd.sleep=v;else delete dd.sleep;persistDay(ld);toast("Sleep saved · "+fmtDate(ld));return}
+  if(t.id==="gratIn"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);dd.grat=t.value.trim();persistDay(ld);if(dd.grat)toast("Alhamdulillah");render();return}
   if(t.dataset&&t.dataset.qn){if(readOnly)return;const i=String(t.dataset.i);S.qnotes[i]=Object.assign({i},S.qnotes[i]||{});S.qnotes[i][t.dataset.qn]=t.value.trim();persistQnote(i);toast("Reference saved");return}
-  if(t.dataset&&t.dataset.j){const m=t.dataset.m;if(!canWriteFor(m))return;const dd=day(todayStr());dd.journal=Object.assign({},dd.journal||{});dd.journal[m]=Object.assign({},dd.journal[m]||{});dd.journal[m][t.dataset.j]=t.value.trim();persistDay(todayStr());toast("Journal saved");return}
+  if(t.dataset&&t.dataset.j){const m=t.dataset.m;if(!canWriteFor(m))return;const ld=logDate(),dd=day(ld);dd.journal=Object.assign({},dd.journal||{});dd.journal[m]=Object.assign({},dd.journal[m]||{});dd.journal[m][t.dataset.j]=t.value.trim();persistDay(ld);toast("Journal saved · "+fmtDate(ld));return}
   if(t.id==="me_tag"&&d){d.tag=t.value;return}
   if(t.dataset&&t.dataset.me&&d){const i=Number(t.dataset.i);if(!d.items[i])return;if(t.dataset.me==="food")d.items[i].f=t.value;else d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}
 });
@@ -1641,14 +1642,15 @@ document.addEventListener("toggle",e=>{const dt=e.target;if(dt.tagName==="DETAIL
 document.addEventListener("input",e=>{if(e.target.id==="gq"){S._gq=e.target.value;document.getElementById("gres").innerHTML=glossaryList(S._gq)}});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
-  const a=b.dataset.a,t=todayStr();
+  const a=b.dataset.a,t=logDate();
   if(a==="info"){e.preventDefault();e.stopPropagation();openInfo(b.dataset.k);return}
   if(a==="tab"){tab=b.dataset.v;history.replaceState(null,"","#"+tab);render();document.querySelector("main").scrollTop=0;return}
   if(a==="mf"){S._mf=b.dataset.v;render();return}
   if(a==="ff"){S._ff=b.dataset.v;render();return}
   if(a==="lm"){S._lm=b.dataset.v;render();return}
   if(readOnly){toast("View only");return}
-  if(!isOwner&&["startfast","startfast930","cancelfast","endfast","dot","tog","mealstart","mealstop","ftimes","ftcancel","rfajr","mood","soul","qmark","qcell","qbulk","qbulkto","qclear","habits_all","catch"].includes(a)){toast("Only Tafseer can change this");return}
+  if(a==="tonight"){const d=day(t);d.meal=d.meal===b.dataset.id?null:b.dataset.id;if(!d.meal)delete d.meal;persistDay(t);toast(d.meal?"Tonight: "+(allMeals().find(x=>x.id===d.meal)||{}).n:"Back to the suggestion");render();return}
+  if(!isOwner&&["startfast","startfast930","cancelfast","endfast","dot","tog","mealstart","mealstop","ftimes","ftcancel","rfajr","mood","soul","qmark","qcell","qbulk","qbulkto","qclear","habits_all"].includes(a)){toast("Only Tafseer can change this");return}
   if(a==="ftimes"){S._ft=!S._ft;render();return}
   if(a==="rfajr"){const ft=fastingTimes(t);if(ft){S.fast={startedAt:ft.fajr.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fasting since Fajr "+fmtClock(ft.fajr));render()}return}
   if(a==="mealstart"){S._meal=Date.now();render();return}
@@ -1668,7 +1670,7 @@ document.addEventListener("click",e=>{
   if(a==="qbulkto"){const idxs=[];for(let i=0;i<=qIndex();i++)idxs.push(i);qSet(idxs,"read");toast((qIndex()+1)+" readings marked read");render();return}
   if(a==="qclear"){if(S._qconfirm){S.qprog={done:{},flag:{}};Object.keys(S.days).forEach(k=>{if(S.days[k].quran){S.days[k].quran=false;persistDay(k)}});persistQprog();S._qconfirm=false;toast("Progress cleared");render()}else{S._qconfirm=true;toast("Tap again to confirm clearing all progress");setTimeout(()=>{S._qconfirm=false},4000)}return}
   if(a==="habits_all"){const dd=b.dataset.d||t,d=day(dd);["starter","train","walk","steps","closed"].forEach(k=>d[k]=true);if((d.water||0)<4)d.water=4;if((d.palms||0)<4)d.palms=4;persistDay(dd);toast("All habits done · "+fmtDate(dd));render();return}
-  if(a==="catch"){S._catch=S._catch?null:todayStr(new Date(Date.now()-864e5));render();return}
+  if(a==="backtoday"){S._ld=null;render();return}
   if(a==="soul"){const d=day(t);d.soul=!d.soul;persistDay(t);render();return}
   if(a==="delw"){removeWeigh(b.dataset.d);toast("Removed");render();return}
   if(a==="fedit"){S._fedit=b.dataset.id;S._fo=S._fo||{};S._fo[b.dataset.id]=true;render();return}
