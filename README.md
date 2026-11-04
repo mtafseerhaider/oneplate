@@ -44,6 +44,38 @@ A phone-first companion app lives in [`app/index.html`](app/index.html): a live 
 
 It is published as a private Claude Artifact, which works on iOS, Android and desktop browsers from one link (the page switches to a sidebar layout on wide screens) with no app store or hosting setup. Weigh-ins and check-ins sync across devices through the Claude account that owns the artifact. The same file can also be served by GitHub Pages if you ever want a public URL; in that mode data stays on each device.
 
+## Run it yourself
+
+OnePlate is also a locally deployable product. The architecture is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and the phased plan in [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md).
+
+```
+apps/web         PWA (installable on iOS, Android, desktop), served by Caddy
+apps/api         Fastify + PostgreSQL API: auth, households, invites, versioned documents, audit, OpenAPI at /docs
+packages/core    Pure domain logic with tests (meals, portions, family stages, Hijri, prayer times, plan, Quran course)
+packages/content Curated content with provenance
+infra            Docker Compose, Caddy, backup script
+app/index.html   The single-file build the claude.ai artifact serves
+```
+
+Quick start with Docker:
+
+```bash
+cp infra/.env.example infra/.env   # set SESSION_SECRET and POSTGRES_PASSWORD
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Then open https://localhost, create the first account (that is the household owner), and create an invite code from the API or the Family tab for Uzma to register with as a Contributor.
+
+Development without Docker (needs Node 22, pnpm 10 and a local PostgreSQL):
+
+```bash
+pnpm install
+pnpm -r --filter @oneplate/content --filter @oneplate/core build
+DATABASE_URL=postgres://oneplate:oneplate@localhost:5432/oneplate pnpm dev:api
+pnpm dev:web        # http://localhost:5173, proxies the API
+pnpm test           # core, content and API tests (API tests need TEST_DATABASE_URL)
+```
+
 ## Family
 
 The Family tab covers Tafseer, Uzma, Abbas and Eliyya. Everyone eats the same OnePlate dinner; the app works out each person's portion and the total to cook. Adults get an optional goal, weigh-ins and, for Uzma, pregnancy or breastfeeding adjustments. Children are never restricted: no calories, no fasting under 7, practice fasts only by the parents' choice, growth logs shown as a trend only, and seconds whenever they are hungry. Profiles, dates of birth and logs sync through the same database.

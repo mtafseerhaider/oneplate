@@ -1,0 +1,10 @@
+import { buildApp } from "./app.js";
+import { loadConfig } from "./config.js";
+import { createPool } from "./db/pool.js";
+import { migrate } from "./db/migrate.js";
+const cfg = loadConfig(); const db = createPool(cfg.DATABASE_URL);
+const app = await buildApp(cfg, db);
+await migrate(db, m => app.log.info(m));
+await app.listen({ port: cfg.PORT, host: cfg.HOST });
+const stop = async () => { await app.close(); await db.end(); process.exit(0); };
+process.on("SIGTERM", stop); process.on("SIGINT", stop);

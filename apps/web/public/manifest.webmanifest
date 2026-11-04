@@ -1,0 +1,1 @@
+{ "name": "OnePlate", "short_name": "OnePlate", "description": "Family well-being: one plate, one fast, one circle.", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#F4F5F1", "theme_color": "#C4731A", "icons": [ { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" } ] }

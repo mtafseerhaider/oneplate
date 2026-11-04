@@ -1,0 +1,25 @@
+# OnePlate local stack: docker compose -f infra/docker-compose.yml up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: oneplate, POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oneplate}, POSTGRES_DB: oneplate }
+    volumes: [ "oneplate_pg:/var/lib/postgresql/data" ]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U oneplate"], interval: 5s, timeout: 3s, retries: 20 }
+  api:
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://oneplate:${POSTGRES_PASSWORD:-oneplate}@db:5432/oneplate
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in infra/.env}
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:-https://localhost}
+      COOKIE_SECURE: "true"
+    depends_on: { db: { condition: service_healthy } }
+    restart: unless-stopped
+  web:
+    build: { context: .., dockerfile: apps/web/Dockerfile }
+    environment: { PUBLIC_HOST: ${PUBLIC_HOST:-localhost} }
+    ports: [ "80:80", "443:443" ]
+    depends_on: [ api ]
+    restart: unless-stopped
+    volumes: [ "oneplate_caddy:/data" ]
+volumes: { oneplate_pg: {}, oneplate_caddy: {} }
