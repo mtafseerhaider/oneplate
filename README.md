@@ -44,6 +44,10 @@ A phone-first companion app lives in [`app/index.html`](app/index.html): a live 
 
 It is published as a private Claude Artifact, which works on iOS, Android and desktop browsers from one link (the page switches to a sidebar layout on wide screens) with no app store or hosting setup. Weigh-ins and check-ins sync across devices through the Claude account that owns the artifact. The same file can also be served by GitHub Pages if you ever want a public URL; in that mode data stays on each device.
 
+## Family
+
+The Family tab covers Tafseer, Uzma, Abbas and Eliyya. Everyone eats the same OnePlate dinner; the app works out each person's portion and the total to cook. Adults get an optional goal, weigh-ins and, for Uzma, pregnancy or breastfeeding adjustments. Children are never restricted: no calories, no fasting under 7, practice fasts only by the parents' choice, growth logs shown as a trend only, and seconds whenever they are hungry. Profiles, dates of birth and logs sync through the same database.
+
 ## Borrowed from Qānūn al-Thuluth
 
 Parts of the app are adapted from the [qanun-al-thuluth](https://github.com/mtafseerhaider/qanun-al-thuluth) family-nutrition project, which encodes the Prophetic rule of thirds:

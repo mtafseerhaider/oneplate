@@ -37,7 +37,7 @@ svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;str
 .chip.view{background:var(--blue-soft);color:var(--blue)}
 main{flex:1;min-height:0;overflow-y:auto;padding-block:18px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--panel);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--line);background:var(--panel);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 .tabs button{appearance:none;background:none;border:0;color:var(--muted);font:600 10.5px var(--body);letter-spacing:.04em;text-transform:uppercase;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
 .tabs button .ib{display:grid;place-items:center;width:44px;height:28px;border-radius:999px;transition:background .2s}
 .tabs button.on{color:var(--accent-text)}
@@ -238,6 +238,8 @@ ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
 .erow{display:grid;grid-template-columns:1fr 72px 36px;gap:6px;align-items:center}
 .erow select,.erow input{padding:8px 10px;border-radius:10px}
 .erow .btn{padding:6px;color:var(--muted)}
+.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 14px var(--display);background:var(--soft);color:var(--accent-text);flex:0 0 auto}
+.avatar.female{background:var(--blue-soft);color:var(--blue)}
 .glist{display:flex;flex-direction:column;gap:6px}
 .glist button{appearance:none;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px}
 .glist button b{font-family:var(--display);font-weight:600;font-size:14px}
@@ -304,6 +306,9 @@ ramadan:["Ramadan mode","The app follows the Hijri date and switches the fast to
 suhoor:["Suhoor","The pre-dawn meal. It ends at Fajr. Slow carbs plus protein plus water spread out, low salt. The Prophet (peace be upon him) said there is blessing in suhoor (Bukhari 1923)."],
 iftar:["Iftar","Breaking the fast at Maghrib: dates and water first, then prayer, then the main plate 20–30 minutes later at your normal dinner portion."],
 thuluth:["Rule of thirds (Qānūn al-Thuluth)","From the hadith: one third for food, one third for drink, one third for breath (Tirmidhi 2380). In practice: half the plate vegetables, a quarter protein, a quarter grain; water before the meal, sips during; about 20 minutes per meal; stop at 70–80 % full."],
+familyrules:["Family rules","Taken from the Qānūn al-Thuluth project: children are never restricted, the family eats one pot with different portions, meals are together and unhurried, water comes before the meal. The rule of thirds is taught to children as rhythm and gratitude, never as eating less."],
+cookfor:["Cook for everyone","The cooking quantity adds up each person's portion: a full plate for the adults, the full plate for a teen, half for a child (as a start) and a third for a toddler, each rounded up. Children may always have more."],
+growth:["Growth log","Weight and height, about once a month, for the trend only. The app does not show percentiles or targets; that reading belongs to the paediatrician. A child who is eating, playing and growing along their own line is doing well."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -481,11 +486,11 @@ const CHECKS=[
 
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{}};
+let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{}};
 let db=null,syncState="wait",readOnly=false,tab=(location.hash||"#today").slice(1);
-if(!["today","plate","train","progress","guide"].includes(tab))tab="today";
+if(!["today","plate","family","train","progress","guide"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{}}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{}}}catch(e){}}
 function saveLocal(){if(readOnly)return;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const queues={};
 function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
@@ -496,6 +501,7 @@ function persistDay(d){saveLocal();dbWrite("days/"+d,S.days[d])}
 function persistWeigh(d){saveLocal();dbWrite("weighins/"+d,S.weighins[d])}
 function removeWeigh(d){delete S.weighins[d];saveLocal();dbDelete("weighins/"+d)}
 function persistMeal(id){saveLocal();dbWrite("meals/"+id,S.meals[id])}
+function persistFamily(id){saveLocal();dbWrite("family/"+id,S.family[id])}
 function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
 function setChip(){const c=document.getElementById("syncChip");const k=readOnly?"viewonly":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
 
@@ -504,11 +510,12 @@ async function connect(){
   if(!db){ syncState="local"; setChip(); render(); return; }
   try{ const u=await window.claude.use("user"); if(u){ const w=await u.can("data.write"); if(w===false){ readOnly=true; setChip(); render(); } } }catch(e){}
   let got=0; const timer=setTimeout(()=>{ if(syncState==="wait"){syncState="local";setChip()} },10000);
-  const ready=()=>{ got++; if(got>=5){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
+  const ready=()=>{ got++; if(got>=6){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
   const err=e=>{ console.warn("db",e); clearTimeout(timer); syncState="local"; setChip(); render(); };
-  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<5&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
+  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<6&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
   db.doc("fast/current").onSnapshot(s=>{ if(s.exists)S.fast=Object.assign({},S.fast,s.data()); saveLocal(); ready(); },err);
   db.collection("days").orderBy("date","desc").limit(120).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.days=o;saveLocal()} ready(); },err);
+  db.collection("family").limit(20).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.family=o;saveLocal()} ready(); },err);
   db.collection("meals").limit(200).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.meals=o;saveLocal()} ready(); },err);
   db.collection("weighins").orderBy("date","asc").limit(400).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.weighins=o;saveLocal()} ready(); },err);
 }
@@ -518,7 +525,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","
 function day(d){ if(!S.days[d])S.days[d]={date:d,water:0,palms:0}; return S.days[d]; }
 function weekNo(){const a=new Date(S.settings.startDate+"T00:00:00"),b=new Date(todayStr()+"T00:00:00");return Math.max(1,Math.floor((b-a)/864e5/7)+1)}
 function phase(w){return w<=3?CYCLE[0]:w<=7?CYCLE[1]:w<=12?CYCLE[2]:CYCLE[3]}
-function weighList(){return Object.values(S.weighins).sort((a,b)=>a.date<b.date?-1:1)}
+function weighList(){return Object.values(S.weighins).filter(w=>!w.m||w.m==="tafseer").sort((a,b)=>a.date<b.date?-1:1)}
 function currentWeight(){const l=weighList();return l.length?Number(l[l.length-1].weight):Number(S.settings.startWeight)}
 function lostKg(){return Number(S.settings.startWeight)-currentWeight()}
 function strengthOn(){return lostKg()>=(S.settings.unlockKg||5)}
@@ -580,7 +587,8 @@ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
 bolt:'<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>',
 home:'<path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/>',
 coffee:'<path d="M5 9h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2M7 5v2M10 4v3M13 5v2"/>',
-rest:'<path d="M4 12h16M12 4v16"/>'
+rest:'<path d="M4 12h16M12 4v16"/>',
+family:'<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3 19a6 6 0 0 1 12 0M14.5 19a4.5 4.5 0 0 1 6.5-4"/>'
 };
 function ic(n,cls){return `<svg class="ic ${cls||""}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||""}</svg>`}
 const KIND_ICON={cycle:"bike",strength:"dumbbell",easy:"walk",rest:"moon"};
@@ -595,6 +603,82 @@ function swRow(id,label,sub,done,ro,leadIcon,g){return `<div class="crow sw-row 
 function fmtClock(d){return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}
 
 /* ---------- views ---------- */
+/* ---------- family (children are never restricted) ---------- */
+const FAMILY_BASE=[
+{id:"tafseer",name:"Tafseer",rel:"me",role:"adult",sex:"male",goal:"fat_loss"},
+{id:"uzma",name:"Uzma",rel:"wife",role:"adult",sex:"female",goal:"maintain",status:"none"},
+{id:"abbas",name:"Abbas",rel:"son",role:"child",sex:"male",goal:"growth"},
+{id:"eliyya",name:"Eliyya",rel:"daughter",role:"child",sex:"female",goal:"growth"}
+];
+function members(){return FAMILY_BASE.map(b=>Object.assign({},b,(S.family||{})[b.id]||{},{id:b.id}))}
+function member(id){return members().find(m=>m.id===id)}
+function ageOf(dob){if(!dob)return null;const b=new Date(dob+"T00:00:00"),n=new Date();if(isNaN(b)||b>n)return null;let months=(n.getFullYear()-b.getFullYear())*12+(n.getMonth()-b.getMonth());if(n.getDate()<b.getDate())months--;return {years:Math.floor(months/12),months}}
+function stageOf(m){if(m.role==="adult")return "adult";const a=ageOf(m.dob);if(!a)return "child";if(a.months<12)return "infant";if(a.years<3)return "toddler";if(a.years<13)return "child";if(a.years<18)return "teen";return "adult"}
+const STAGE_LABEL={infant:"Infant",toddler:"Toddler",child:"Child",teen:"Teen",adult:"Adult"};
+function ageLabel(m){const a=ageOf(m.dob);if(!a)return "age not set";return a.years<2?a.months+" months":a.years+" years"}
+/* Portion factors against the adult plate (Thuluth 14 §6): toddler ⅓, child ½ as a START, teen the full plate, always rounded UP to a quarter. Children may always have seconds. */
+function portionFactor(m){const s=stageOf(m);if(s==="adult")return m.goal==="fat_loss"?1:1;if(s==="teen")return 1;if(s==="child")return 0.5;if(s==="toddler")return 0.34;return 0}
+function roundUpQ(q){return Math.ceil(q*4-1e-9)/4}
+function memberPortions(meal,m){const f=portionFactor(m);if(!f)return [];return normItems(meal.items).map(it=>{const fd=FOODS[it.f];return portion(roundUpQ(it.q*f),fd)})}
+function cookQuantities(meal){const tot={};normItems(meal.items).forEach(it=>{tot[it.f]=0});members().forEach(m=>{const f=portionFactor(m);if(!f)return;normItems(meal.items).forEach(it=>{tot[it.f]+=roundUpQ(it.q*f)})});return Object.keys(tot).map(k=>portion(Math.ceil(tot[k]*2)/2,FOODS[k]))}
+function memberWeighs(id){return Object.values(S.weighins).filter(w=>(w.m||"tafseer")===id).sort((a,b)=>a.date<b.date?-1:1)}
+function initials(n){return (n||"?").trim().slice(0,1).toUpperCase()}
+function childGuide(m){const s=stageOf(m),a=ageOf(m.dob);const yrs=a?a.years:null;
+  const plate=s==="toddler"?"Small quarters: a little protein, a little rice or roti, a little vegetable, some fruit or yogurt. Tiny portions, offered often. Milk after the meal, not before.":"Quarters, not thirds: protein, grain, vegetables, and fruit or dairy, in roughly equal parts. The first serving is a start; seconds whenever still hungry. No calorie talk, ever.";
+  const fast=s==="infant"||s==="toddler"||(yrs!==null&&yrs<7)?"No fasting at all under 7. Join the family at suhoor if awake, open iftar with a date, help set the table.":s==="child"?"Practice fasts only, chosen by you: until Dhuhr or until Asr, at most 3 a week, suhoor always, never on a very hot day. Stop at once for dizziness, headache, unusual tiredness, no urine for 6 hours, vomiting: give water and food.":"From puberty fasting is an obligation in Islamic law; the app supports full fasts with the same stop signs, and suhoor and iftar portions are never reduced. If puberty is uncertain, that is a question for a scholar, not this app.";
+  const water=s==="toddler"?"Water in a cup at the table; no milk or juice in the hour before meals.":"Half a glass on waking, water at the table, nothing sweet in the hour before meals. Chai is not for children.";
+  return {plate,fast,water}}
+const CHILD_TIPS=["One small taste of a new food every day for two weeks. A pea-sized piece counts.","It can take ten or more tries before a child accepts a food. Each time it is on the plate is progress.","Skip 'one more bite' and 'finish your plate'. Pressure makes children eat less of that food.","You decide what, when and where; the child decides whether and how much.","Put one food they already eat on every plate next to the new one.","Eat together, screens away, about 20 minutes, Bismillah first."];
+function memberEditor(m){const ad=m.role==="adult";return `<form class="form fam-form" data-m="${m.id}" autocomplete="off">
+  <label class="f">Name<input type="text" data-k="name" value="${esc(m.name)}" maxlength="30"></label>
+  <label class="f">Date of birth<input type="date" data-k="dob" value="${esc(m.dob||"")}"></label>
+  <label class="f">Sex<select data-k="sex"><option value="male" ${m.sex==="male"?"selected":""}>Male</option><option value="female" ${m.sex==="female"?"selected":""}>Female</option></select></label>
+  ${ad?`<label class="f">Goal<select data-k="goal"><option value="fat_loss" ${m.goal==="fat_loss"?"selected":""}>Fat loss</option><option value="maintain" ${m.goal==="maintain"?"selected":""}>Maintain / healthy eating</option></select></label>`:""}
+  ${ad&&m.sex==="female"?`<label class="f">Status<select data-k="status"><option value="none" ${(m.status||"none")==="none"?"selected":""}>None</option><option value="pregnant" ${m.status==="pregnant"?"selected":""}>Pregnant</option><option value="breastfeeding" ${m.status==="breastfeeding"?"selected":""}>Breastfeeding</option></select></label>`:""}
+  ${ad&&m.id!=="tafseer"?`<label class="f">Start weight kg<input type="number" data-k="startWeight" step="0.1" value="${m.startWeight||""}" placeholder="optional"></label><label class="f">Target kg<input type="number" data-k="targetWeight" step="0.1" value="${m.targetWeight||""}" placeholder="optional"></label>`:""}
+  <button class="btn primary" type="submit">Save</button></form>`}
+function growthForm(m){return `<form class="form grow-form" data-m="${m.id}" autocomplete="off">
+  <label class="f">Date<input type="date" data-k="date" value="${todayStr()}" required></label>
+  <label class="f">Weight kg<input type="number" data-k="weight" step="0.1" min="2" max="200" inputmode="decimal" required></label>
+  ${m.role==="child"?`<label class="f">Height cm<input type="number" data-k="height" step="0.5" min="40" max="220" inputmode="decimal" placeholder="optional"></label>`:`<label class="f">Waist cm<input type="number" data-k="waist" step="0.5" min="40" max="200" inputmode="decimal" placeholder="optional"></label>`}
+  <button class="btn" type="submit">Log</button></form>`}
+function miniChart(ws,key){if(ws.length<2)return "";const W=320,H=90,L=30,R=8,T=8,B=18;const vals=ws.map(w=>Number(w[key])).filter(v=>v>0);if(vals.length<2)return "";const pts=ws.filter(w=>Number(w[key])>0);const t0=new Date(pts[0].date).getTime(),t1=new Date(pts[pts.length-1].date).getTime()||t0+1;const mn=Math.min.apply(null,vals)-1,mx=Math.max.apply(null,vals)+1;const X=t=>L+(t-t0)/Math.max(1,t1-t0)*(W-L-R),Y=v=>T+(mx-v)/(mx-mn)*(H-T-B);const path=pts.map((p,i)=>(i?"L":"M")+X(new Date(p.date).getTime()).toFixed(1)+" "+Y(Number(p[key])).toFixed(1)).join(" ");return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${key} over time"><line class="grid" x1="${L}" x2="${W-R}" y1="${Y(mn+1).toFixed(1)}" y2="${Y(mn+1).toFixed(1)}"/><line class="grid" x1="${L}" x2="${W-R}" y1="${Y(mx-1).toFixed(1)}" y2="${Y(mx-1).toFixed(1)}"/><text x="${L-5}" y="${(Y(mx-1)+3).toFixed(1)}" text-anchor="end">${(mx-1).toFixed(0)}</text><text x="${L-5}" y="${(Y(mn+1)+3).toFixed(1)}" text-anchor="end">${(mn+1).toFixed(0)}</text><path class="act" d="${path}"/>${pts.map(p=>`<circle class="pt" cx="${X(new Date(p.date).getTime()).toFixed(1)}" cy="${Y(Number(p[key])).toFixed(1)}" r="3"/>`).join("")}<text x="${L}" y="${H-4}">${fmtDate(pts[0].date)}</text><text x="${W-R}" y="${H-4}" text-anchor="end">${fmtDate(pts[pts.length-1].date)}</text></svg>`}
+function vFamily(){
+  const ms=members(),ro=readOnly,tonight=tonightMeal(),ed=S._fedit;
+  const missing=ms.filter(m=>m.role==="child"&&!m.dob).map(m=>m.name);
+  return `
+  <div class="hdr"><div><p class="eyebrow">${ms.length} members · one pot, four plates</p><h1>Family</h1></div></div>
+  ${missing.length&&!ro?`<div class="note">Set a date of birth for ${esc(missing.join(" and "))} so portions, fasting guidance and growth logs fit their age. Tap a card, then Edit.</div>`:""}
+  <section class="card">
+    <p class="eyebrow">${ic("plate")} Family rules ${I("familyrules")}</p>
+    <ul class="small"><li><b>Children are never restricted.</b> No calories, no diet talk, no fasting under 7. Their first serving is a start; seconds whenever they are hungry.</li><li><b>One pot.</b> Everyone eats the same OnePlate dinner; only the portion changes.</li><li><b>Together, screens away, about 20 minutes.</b> Bismillah first. Nobody criticises the food.</li><li><b>Water before, sips during.</b> Chai for adults an hour after. Milk for children after the meal, not before.</li></ul>
+  </section>
+  ${tonight?`<section class="card accent">
+    <p class="eyebrow">${ic("home")} Tonight for everyone · ${esc(tonight.n)} ${I("cookfor")}</p>
+    <p class="small"><b>Cook:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
+    <div class="hands">${ms.map(m=>`<span>${esc(m.name)}</span><div>${memberPortions(tonight,m).length?esc(memberPortions(tonight,m).join(" · "))+(m.role==="child"?" <span class='muted'>+ seconds if hungry</span>":""):"<span class='muted'>milk-based; ask the paediatrician</span>"}</div>`).join("")}</div>
+  </section>`:""}
+  ${ms.map(m=>{const st=stageOf(m),ws=memberWeighs(m.id),last=ws[ws.length-1],ad=m.role==="adult",g=ad?null:childGuide(m);const editing=ed===m.id;
+    return `<details ${(S._fo||{})[m.id]?"open":""} data-fid="${m.id}"><summary><span style="display:flex;align-items:center;gap:10px"><span class="avatar ${m.sex}">${initials(m.name)}</span><span>${esc(m.name)}<br><span class="kcal">${esc(m.rel)} · ${STAGE_LABEL[st]} · ${ageLabel(m)}</span></span></span>${ic("chev","chev")}</summary><div class="body">
+    ${editing?memberEditor(m):`
+    <div class="row" style="gap:6px">${ad?`<span class="pill ${m.goal==="fat_loss"?"soft":"green"}">${m.goal==="fat_loss"?"Fat loss":"Maintain"}</span>`:`<span class="pill green">Growing · never restricted</span>`}${m.status&&m.status!=="none"?`<span class="pill blue">${m.status}</span>`:""}${last?`<span class="pill grey">${Number(last.weight).toFixed(1)} kg · ${fmtDate(last.date)}</span>`:""}${ro?"":`<button class="btn ghost" type="button" data-a="fedit" data-id="${m.id}">Edit</button>`}</div>
+    ${m.id==="tafseer"?`<p class="small muted">Your own plan lives on the Today, Train and Progress tabs.</p>`:""}
+    ${ad&&m.id!=="tafseer"?`<p class="small">${m.status==="pregnant"?"Pregnancy: no calorie deficit, no fasting plan without the clinician's say. Protein-rich suhoor if fasting, an extra 300 ml water a day, dates in the last weeks. Warning signs (reduced movements, dizziness, headache, bleeding, dark urine): break the fast and call the clinician.":m.status==="breastfeeding"?"Breastfeeding: no calorie deficit; an extra 700 ml water a day. If fasting, watch the baby's wet nappies (6+ a day); fewer means break the fast and see the clinician.":m.goal==="fat_loss"?"Same OnePlate dinner, same rules: 2 palms protein, 2 fists veg, 1 cupped hand or 1 roti, 1 thumb fat, 1 bowl yogurt. A fasting window is her choice, 14:10 or 16:8 at most, never more than 24 hours. Weekly weigh-in below.":"Same OnePlate dinner with one extra cupped hand of rice or roti. No fasting needed. Weigh-in below if she wants to track."}</p>
+      ${miniChart(ws,"weight")}
+      ${ro?"":growthForm(m)}
+      ${ws.length?`<div class="log">${ws.slice().reverse().slice(0,6).map(r=>`<div class="r"><span>${fmtDate(r.date)}</span><span>${Number(r.weight).toFixed(1)} kg</span><span class="muted">${r.waist?Number(r.waist).toFixed(1)+" cm":""}</span>${ro?"<span></span>":`<button data-a="delw" data-d="${r.m?r.m+"-"+r.date:r.date}" aria-label="delete">✕</button>`}</div>`).join("")}</div>`:""}`:""}
+    ${!ad?`
+      <div class="hands"><span>Plate</span><div class="small">${esc(g.plate)}</div><span>Water</span><div class="small">${esc(g.fast?g.water:"")}</div><span>Fasting</span><div class="small">${esc(g.fast)}</div></div>
+      <p class="eyebrow">Growth log ${I("growth")}</p>
+      ${miniChart(ws,"weight")}${miniChart(ws,"height")}
+      ${ro?"":growthForm(m)}
+      ${ws.length?`<div class="log">${ws.slice().reverse().slice(0,6).map(r=>`<div class="r"><span>${fmtDate(r.date)}</span><span>${Number(r.weight).toFixed(1)} kg</span><span class="muted">${r.height?Number(r.height).toFixed(1)+" cm":""}</span>${ro?"<span></span>":`<button data-a="delw" data-d="${r.m+"-"+r.date}" aria-label="delete">✕</button>`}</div>`).join("")}</div>`:`<p class="small muted">No entries yet. Monthly is plenty. The app shows the trend only; percentiles and growth charts are for the paediatrician.</p>`}
+      <p class="eyebrow">Tips</p><ul class="small">${CHILD_TIPS.slice(0,3).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+    `}
+    </div></details>`}).join("")}
+  <p class="small muted">Child guidance follows the Qānūn al-Thuluth rules: growth first, no restriction, practice fasts only from 7 and only by the parents' choice. It is education, not medical advice.</p>`;
+}
+
 /* ---------- Hijri calendar, Sunnah fast days, prayer times (ported from the Qanun al-Thuluth project) ---------- */
 const HIJRI_MONTHS=["Muharram","Safar","Rabi al-Awwal","Rabi al-Thani","Jumada al-Ula","Jumada al-Akhirah","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qa'dah","Dhu al-Hijjah"];
 const ISLAMIC_EPOCH=1948439.5;
@@ -739,6 +823,7 @@ function vToday(){
     <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate</p>${ic("chev","")}</div>
     <h3>${esc(tonight.n)}</h3>
     <p class="small muted">${esc(handLine(tonight))} · ${mealCalc(tonight).kcal} kcal</p>
+    <p class="small muted"><b>Cook for the family:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
   </section>`:""}`;
 }
 function arc(cx,cy,r,a0,a1){const p=a=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${cx} ${cy}L${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}Z`}
@@ -789,6 +874,7 @@ function vPlate(){
     ${mbar(t)}
     <div class="hands"><span>Protein</span><div>${esc(g.protein.join(" · ")||"—")}</div><span>Veg</span><div>${esc(g.veg.join(" · ")||"—")}</div><span>Carbs</span><div>${esc(g.carb.join(" · ")||"—")}</div><span>Fat</span><div>${esc(g.fat.join(" · ")||"—")}</div><span>Plus</span><div>${esc(g.plus.join(" · ")||"—")}</div></div>
     <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(FOODS[it.f].ur||FOODS[it.f].n)).join(" · "))}</p>
+    <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Family portions · cook: ${esc(cookQuantities(m).join(" · "))}</span>${ic("chev","chev")}</summary><div class="body"><div class="hands">${members().map(mm=>`<span>${esc(mm.name)}</span><div class="small">${memberPortions(m,mm).length?esc(memberPortions(m,mm).join(" · "))+(mm.role==="child"?" + seconds if hungry":""):"milk-based"}</div>`).join("")}</div></div></details>
     ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
     ${ro?"":`<div class="row"><button class="btn" type="button" data-a="me_edit" data-id="${m.id}">Edit meal</button></div>`}
     </div></details>`}).join("")}
@@ -1028,14 +1114,14 @@ document.addEventListener("input",e=>{
   if(t.dataset&&t.dataset.me==="qty"&&d){const i=Number(t.dataset.i);if(d.items[i]){d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}}
 });
 
-const VIEWS={today:vToday,plate:vPlate,train:vTrain,progress:vProgress,guide:vGuide};
-const TAB_ICON={today:"clock",plate:"plate",train:"bike",progress:"trend",guide:"book"};
+const VIEWS={today:vToday,plate:vPlate,family:vFamily,train:vTrain,progress:vProgress,guide:vGuide};
+const TAB_ICON={today:"clock",plate:"plate",family:"family",train:"bike",progress:"trend",guide:"book"};
 function render(){
   const v=document.getElementById("view");
   const scroll=v.parentElement.scrollTop;
   v.innerHTML=VIEWS[tab]();
   v.parentElement.scrollTop=scroll;
-  document.getElementById("tabs").innerHTML=["today","plate","train","progress","guide"].map(k=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}" aria-label="${k}" aria-current="${k===tab?"page":"false"}"><span class="ib">${ic(TAB_ICON[k])}</span>${k}</button>`).join("");
+  document.getElementById("tabs").innerHTML=["today","plate","family","train","progress","guide"].map(k=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}" aria-label="${k}" aria-current="${k===tab?"page":"false"}"><span class="ib">${ic(TAB_ICON[k])}</span>${k}</button>`).join("");
   tick();
 }
 function tick(){
@@ -1057,7 +1143,7 @@ function closeInfo(){document.getElementById("sheet").classList.remove("show");d
 document.getElementById("scrim").addEventListener("click",closeInfo);
 document.getElementById("sheetClose").addEventListener("click",closeInfo);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeInfo();return}if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[data-a]:not(button):not(input)")){e.preventDefault();e.target.click()}});
-document.addEventListener("toggle",e=>{const dt=e.target;if(dt.tagName==="DETAILS"&&dt.dataset.mid){S._mopen=dt.open?dt.dataset.mid:(S._mopen===dt.dataset.mid?null:S._mopen)}},true);
+document.addEventListener("toggle",e=>{const dt=e.target;if(dt.tagName==="DETAILS"&&dt.dataset.fid){S._fo=S._fo||{};S._fo[dt.dataset.fid]=dt.open}if(dt.tagName==="DETAILS"&&dt.dataset.mid){S._mopen=dt.open?dt.dataset.mid:(S._mopen===dt.dataset.mid?null:S._mopen)}},true);
 document.addEventListener("input",e=>{if(e.target.id==="gq"){S._gq=e.target.value;document.getElementById("gres").innerHTML=glossaryList(S._gq)}});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
@@ -1080,9 +1166,12 @@ document.addEventListener("click",e=>{
   if(a==="dot"){const d=day(t),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(t);render();return}
   if(a==="tog"){const d=day(t);d[b.dataset.k]=!d[b.dataset.k];persistDay(t);render();return}
   if(a==="delw"){removeWeigh(b.dataset.d);toast("Removed");render();return}
+  if(a==="fedit"){S._fedit=b.dataset.id;S._fo=S._fo||{};S._fo[b.dataset.id]=true;render();return}
 });
 document.addEventListener("submit",e=>{
   if(readOnly){e.preventDefault();return}
+  if(e.target.classList&&e.target.classList.contains("fam-form")){e.preventDefault();const id=e.target.dataset.m;const rec=Object.assign({},S.family[id]||{},{id});e.target.querySelectorAll("[data-k]").forEach(el=>{const k=el.dataset.k;let v=el.value;if(k==="startWeight"||k==="targetWeight"){v=parseFloat(v);if(!(v>0)){delete rec[k];return}}if(k==="name"&&!v.trim())return;rec[k]=v});S.family[id]=rec;persistFamily(id);S._fedit=null;S._fo=S._fo||{};S._fo[id]=true;toast("Saved");render();return}
+  if(e.target.classList&&e.target.classList.contains("grow-form")){e.preventDefault();const id=e.target.dataset.m;const g=k=>{const el=e.target.querySelector(`[data-k="${k}"]`);return el?el.value:""};const date=g("date"),kg=parseFloat(g("weight")),h=parseFloat(g("height")),wc=parseFloat(g("waist"));if(!date||!(kg>0))return;const key=id==="tafseer"?date:id+"-"+date;const r={date,weight:Math.round(kg*10)/10};if(id!=="tafseer")r.m=id;if(h>0)r.height=Math.round(h*2)/2;if(wc>0)r.waist=Math.round(wc*2)/2;S.weighins[key]=r;persistWeigh(key);S._fo=S._fo||{};S._fo[id]=true;toast("Logged "+kg.toFixed(1)+" kg");render();return}
   if(e.target.id==="fform"){e.preventDefault();const sv=document.getElementById("f_start").value,ev=document.getElementById("f_end").value;if(!sv)return;const st=new Date(sv);if(isNaN(st))return;if(ev){const en=new Date(ev);if(isNaN(en)||en<=st){toast("End must be after start");return}const h=(en-st)/36e5;if(h>72){toast("That is longer than 72 h; check the dates");return}S.fast={startedAt:null,lastHours:Math.round(h*10)/10,lastEndedAt:en.toISOString()};persistFast();const k=todayStr(en),dd=day(k);dd.fastH=Math.round(h*10)/10;persistDay(k);toast("Logged "+h.toFixed(1)+" h fast")}else{if(st>new Date()){toast("Start is in the future");return}S.fast={startedAt:st.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Start time set")}S._ft=false;render();return}
   if(e.target.id==="wform"){e.preventDefault();const d=document.getElementById("wdate").value,kg=parseFloat(document.getElementById("wkg").value),cm=parseFloat(document.getElementById("wcm").value);if(!d||!(kg>0))return;const r={date:d,weight:Math.round(kg*10)/10};if(cm>0)r.waist=Math.round(cm*2)/2;S.weighins[d]=r;persistWeigh(d);toast("Saved "+kg.toFixed(1)+" kg"+(strengthOn()?" · strength unlocked!":""));render()}
   if(e.target.id==="sform"){e.preventDefault();const sw=parseFloat(document.getElementById("s_sw").value),tw=parseFloat(document.getElementById("s_tw").value),sd=document.getElementById("s_sd").value,fh=parseInt(document.getElementById("s_fh").value,10),uk=parseFloat(document.getElementById("s_uk").value);if(sw>0)S.settings.startWeight=sw;if(tw>0)S.settings.targetWeight=tw;if(sd)S.settings.startDate=sd;if(fh>=14&&fh<=24)S.settings.fastHours=fh;if(uk>0)S.settings.unlockKg=uk;const cty=document.getElementById("s_city"),ram=document.getElementById("s_ram"),hoff=document.getElementById("s_hoff"),trad=document.getElementById("s_trad");if(cty&&CITIES[cty.value])S.settings.city=cty.value;if(ram)S.settings.ramadan=ram.value;if(hoff)S.settings.hijriOffset=Number(hoff.value);if(trad)S.settings.tradition=trad.value;persistSettings();toast("Settings saved");render()}
