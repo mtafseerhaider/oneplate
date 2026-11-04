@@ -183,6 +183,7 @@ fastgoal:["Fast goal","Hours from the last bite at night to the first food the n
 starter:["Protein starter","The first thing you eat when the fast ends: a bowl of yogurt and two boiled eggs, or a whey shake. Small, fast, high in protein. It stops the ravenous raid on the kitchen."],
 closed:["Kitchen closed","No more food after 9:30 PM. Water or plain tea only. This is where most one-meal days quietly turn into too many calories."],
 walk:["Post-dinner walk","A gentle 10 to 15 minute walk within half an hour of finishing dinner. It lowers blood sugar after the meal and helps digestion."],
+water:["Water bottles","Count each 700 ml bottle you finish. Four bottles is 2.8 L, five is 3.5 L. Aim for four on a normal day and five on a hot day or a motorcycle commute in the heat. A pinch of salt in the first bottle of the morning prevents dizziness."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -405,7 +406,7 @@ function vToday(){
   <section class="card">
     <p class="eyebrow">Check-ins</p>
     <div class="checks">
-      <div class="check"><div class="t">Water<small>Glasses (≈250 ml). Aim 10–14.</small></div>${ro?`<b class="kcal">${d.water||0}</b>`:`<div class="stepper"><button data-a="water" data-v="-1" aria-label="less water">−</button><b>${d.water||0}</b><button data-a="water" data-v="1" aria-label="more water">+</button></div>`}</div>
+      <div class="check"><div class="t">Water bottles ${I("water")}<small>700 ml each · ${((d.water||0)*0.7).toFixed(1)} L today. Aim 4–5 bottles.</small></div>${ro?`<b class="kcal">${d.water||0}</b>`:`<div class="stepper"><button data-a="water" data-v="-1" aria-label="one bottle less">−</button><b>${d.water||0}</b><button data-a="water" data-v="1" aria-label="one bottle more">+</button></div>`}</div>
       <div class="check"><div class="t">Protein palms ${I("palms")}<small>4 minimum, 5 on training days.</small></div>${ro?`<b class="kcal">${d.palms||0}</b>`:`<div class="stepper"><button data-a="palms" data-v="-1" aria-label="fewer palms">−</button><b>${d.palms||0}</b><button data-a="palms" data-v="1" aria-label="more palms">+</button></div>`}</div>
       ${CHECKS.map(c=>`<button class="check ${d[c.id]?"done":""}" ${ro?"disabled":""} data-a="tog" data-k="${c.id}"><span class="box"></span><div class="t">${esc(c.id==="train"?plan.t+" done":c.t)} ${I(c.g)}${c.s?`<small>${esc(c.s)}</small>`:""}</div></button>`).join("")}
     </div>
