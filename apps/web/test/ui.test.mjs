@@ -58,6 +58,16 @@ test("scholar review: a reviewer records a status and the badge shows it", async
   const c = await page.evaluate(() => core.reviewCounts(allContentKeys(), REVIEWS_SHIPPED, S.reviews)); assert.equal(c.verified, 1);
   await page.evaluate(() => { canReview = false; render(); }); assert.equal(await page.$(`[data-a="rvopen"]`), null);
 });
+test("review queue lists drafts of a kind in course order and imports reviews", async () => {
+  await page.evaluate(() => { canReview = true; S.reviews = {}; S._rq = null; tab = "learn"; render(); document.querySelector("details:has(#rq_kind) summary").click(); });
+  const first = await page.$eval(".rqrow .t b", e => e.textContent); assert.match(first, /Al-Fatiha/); assert.equal(await page.$$eval(".rqrow", r => r.length), 40);
+  await page.selectOption("#rq_kind", "story"); await page.waitForTimeout(100); assert.equal(await page.$$eval(".rqrow", r => r.length), 16);
+  await page.click(".rqrow [data-a='rvopen']"); await page.selectOption(".rqrow #rv_status", "reviewed"); await page.fill(".rqrow #rv_by", "Uzma"); await page.click(".rqrow [data-a='rvsave']"); await page.waitForTimeout(100);
+  assert.equal(await page.$$eval(".rqrow", r => r.length), 15); assert.equal(await page.evaluate(() => Object.values(S.reviews)[0].by), "Uzma");
+  await page.click("[data-a='rvexport']"); await page.fill("#rv_json", JSON.stringify({ "quran-1-1-7": { status: "verified", by: "Tafseer", source: "WOFIS vol. 1 p. 20" }, "bad key": { status: "verified" }, "surah-2": { status: "nope" } }));
+  await page.click("[data-a='rvimport']"); await page.waitForTimeout(150); assert.equal(await page.evaluate(() => Object.keys(S.reviews).length), 2); assert.equal(await page.evaluate(() => S.reviews["quran-1-1-7"].status), "verified");
+  await page.evaluate(() => { canReview = false; S.reviews = {}; S._rvx = false; render(); });
+});
 test("urdu toggle flips direction without overflow", async () => {
   await page.click("#langBtn"); await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 402);

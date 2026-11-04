@@ -284,3 +284,7 @@ html.ur .kcal,html.ur .mkey,html.ur .stat b,html.ur .tile b,html.ur .ring .lbl,h
 .btn.sm{padding:4px 10px;font-size:12px;min-height:0}
 .rvform{margin:8px 0;padding:12px;background:var(--panel2)}
 .hands span.green{color:var(--green)}.hands span.blue{color:var(--blue)}.hands span.red{color:var(--red)}
+.rq{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.rqrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.rqrow .t{flex:1;min-width:180px}.rqrow .t small{display:block;color:var(--muted)}
+.rqrow .rvform{flex-basis:100%;margin:4px 0 0}

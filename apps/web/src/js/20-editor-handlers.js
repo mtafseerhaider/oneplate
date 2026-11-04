@@ -22,6 +22,7 @@ document.addEventListener("change",e=>{
   if(t.id==="gratIn"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);dd.grat=t.value.trim();persistDay(ld);if(dd.grat)toast("Alhamdulillah");render();return}
   if(t.dataset&&t.dataset.qn){if(readOnly)return;const k=String(t.dataset.k);S.qnotes[k]=Object.assign({i:k},S.qnotes[k]||{});S.qnotes[k][t.dataset.qn]=t.value.trim();persistQnote(k);toast("Reference saved");return}
   if(t.id==="qsurah"){S._qsurah=Number(t.value);render();return}
+  if(t.id==="rq_kind"||t.id==="rq_st"){S._rq=Object.assign({st:"draft",kind:"close"},S._rq||{});S._rq[t.id==="rq_kind"?"kind":"st"]=t.value;S._rv=null;render();return}
   if(t.dataset&&t.dataset.j){const m=t.dataset.m;if(!canWriteFor(m))return;const ld=logDate(),dd=day(ld);dd.journal=Object.assign({},dd.journal||{});dd.journal[m]=Object.assign({},dd.journal[m]||{});dd.journal[m][t.dataset.j]=t.value.trim();persistDay(ld);toast("Journal saved · "+fmtDate(ld));return}
   if(t.id==="me_tag"&&d){d.tag=t.value;return}
   if(t.dataset&&t.dataset.me&&d){const i=Number(t.dataset.i);if(!d.items[i])return;if(t.dataset.me==="food")d.items[i].f=t.value;else d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}
@@ -89,6 +90,8 @@ document.addEventListener("click",e=>{
   if(a==="dot"){const dd=b.dataset.d||t,d=day(dd),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(dd);render();return}
   if(a==="tog"){const dd=b.dataset.d||t,d=day(dd);d[b.dataset.k]=!d[b.dataset.k];persistDay(dd);render();return}
   if(a==="mood"){const d=day(t);d.mood=Number(b.dataset.v);persistDay(t);render();return}
+  if(a==="rvexport"){S._rvx=!S._rvx;render();return}
+  if(a==="rvimport"){if(!canReview)return;try{importReviews(document.getElementById("rv_json").value).then(n=>{toast(n+" reviews imported");render()}).catch(e=>toast(e.message))}catch(e){toast(e.message)}return}
   if(a==="rvopen"){if(!canReview){toast("Reviewing is for the content reviewers");return}S._rv=S._rv===b.dataset.k?null:b.dataset.k;render();return}
   if(a==="rvsave"){if(!canReview)return;const k=b.dataset.k,body={status:document.getElementById("rv_status").value,by:document.getElementById("rv_by").value.trim(),source:document.getElementById("rv_src").value.trim()||undefined,note:document.getElementById("rv_note").value.trim()||undefined,date:todayStr()};
     if(body.status!=="draft"&&!body.by){toast("Add the reviewer's name");return}if(body.status==="verified"&&!body.source){toast("Verified needs the edition, volume and page");return}

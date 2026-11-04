@@ -288,6 +288,10 @@ html.ur .kcal,html.ur .mkey,html.ur .stat b,html.ur .tile b,html.ur .ring .lbl,h
 .btn.sm{padding:4px 10px;font-size:12px;min-height:0}
 .rvform{margin:8px 0;padding:12px;background:var(--panel2)}
 .hands span.green{color:var(--green)}.hands span.blue{color:var(--blue)}.hands span.red{color:var(--red)}
+.rq{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.rqrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.rqrow .t{flex:1;min-width:180px}.rqrow .t small{display:block;color:var(--muted)}
+.rqrow .rvform{flex-basis:100%;margin:4px 0 0}
 </style>
 
 <div id="app">
@@ -1122,6 +1126,7 @@ document.addEventListener("change",e=>{
   if(t.id==="gratIn"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);dd.grat=t.value.trim();persistDay(ld);if(dd.grat)toast("Alhamdulillah");render();return}
   if(t.dataset&&t.dataset.qn){if(readOnly)return;const k=String(t.dataset.k);S.qnotes[k]=Object.assign({i:k},S.qnotes[k]||{});S.qnotes[k][t.dataset.qn]=t.value.trim();persistQnote(k);toast("Reference saved");return}
   if(t.id==="qsurah"){S._qsurah=Number(t.value);render();return}
+  if(t.id==="rq_kind"||t.id==="rq_st"){S._rq=Object.assign({st:"draft",kind:"close"},S._rq||{});S._rq[t.id==="rq_kind"?"kind":"st"]=t.value;S._rv=null;render();return}
   if(t.dataset&&t.dataset.j){const m=t.dataset.m;if(!canWriteFor(m))return;const ld=logDate(),dd=day(ld);dd.journal=Object.assign({},dd.journal||{});dd.journal[m]=Object.assign({},dd.journal[m]||{});dd.journal[m][t.dataset.j]=t.value.trim();persistDay(ld);toast("Journal saved · "+fmtDate(ld));return}
   if(t.id==="me_tag"&&d){d.tag=t.value;return}
   if(t.dataset&&t.dataset.me&&d){const i=Number(t.dataset.i);if(!d.items[i])return;if(t.dataset.me==="food")d.items[i].f=t.value;else d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}
@@ -1189,6 +1194,8 @@ document.addEventListener("click",e=>{
   if(a==="dot"){const dd=b.dataset.d||t,d=day(dd),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(dd);render();return}
   if(a==="tog"){const dd=b.dataset.d||t,d=day(dd);d[b.dataset.k]=!d[b.dataset.k];persistDay(dd);render();return}
   if(a==="mood"){const d=day(t);d.mood=Number(b.dataset.v);persistDay(t);render();return}
+  if(a==="rvexport"){S._rvx=!S._rvx;render();return}
+  if(a==="rvimport"){if(!canReview)return;try{importReviews(document.getElementById("rv_json").value).then(n=>{toast(n+" reviews imported");render()}).catch(e=>toast(e.message))}catch(e){toast(e.message)}return}
   if(a==="rvopen"){if(!canReview){toast("Reviewing is for the content reviewers");return}S._rv=S._rv===b.dataset.k?null:b.dataset.k;render();return}
   if(a==="rvsave"){if(!canReview)return;const k=b.dataset.k,body={status:document.getElementById("rv_status").value,by:document.getElementById("rv_by").value.trim(),source:document.getElementById("rv_src").value.trim()||undefined,note:document.getElementById("rv_note").value.trim()||undefined,date:todayStr()};
     if(body.status!=="draft"&&!body.by){toast("Add the reviewer's name");return}if(body.status==="verified"&&!body.source){toast("Verified needs the edition, volume and page");return}
@@ -1242,11 +1249,30 @@ function reviewPanel(key,title){if(!canReview||S._rv!==key)return "";const r=rev
   <p class="small muted">Gates follow the Bayan Library: draft → reviewed (a named reader checked it against the source) → verified (checked against the printed edition, with volume and page). Disputed keeps the note visible with your objection. ${typeof window.oneplate==="object"?"Saved to the shared review table; every household sees it.":"Saved with this household's data."}</p></div>`}
 function allContentKeys(){const k=QPLAN.map(e=>e.key);SURAH_INDEX.forEach(s=>k.push("surah-"+s.n));TEACHINGS.forEach(t=>k.push(contentKey("teaching",t)));STORIES.forEach(t=>k.push(contentKey("story",t)));return k}
 function reviewSummary(){const keys=allContentKeys(),c=core.reviewCounts(keys,REVIEWS_SHIPPED,S.reviews),n=keys.length;const recent=Object.keys(S.reviews).map(k=>Object.assign({k},S.reviews[k])).sort((a,b)=>(b.date||"")<(a.date||"")?-1:1).slice(0,8);
-  return `<details><summary><span>Scholar review · ${c.verified+c.reviewed} of ${n} checked ${I("review")}</span>${ic("chev","chev")}</summary><div class="body">
+  return `<details ${(S._rq||S._rvx)?"open":""}><summary><span>Scholar review · ${c.verified+c.reviewed} of ${n} checked ${I("review")}</span>${ic("chev","chev")}</summary><div class="body">
   <div class="row" style="gap:6px;flex-wrap:wrap">${Object.keys(REVIEW_GATES).map(k=>`<span class="pill ${REVIEW_GATES[k].tone}">${REVIEW_GATES[k].label} ${c[k]}</span>`).join("")}</div>
   <div class="goalbar"><div class="bar"><i style="width:${((c.verified+c.reviewed)/n*100).toFixed(1)}%"></i></div><div class="lbls"><span>${c.verified} verified · ${c.reviewed} reviewed</span><span>${c.draft} drafts</span></div></div>
   <p class="small">${Object.keys(REVIEW_GATES).map(k=>`<b>${REVIEW_GATES[k].label}.</b> ${esc(REVIEW_GATES[k].means)}`).join(" ")}</p>
   <p class="small muted">Counted: ${QPLAN.length} course readings, ${SURAH_INDEX.length} surah notes, ${TEACHINGS.length} teachings and ${STORIES.length} stories. ${canReview?"You can review: open any item's Review button on this tab.":typeof window.oneplate==="object"?"Reviewing is for the accounts named in ADMIN_EMAILS.":"The owner records reviews here."}</p>
-  ${recent.length?`<div class="hands">${recent.map(r=>`<span class="${REVIEW_GATES[r.status]?REVIEW_GATES[r.status].tone:""}">${esc(r.status)}</span><div class="small"><b>${esc(r.k)}</b> · ${esc(r.by||"")}${r.date?" · "+esc(r.date):""}${r.source?"<br><span class='muted'>"+esc(r.source)+"</span>":""}${r.note?"<br>"+esc(r.note):""}</div>`).join("")}</div>`:""}
+  ${reviewQueue()}
+  ${recent.length?`<p class="eyebrow">Latest reviews</p><div class="hands">${recent.map(r=>`<span class="${REVIEW_GATES[r.status]?REVIEW_GATES[r.status].tone:""}">${esc(r.status)}</span><div class="small"><b>${esc(r.k)}</b> · ${esc(r.by||"")}${r.date?" · "+esc(r.date):""}${r.source?"<br><span class='muted'>"+esc(r.source)+"</span>":""}${r.note?"<br>"+esc(r.note):""}</div>`).join("")}</div>`:""}
   </div></details>`}
+/* The reviewer's queue: every item of one kind in one status, in course order, with the volume reference and the panel inline, so a reviewer can work through the drafts without hunting for the day each one appears. */
+function reviewItems(kind){
+  if(kind==="close")return QPLAN.map((e,i)=>e.cur?{key:e.key,title:e.n,sub:`Reading ${i+1} · ${qRef(e)} · English al-Mizan vol. ${(mizanVol(e.s,e.f)||{}).vol||"?"}`}:null).filter(Boolean);
+  if(kind==="reading")return QPLAN.map((e,i)=>e.cur?null:{key:e.key,title:e.n,sub:`Reading ${i+1} · ${qRef(e)} · English al-Mizan vol. ${(mizanVol(e.s,e.f)||{}).vol||"?"}`}).filter(Boolean);
+  if(kind==="surah")return SURAH_INDEX.map(x=>({key:"surah-"+x.n,title:`${x.n}. ${x.a} · ${x.t}`,sub:`${x.v} verses · ${x.p} · English al-Mizan vol. ${(mizanVol(x.n,1)||{}).vol||"?"}`}));
+  if(kind==="teaching")return TEACHINGS.map(t=>({key:contentKey("teaching",t),title:t.q,sub:`${t.w} · ${t.src} · ${t.v}`}));
+  return STORIES.map(t=>({key:contentKey("story",t),title:t.t,sub:`Quran ${t.r}`}));
+}
+const RQ_KINDS={close:"Close readings",reading:"Other readings",surah:"Surah notes",teaching:"Teachings",story:"Stories"};
+function reviewQueue(){if(!canReview)return "";const q=S._rq||{st:"draft",kind:"close"};const all=reviewItems(q.kind),items=all.filter(x=>reviewOf(x.key).status===q.st),show=items.slice(0,40);
+  return `<p class="eyebrow">Review queue</p><div class="form"><label class="f" style="flex:1">Kind<select id="rq_kind">${Object.keys(RQ_KINDS).map(k=>`<option value="${k}" ${q.kind===k?"selected":""}>${RQ_KINDS[k]}</option>`).join("")}</select></label><label class="f" style="flex:1">Status<select id="rq_st">${Object.keys(REVIEW_GATES).map(k=>`<option value="${k}" ${q.st===k?"selected":""}>${REVIEW_GATES[k].label}</option>`).join("")}</select></label></div>
+  <p class="small muted">${items.length} of ${all.length} ${RQ_KINDS[q.kind].toLowerCase()} are ${q.st}${items.length>40?"; the first 40 are listed":""}.</p>
+  <div class="rq">${show.map(x=>`<div class="rqrow"><div class="t"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></div><button class="btn ghost sm" type="button" data-a="rvopen" data-k="${x.key}">${S._rv===x.key?tr("Close"):tr("Review")}</button>${S._rv===x.key?reviewPanel(x.key,x.title):""}</div>`).join("")}</div>
+  <div class="row"><button class="btn ghost sm" type="button" data-a="rvexport">${S._rvx?"Hide":"Export / import reviews"}</button></div>
+  ${S._rvx?`<p class="small muted">Reviews as JSON. Copy this into the other build's import box to carry reviews between the artifact and the local app; importing merges by key.</p><textarea id="rv_json" rows="6" style="width:100%;font:12px var(--mono)">${esc(JSON.stringify(S.reviews,null,1))}</textarea><div class="row"><button class="btn primary sm" type="button" data-a="rvimport">${ic("check")} Import what is in the box</button></div>`:""}`}
+function importReviews(text){let j;try{j=JSON.parse(text)}catch(e){throw new Error("Not valid JSON")}if(!j||typeof j!=="object"||Array.isArray(j))throw new Error("Expected an object keyed by content key");
+  const entries=Object.entries(j).filter(([k,v])=>/^[a-z]+-[a-z0-9-]{1,60}$/.test(k)&&v&&core.isReviewStatus(v.status)&&(v.status==="draft"||v.by));if(!entries.length)throw new Error("Nothing importable in the box");
+  return entries.reduce((pr,[k,v])=>pr.then(()=>persistReview(k,{status:v.status,by:v.by,source:v.source,note:v.note,date:v.date||todayStr()})),Promise.resolve()).then(()=>entries.length)}
 </script>
