@@ -212,7 +212,7 @@ vitd:["Vitamin D","Needed for bone strength around the healed fracture. Very com
 omad:["OMAD","One Meal A Day. Your original routine. It works, but it makes eating enough protein and recovering from exercise harder. The plan uses a small starter plus one plate instead."],
 sync:["Synced","Your check-ins and weigh-ins are saved to your Claude account, so the same data appears on your iPhone and your Android phone."],
 local:["This device only","Not signed in or offline, so data is saved only in this browser. Sign in to claude.ai and reopen the link to sync."],
-viewonly:["View only","You can see everything, including tonight's plate and the meal list, but cannot change check-ins or weigh-ins. Only the owner can."],
+viewonly:["View only","You can see everything live: the fast timer, today's check-ins, all progress and weigh-ins, the training week and the full meal list. Only the owner can change entries. Use the five tabs at the bottom to navigate."],
 nail:["Titanium nail","The metal rod inside the left shin bone from the fracture. Walking and cycling are good for it. No running or jumping until an orthopaedic surgeon says so."],
 tibia:["Tibia and fibula","The two bones of the lower leg. The tibia is the big shin bone that holds the nail."]
 };
@@ -384,6 +384,7 @@ function vToday(){
   return `
   <div class="row between"><div><p class="eyebrow">${DAYS[wd]} · week ${w} ${I("week")}</p><h1>Today</h1></div>
    <span class="pill soft">${phase(w).n} ${I("phase")}</span></div>
+  ${ro?`<div class="note">You are viewing the owner's OnePlate. Everything here is live: today's fast, check-ins, progress and tonight's plate. Tap any <b>i</b> for a plain explanation. Use the tabs below to move around.</div>`:""}
   <section class="card">
     <p class="eyebrow">Fast ${I("fast")}</p>
     <div class="timer">
