@@ -37,3 +37,9 @@ A practical, evidence-based fat-loss plan for going from **84 kg to 70 kg** with
 ## Disclaimer
 
 Educational content, not individual medical advice. Review with your physician, especially regarding the healed fracture, before starting the exercise plan.
+
+## The app
+
+A phone-first companion app lives in [`app/index.html`](app/index.html): a live fast timer, daily check-ins (water, protein palms, starter, session, post-dinner walk, kitchen closed), the plate builder with all 16 dinners, the phased training plan, a weigh-in log with a chart against the 0.5 kg/week line, and the fasting traffic-light guide.
+
+It is published as a private Claude Artifact, which works on iOS and Android from one link with no app store or hosting setup. Weigh-ins and check-ins sync across devices through the Claude account that owns the artifact. The same file can also be served by GitHub Pages if you ever want a public URL; in that mode data stays on each device.
