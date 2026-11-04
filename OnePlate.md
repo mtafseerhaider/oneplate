@@ -12,6 +12,16 @@
 
 ---
 
+## Current adjustments (November 2026)
+
+These override the matching sections below while they apply. The app at `app/index.html` already reflects them.
+
+- **Fast ends at home, not at the office.** The protein starter (Course 1) is eaten on reaching home at about 7:00 PM, then training at 7:30, dinner at 8:00, kitchen closed 9:30 PM. Fast length is about 21 hours.
+- **Cycling is 120 minutes a week:** four rides of 30 minutes (Mon, Tue, Thu, Sat), with a walk day on Wednesday, active recovery Friday, long walk Sunday.
+- **Strength training is locked** until 5 kg has been lost through fasting, walking and cycling (at 79 kg). No equipment is needed until then. The app unlocks it automatically from the weigh-in log and switches the weekly schedule to the full version.
+
+---
+
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
