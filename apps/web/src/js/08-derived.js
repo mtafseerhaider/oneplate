@@ -1,7 +1,6 @@
 /* ---------- derived ---------- */
+function streak(){return core.streak(S.days,todayStr())}
 function greeting(){const h=new Date().getHours();return h<12?"Good morning":h<17?"Good afternoon":"Good evening"}
-function doneCount(d){let n=0;["starter","train","walk","steps","closed"].forEach(k=>{if(d[k])n++});if((d.water||0)>=4)n++;if((d.palms||0)>=4)n++;return n}
-function streak(){let n=0;const t=new Date();if(!(S.days[todayStr(t)]||{}).closed)t.setDate(t.getDate()-1);for(let i=0;i<400;i++){const k=todayStr(t);if((S.days[k]||{}).closed){n++;t.setDate(t.getDate()-1)}else break}return n}
 function hintIcon(h){return h<6.75?"bed":h<8?"sun":h<9?"bike":h<14?"coffee":h<18?"clock":h<19?"home":h<19.5?"egg":h<20?"bike":h<21.5?"plate":h<22.75?"walk":"moon"}
 function dots(f,v,n,ro,cls,dd){return `<div class="dots ${cls||""} ${ro?"ro":""}">${Array.from({length:n},(_,i)=>i+1).map(i=>`<button class="dot ${i<=v?"on":""}" ${ro?"disabled":""} data-a="dot" data-f="${f}" data-v="${i}" ${dd?`data-d="${dd}"`:""} aria-label="${i}" aria-pressed="${i<=v}">${i}</button>`).join("")}</div>`}
 function swRow(id,label,sub,done,ro,leadIcon,g,dd){return `<div class="crow sw-row ${done?"done":""}" role="switch" aria-checked="${done?"true":"false"}" ${ro?"":`tabindex="0" data-a="tog"`} data-k="${id}" ${dd?`data-d="${dd}"`:""}><span class="lead">${ic(leadIcon)}</span><div class="t"><b>${esc(label)} ${g?I(g):""}</b>${sub?`<small>${esc(sub)}</small>`:""}</div><span class="sw"><i></i></span></div>`}

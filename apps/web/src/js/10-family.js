@@ -7,15 +7,13 @@ const FAMILY_BASE=[
 ];
 function members(){return FAMILY_BASE.map(b=>Object.assign({},b,(S.family||{})[b.id]||{},{id:b.id}))}
 function member(id){return members().find(m=>m.id===id)}
-function ageOf(dob){if(!dob)return null;const b=new Date(dob+"T00:00:00"),n=new Date();if(isNaN(b)||b>n)return null;let months=(n.getFullYear()-b.getFullYear())*12+(n.getMonth()-b.getMonth());if(n.getDate()<b.getDate())months--;return {years:Math.floor(months/12),months}}
-function stageOf(m){if(m.role==="adult")return "adult";const a=ageOf(m.dob);if(!a)return "child";if(a.months<12)return "infant";if(a.years<3)return "toddler";if(a.years<13)return "child";if(a.years<18)return "teen";return "adult"}
+function stageOf(m){return core.stageOf(m)}
+function portionFactor(m){return core.portionFactor(m)}
+function memberPortions(meal,m){return core.memberPortions(meal,m)}
+function cookQuantities(meal){return core.cookQuantities(meal,members())}
 const STAGE_LABEL={infant:"Infant",toddler:"Toddler",child:"Child",teen:"Teen",adult:"Adult"};
 function ageLabel(m){const a=ageOf(m.dob);if(!a)return "age not set";return a.years<2?a.months+" months":a.years+" years"}
 /* Portion factors against the adult plate (Thuluth 14 §6): toddler ⅓, child ½ as a START, teen the full plate, always rounded UP to a quarter. Children may always have seconds. */
-function portionFactor(m){const s=stageOf(m);if(s==="adult")return m.goal==="fat_loss"?1:1;if(s==="teen")return 1;if(s==="child")return 0.5;if(s==="toddler")return 0.34;return 0}
-function roundUpQ(q){return Math.ceil(q*4-1e-9)/4}
-function memberPortions(meal,m){const f=portionFactor(m);if(!f)return [];return normItems(meal.items).map(it=>{const fd=FOODS[it.f];return portion(roundUpQ(it.q*f),fd)})}
-function cookQuantities(meal){const tot={};normItems(meal.items).forEach(it=>{tot[it.f]=0});members().forEach(m=>{const f=portionFactor(m);if(!f)return;normItems(meal.items).forEach(it=>{tot[it.f]+=roundUpQ(it.q*f)})});return Object.keys(tot).map(k=>portion(Math.ceil(tot[k]*2)/2,FOODS[k]))}
 function memberWeighs(id){return Object.values(S.weighins).filter(w=>(w.m||"tafseer")===id).sort((a,b)=>a.date<b.date?-1:1)}
 function initials(n){return (n||"?").trim().slice(0,1).toUpperCase()}
 function childGuide(m){const s=stageOf(m),a=ageOf(m.dob);const yrs=a?a.years:null;

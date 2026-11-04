@@ -7,7 +7,8 @@ Source of the OnePlate interface. `app/index.html` (the claude.ai artifact build
 | `head.html` | title, viewport meta, font link |
 | `styles.css` | design tokens, layout, components, Urdu/RTL rules |
 | `markup.html` | the app shell: top bar, main, tabs, toast, info sheet |
-| `js/NN-*.js` | classic scripts concatenated in the order listed in `build-order.json` (phase 2 step 1: one global scope, split by section; step 2 converts them to ES modules importing `@oneplate/core` and `@oneplate/content`) |
+| `lib.js` | bundled by esbuild: exposes `@oneplate/core` and `@oneplate/content` as the globals the interface uses |
+| `js/NN-*.js` | interface scripts concatenated in the order listed in `build-order.json`; they hold views, state and events only, and call core for every calculation |
 
 Rebuild after any change:
 

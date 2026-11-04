@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build-app.mjs && pnpm -r --filter ./packages/* --filter ./apps/* build",
     "build:app": "node scripts/build-app.mjs",
@@ -15,9 +17,10 @@
     "migrate": "pnpm --filter @oneplate/api migrate"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "vitest": "^2.1.8",
+    "@types/node": "^22.10.2",
+    "esbuild": "~0.24.2",
     "tsx": "^4.19.2",
-    "@types/node": "^22.10.2"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
   }
 }

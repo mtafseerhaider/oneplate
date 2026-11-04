@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Idea {t:string;w:string;i:string;k:string;d:string}
 export const IDEAS: Idea[] = [
 {t:"Consistency beats intensity",w:"The Prophet ﷺ; Bayan daily practice",i:"The most beloved deeds to Allah are the most consistent, even if small (Bukhari 6464). A plan you repeat beats a plan you admire.",k:"Doing a little every day is better than doing a lot once and stopping.",d:"Keep today's habits small enough to repeat tomorrow."},

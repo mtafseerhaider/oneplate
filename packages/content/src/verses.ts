@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Verse {r:string;m:string;c:string;k:string;a:string;do:string}
 export const VERSES: Verse[] = [
 {r:"2:286",m:"Allah does not burden a soul beyond what it can bear.",c:"The closing verse of al-Baqarah, a prayer the Prophet taught to recite at night.",k:"Allah never gives you a test too big for you. If something feels hard, it is still the right size for you.",a:"Whatever today holds was measured for you. Difficulty is not a sign of abandonment.",do:"Name one thing that feels too heavy, then do the first small piece of it."},

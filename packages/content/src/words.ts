@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Word {t:string;ar:string;rt:string;m:string;k:string;u:string}
 export const WORDS: Word[] = [
 {t:"Hikmah",ar:"حِكْمَة",rt:"h-k-m",m:"Wisdom: knowing the right thing and doing it at the right time, in the right measure.",k:"Hikmah is being wise: knowing what is good and doing it the smart way.",u:"Allah gave Luqman hikmah (31:12), and his first act was gratitude."},

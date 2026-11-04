@@ -17,7 +17,7 @@ function pick(arr,off,back){const i=dayOfYear()-(back||0)+(off||0);return arr[((
 function weekTheme(){return THEMES[Math.floor(dayOfYear()/7)%THEMES.length]}
 function learnMember(){const ids=members().map(m=>m.id);if(!S._lm||!ids.includes(S._lm))S._lm=isOwner?"tafseer":(readOnly?"uzma":"uzma");return S._lm}
 function canWriteFor(id){if(readOnly)return false;if(isOwner)return true;return id!=="tafseer"}
-const KID_Q=["What made you smile today?","Who did you help today?","What is one thing you are thankful for right now?","What was hard today, and what did you do?","What is something new you learned?","Who were you kind to today?","What would you like to ask Allah for tonight?"];
+
 function lcard(icon,title,body,extra){return `<section class="card"><div class="row between"><p class="eyebrow">${ic(icon)} ${title}</p>${extra||""}</div>${body}</section>`}
 function vLearn(){
   const t=logDate(),d=day(t),mId=learnMember(),m=member(mId),kid=m.role==="child",ro=!canWriteFor(mId);

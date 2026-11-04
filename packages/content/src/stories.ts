@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Story {t:string;r:string;s:string;k:string;m:string;f:string}
 export const STORIES: Story[] = [
 {t:"Adam and the first mistake",r:"2:30–37; 7:19–23",s:"Allah taught Adam the names of all things and had the angels bow to him. Iblis refused out of pride. Adam and his wife ate from the forbidden tree, admitted it at once, and were taught the words of repentance. Pride was the sin that was not forgiven; a mistake owned was.",k:"Adam made a mistake, said sorry straight away, and Allah forgave him. Iblis was proud and would not say sorry. Saying sorry is the brave thing.",m:"A mistake admitted is forgiven. Pride is the real fall.",f:"Tonight, each person says one thing they got wrong this week and what they learned."},

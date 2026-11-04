@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface FastItem {n:string;k:string;g:"green"|"amber"|"red";s:string;f:string;a:string;note:string}
 export const FAST: FastItem[] = [
 {n:"Water / mineral / sparkling",k:"0",g:"green",s:"No",f:"No",a:"No",note:"2.5–3.5 L a day. Carbonation adds 20–30 min of fullness."},

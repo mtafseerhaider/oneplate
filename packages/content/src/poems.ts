@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Poem {l:string;w:string;s:string;k:string}
 export const POEMS: Poem[] = [
 {l:"Human beings are members of a whole,\nin creation of one essence and soul.\nIf one member is afflicted with pain,\nthe other members uneasy will remain.",w:"Saadi Shirazi",s:"Gulistan, chapter 1, story 10",k:"All people are like one body. If one hurts, everyone feels it."},

@@ -30,9 +30,11 @@ Still to do:
 ## Phase 2: Decompose the UI
 Step 1, done in this commit:
 - The single file is split into `apps/web/src` (head, styles, markup, 21 ordered script chunks). `scripts/build-app.mjs` reassembles `app/index.html` byte for byte; the PWA build runs it first; CI fails on drift. The artifact is now a build output, not a hand-edited file.
-Step 2, next:
-- Convert the chunks to ES modules importing `@oneplate/core` and `@oneplate/content`, deleting the duplicated logic and data from the UI, with a bundler (esbuild) producing the inlined artifact and the PWA.
-- Component tests for the plate builder, meal editor and progress grid.
+Step 2, done:
+- `@oneplate/core` and `@oneplate/content` are bundled into the app by esbuild (`apps/web/src/lib.js`) and the interface's own copies of the food table, meal maths, family portions, Hijri and prayer-time code, plan tables, all content libraries, the glossary and the Urdu strings were deleted. The interface keeps thin wrappers that read app state and call core. A 15-point snapshot of calculations taken before the change matches after it.
+- Browser component tests in `apps/web/test` cover the plate builder, meal editor, family portions, progress grid, Urdu toggle and script errors; CI installs Chromium and runs them.
+Step 3, later:
+- Convert the interface chunks themselves to ES modules by tab, with TypeScript, once the content review workflow (phase 4) settles the data shapes.
 
 ## Phase 3: Launch readiness (2–3 weeks)
 - Multi-household admin, usage limits, status page, structured error reporting, privacy policy and terms, data retention policy, backup restore drill, load test of the sync endpoints.

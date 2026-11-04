@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Dua {t:string;m:string;r:string;w:string}
 export const DUAS: Dua[] = [
 {t:"Rabbana atina fid-dunya hasanatan wa fil-akhirati hasanatan wa qina 'adhab an-nar",m:"Our Lord, give us good in this world and good in the Hereafter, and protect us from the Fire.",r:"Quran 2:201",w:"After every prayer; the Prophet's most frequent dua"},

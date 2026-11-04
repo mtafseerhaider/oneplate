@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Teaching {w:string;q:string;src:string;v:string;k:string;a:string}
 export const TEACHINGS: Teaching[] = [
 {w:"The Prophet Muhammad ﷺ",q:"The best of you are those who are best to their families, and I am the best of you to my family.",src:"Jami' al-Tirmidhi 3895",v:"graded sahih",k:"The Prophet said the best people are the ones who are kindest at home.",a:"Character is measured where it costs the most: with the people who see you every day."},

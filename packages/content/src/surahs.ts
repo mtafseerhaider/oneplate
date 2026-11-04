@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Surah {n:number;a:string;t:string;v:number;p:string;s:string;k:string;l:string}
 export const SURAHS: Surah[] = [
 {n:1,a:"Al-Fatiha",t:"The Opening",v:7,p:"Meccan",s:"Praise, mercy, mastery of the Day of Judgement, worship and help from Allah alone, and the prayer for the straight path. The whole Quran in seven verses; recited in every unit of prayer.",k:"It is the first page of the Quran and the prayer we say in every salah: Allah, show us the right road.",l:"Ask for guidance every day; it is not a one-time request."},

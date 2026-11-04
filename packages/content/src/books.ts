@@ -1,4 +1,4 @@
-/** Generated from app/index.html by scripts/extract-content.py. Edit the source of truth there until phase 2 moves it here. */
+/** Curated content. Source of truth since phase 2. */
 export interface Book {t:string;w:string;y:string;why:string;core:string;take:string;next:string}
 export const BOOKS: Book[] = [
 {t:"The Muqaddimah",w:"Ibn Khaldun",y:"1377",why:"The founding text of sociology and the philosophy of history, written in a fortress in Algeria.",core:"Civilisations rise on group solidarity and decline when luxury erodes it; history has laws that can be studied.",take:"Strength is social before it is material.",next:"Read the chapters on 'asabiyyah and on the sciences."},

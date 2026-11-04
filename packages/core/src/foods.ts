@@ -56,23 +56,23 @@ colddrink:{ur:"کولڈ ڈرنک",n:"Cold drink, 250 ml",short:"cold drink",u:"g
 };
 
 export const BASE_MEALS: Meal[] = [
-{id:"karahi",n:"Chicken Karahi Plate",tag:"chicken",items:[["chk_karahi",2],["salad",2],["roti",1],["yogurt",1]],note:"Chicken and yogurt give the protein; tomato and salad add volume at low calories; one roti keeps the deficit intact."},
+{id:"karahi",n:"Chicken Karahi Plate",tag:"chicken",items:[["chk_karahi",2],["salad",2],["roti",1],["yogurt",1]],note:"Chicken and yogurt give the protein; tomato and salad add volume at low calories; one roti keeps the deficit intact. The oil is already inside the karahi, so cook it with a measured tablespoon."},
 {id:"tikka",n:"Chicken Tikka Plate",tag:"chicken",items:[["chk_tikka",2],["salad",2],["rice",1],["chutney",1],["raita",1]],note:"Grilling needs almost no oil, so protein is high and fat is low; raita adds calcium."},
-{id:"bbq",n:"Chicken BBQ Mix",tag:"chicken",items:[["chk_tikka",1],["malai_boti",1],["salad",2],["roti",1],["yogurt",1]],note:"High protein and very filling; the cream in the malai boti pushes fat up, so skip the naan."},
-{id:"seekh",n:"Seekh Kebab & Daal Plate",tag:"beef",items:[["seekh",3],["daal",1],["salad",2],["roti",1],["raita",1]],note:"Beef brings iron, zinc and creatine; daal adds fibre for long fullness."},
-{id:"fish",n:"Grilled Fish Plate",tag:"fish",items:[["fish_grill",2],["sabzi",2],["rice",1],["yogurt",1]],note:"The leanest protein on the list; omega-3 supports recovery."},
-{id:"fishcurry",n:"Fish Curry Plate",tag:"fish",items:[["fish_curry",2],["sabzi",2],["roti",1],["yogurt",1]],note:"Same lean protein in a family-style format."},
-{id:"keema",n:"Keema Anday Plate",tag:"beef",items:[["keema",2],["egg",2],["salad",1],["roti",1],["yogurt",1]],note:"Eggs add leucine-rich protein cheaply; keema reheats well."},
-{id:"beef",n:"Beef Boti / Pasanda Plate",tag:"beef",items:[["beef_lean",2],["salad",2],["rice",1],["yogurt",1]],note:"Very high satiety per calorie."},
-{id:"shorba",n:"Chicken Shorba / Haandi Plate",tag:"chicken",items:[["chk_curry",2],["salad",1],["rice",1],["yogurt",1]],note:"The everyday home dish, with the oil layer drained."},
-{id:"omelette",n:"Omelette & Chana Plate",tag:"meatless",items:[["egg",3],["oil",1],["chana",1],["salad",1],["roti",1],["yogurt",1]],note:"Cheapest and fastest. Use a whey starter on this night."},
-{id:"daalboti",n:"Daal & Chicken Boti Plate",tag:"chicken",items:[["daal",1],["chk_tikka",1],["salad",2],["roti",1],["yogurt",1]],note:"The lightest plate; good for rest days."},
-{id:"paneer",n:"Paneer & Chana Plate",tag:"meatless",items:[["paneer",1],["chana",1],["salad",2],["roti",1],["yogurt",1]],note:"Calcium-rich for the tibia."},
-{id:"botisalad",n:"Tikka Boti Salad Bowl",tag:"chicken",items:[["chk_tikka",2],["salad",3],["olive",1],["yogurt",1]],note:"Highest protein, lowest calories."},
-{id:"palak",n:"Palak Gosht Plate",tag:"beef",items:[["mutton",2],["palak",2],["salad",1],["roti",1],["yogurt",1]],note:"Mutton is fattier, so once a week."},
-{id:"pulao",n:"Controlled Chicken Pulao",tag:"chicken",items:[["chk_thigh",2],["salad",2],["pulao",1],["raita",1]],note:"More chicken, one cupped hand of rice."},
-{id:"biryani",n:"Controlled Chicken Biryani",tag:"chicken",items:[["chk_thigh",2],["salad",2],["biryani",1],["raita",1]],note:"No food is banned. Protein first, rice last."},
-{id:"steak",n:"Chicken Steak, Daal & Raita",tag:"chicken",items:[["chk_breast",2],["daal",0.5],["raita",1]],note:"Grilled breast, a small bowl of daal in place of roti, raita for calcium."}
+{id:"bbq",n:"Chicken BBQ Mix",tag:"chicken",items:[["chk_tikka",1],["malai_boti",1],["salad",2],["roti",1],["yogurt",1]],note:"High protein and very filling; the cream in the malai boti pushes fat up, so skip the naan. A Saturday-friendly plate."},
+{id:"seekh",n:"Seekh Kebab & Daal Plate",tag:"beef",items:[["seekh",3],["daal",1],["salad",2],["roti",1],["raita",1]],note:"Beef brings iron, zinc and creatine; daal adds fibre for long fullness. Cheap and family-friendly."},
+{id:"fish",n:"Grilled Fish Plate",tag:"fish",items:[["fish_grill",2],["sabzi",2],["rice",1],["yogurt",1]],note:"The leanest protein on the list; omega-3 supports recovery; low fat leaves room for a full carb portion on training days."},
+{id:"fishcurry",n:"Fish Curry Plate",tag:"fish",items:[["fish_curry",2],["sabzi",2],["roti",1],["yogurt",1]],note:"Same lean protein in a family-style format; the tomato base adds volume without calories."},
+{id:"keema",n:"Keema Anday Plate",tag:"beef",items:[["keema",2],["egg",2],["salad",1],["roti",1],["yogurt",1]],note:"Eggs add leucine-rich protein cheaply; keema reheats well for a busy week. Ask for lean mince."},
+{id:"beef",n:"Beef Boti / Pasanda Plate",tag:"beef",items:[["beef_lean",2],["salad",2],["rice",1],["yogurt",1]],note:"Very high satiety per calorie; red meat once or twice a week supports iron and creatine stores."},
+{id:"shorba",n:"Chicken Shorba / Haandi Plate",tag:"chicken",items:[["chk_curry",2],["salad",1],["rice",1],["yogurt",1]],note:"The everyday home dish, made plan-friendly by draining the oil layer and holding rice to one cupped hand."},
+{id:"omelette",n:"Omelette & Chana Plate",tag:"meatless",items:[["egg",3],["oil",1],["chana",1],["salad",1],["roti",1],["yogurt",1]],note:"Cheapest and fastest. Protein is lower, so use a whey starter on this night."},
+{id:"daalboti",n:"Daal & Chicken Boti Plate",tag:"chicken",items:[["daal",1],["chk_tikka",1],["salad",2],["roti",1],["yogurt",1]],note:"The lightest plate; daal fibre gives long satiety. Good for rest days or the night after a cheat meal."},
+{id:"paneer",n:"Paneer & Chana Plate",tag:"meatless",items:[["paneer",1],["chana",1],["salad",2],["roti",1],["yogurt",1]],note:"Calcium-rich for the tibia; pair with an egg or whey starter for protein."},
+{id:"botisalad",n:"Tikka Boti Salad Bowl",tag:"chicken",items:[["chk_tikka",2],["salad",3],["olive",1],["yogurt",1]],note:"Highest protein, lowest calories. Use on rest days or to speed up a slow week without hunger."},
+{id:"palak",n:"Palak Gosht Plate",tag:"beef",items:[["mutton",2],["palak",2],["salad",1],["roti",1],["yogurt",1]],note:"Spinach adds volume, iron and magnesium. Mutton is fattier, so keep it to once a week and drain the surface oil."},
+{id:"pulao",n:"Controlled Chicken Pulao",tag:"chicken",items:[["chk_thigh",2],["salad",2],["pulao",1],["raita",1]],note:"Family cooks pulao anyway; take more chicken and one cupped hand of rice instead of a mound."},
+{id:"biryani",n:"Controlled Chicken Biryani",tag:"chicken",items:[["chk_thigh",2],["salad",2],["biryani",1],["raita",1]],note:"No food is banned. Protein first, salad second, rice last; stop at one cupped hand."},
+{id:"steak",n:"Chicken Steak, Daal & Raita",tag:"chicken",items:[["chk_breast",2],["daal",0.5],["raita",1]],note:"Grilled breast is the leanest protein on the list; a small bowl of daal brings fibre and slow carbs in place of roti; raita adds calcium. Add 2 fists of salad if there is any on the table."}
 ];
 
 export function normItems(items: Meal["items"] | undefined): MealItem[] {

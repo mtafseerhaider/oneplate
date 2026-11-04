@@ -1,10 +1,4 @@
 /* ---------- meal maths ---------- */
-function normItems(items){return (items||[]).map(it=>Array.isArray(it)?{f:it[0],q:Number(it[1])}:{f:it.f,q:Number(it.q)}).filter(it=>FOODS[it.f]&&it.q>0)}
-function mealCalc(m){let k=0,p=0,c=0,f=0;normItems(m.items).forEach(it=>{const fd=FOODS[it.f];k+=fd.kcal*it.q;p+=fd.p*it.q;c+=fd.c*it.q;f+=fd.f*it.q});return {kcal:Math.round(k/5)*5,p:Math.round(p),c:Math.round(c),f:Math.round(f)}}
-function qtyStr(q){const w=Math.floor(q),r=q-w;const fr=r>=.74?"¾":r>=.49?"½":r>=.24?"¼":"";return (w?w:"")+(fr?(w?" ":"")+fr:"")||String(q)}
-function portion(q,fd){const u=UNITS[fd.u]||["",""];return (qtyStr(q)+" "+(q<=1?u[0]:u[1])+" "+(fd.short||"")).replace(/\s+/g," ").trim()}
-function hands(m){const g={protein:[],veg:[],carb:[],fat:[],plus:[]};normItems(m.items).forEach(it=>{const fd=FOODS[it.f];g[fd.cat].push(portion(it.q,fd))});return g}
-function handLine(m){const g=hands(m);return [].concat(g.protein,g.veg,g.carb,g.fat,g.plus).join(" · ")}
 function allMeals(){const o=S.meals||{};const list=BASE_MEALS.map(b=>{const v=o[b.id];if(v&&v.deleted)return null;return Object.assign({},b,v||{},{base:true})}).filter(Boolean);Object.values(o).forEach(v=>{if(v&&v.id&&/^c_/.test(v.id)&&!v.deleted)list.push(Object.assign({},v,{base:false}))});return list}
 function tonightMeal(){const l=allMeals();if(!l.length)return null;const d=S.days[logDate()];if(d&&d.meal){const m=l.find(x=>x.id===d.meal);if(m)return m}const dt=new Date(logDate()+"T12:00:00");return l[(dt.getDate()+dt.getMonth())%l.length]}
 function foodOptions(sel){const cats=[["protein","Protein"],["veg","Vegetables"],["carb","Carbs"],["fat","Fats"],["plus","Daal, dairy & extras"]];return cats.map(c=>`<optgroup label="${c[1]}">${Object.keys(FOODS).filter(k=>FOODS[k].cat===c[0]).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(FOODS[k].n)} · ${esc(FOODS[k].ur||"")} · per ${esc((UNITS[FOODS[k].u]||[""])[0]||"item")}</option>`).join("")}</optgroup>`).join("")}
