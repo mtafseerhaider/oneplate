@@ -19,6 +19,8 @@ const schema = z.object({
   MAX_HOUSEHOLDS_PER_USER: z.coerce.number().default(3),
   MAX_DOCS_PER_HOUSEHOLD: z.coerce.number().default(25000),
   PUBLIC_URL: z.string().default("http://localhost:5173"),
+  VAPID_PUBLIC_KEY: z.string().optional(),                 // web push; generated once and kept in the database when unset
+  VAPID_PRIVATE_KEY: z.string().optional(),
   WEB_DIST: z.string().optional()                         // when set, the API also serves the built web app from this directory (single-service deploys)
 });
 export type Config = z.infer<typeof schema>;

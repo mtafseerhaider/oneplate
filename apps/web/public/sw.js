@@ -1,6 +1,8 @@
 /* OnePlate service worker: app shell cached for offline start; API calls always go to the network. */
-const CACHE = "oneplate-shell-v2";
+const CACHE = "oneplate-shell-v3";
 const SHELL = ["./", "./index.html", "./account.html", "./oneplate-adapter.js", "./webauthn.js", "./manifest.webmanifest", "./icon.svg", "./privacy.html", "./terms.html", "./status.html"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => { const u = new URL(e.request.url); if (e.request.method !== "GET" || u.pathname.includes("/households/") || u.pathname.startsWith("/auth") || u.pathname.startsWith("/api")) return; e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => { if (u.origin === location.origin && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); } return res; }).catch(() => caches.match("./index.html")))); });
+self.addEventListener("push", e => { let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text() }; } e.waitUntil(self.registration.showNotification(d.title || "OnePlate", { body: d.body || "", icon: "./icon.svg", badge: "./icon.svg", tag: d.kind || "oneplate", data: { url: d.url || "./" } })); });
+self.addEventListener("notificationclick", e => { e.notification.close(); const url = new URL((e.notification.data && e.notification.data.url) || "./", self.location.href).href; e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => { for (const c of cs) { if (c.url.startsWith(self.registration.scope) && "focus" in c) return c.focus(); } return self.clients.openWindow(url); })); });

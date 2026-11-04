@@ -61,6 +61,13 @@ Done in this commit:
 - End-to-end browser test against the real API: link created in the app, wrong and right date of birth, passkey registered through a virtual authenticator, auto-open on the next visit, passkey sign-in after sign-out. CI builds the API and runs it.
 Not possible on the claude.ai artifact: its database is readable only by signed-in people the owner shared it with.
 
+## Phase 6: Less typing
+Done in this commit:
+- Apple Health through an iPhone Shortcut: per-person ingest tokens (owner, or a contributor for themselves; never for a child), `POST /ingest/:token` normalising weight (kg or lb), steps, sleep, cycling minutes and active energy into the day document and a `src: health` weigh-in that never overwrites a manual one, `GET /ingest/:token/latest` for the reverse Shortcut. Recipe on the Account card and in `docs/SHORTCUTS.md`.
+- Web push: VAPID keys generated once and kept in the database (or configured), subscriptions per device with per-kind preferences, a test send, and a minute scheduler that decides reminders by the household's local time (fast complete, protein starter, Friday weigh-in, family circle, Quran reading), each sent once and only when the thing is not already recorded; dead subscriptions are removed. Service worker shows and routes the notification.
+- Tests: normalisation, habit application, reminder decisions across local times, token lifecycle, subscribe and unsubscribe, scheduler idempotence.
+Not possible: reading Health Connect on Android from a web app.
+
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.
 - No change to a domain rule without a test.

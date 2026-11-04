@@ -5,6 +5,7 @@ import { createPool } from "../src/db/pool.js";
 import { migrate } from "../src/db/migrate.js";
 import { ChangeBus } from "../src/events.js";
 import { MemoryMailer, createMailer, SmtpMailer } from "../src/mail.js";
+import { normalizeHealth, applyHealthToDay, dueReminders, localParts, schedulerTick } from "../src/integrations.js";
 const cfg = loadConfig({ ...process.env, NODE_ENV: "test", ADMIN_EMAILS: "tafseer@example.com", MAX_HOUSEHOLDS_PER_USER: "2", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
 const db = createPool(cfg.DATABASE_URL); let app: Awaited<ReturnType<typeof buildApp>>; const mailer = new MemoryMailer(); const bus = new ChangeBus(cfg.DATABASE_URL);
 const cookieOf = (res: any) => String(res.headers["set-cookie"]).split(";")[0];
@@ -93,6 +94,58 @@ describe("OnePlate API", () => {
     const one = await buildApp(loadConfig({ ...process.env, NODE_ENV: "test", DATABASE_URL: cfg.DATABASE_URL, LOG_LEVEL: "silent", WEB_DIST: dir }), db, { mailer });
     const root = await one.inject({ method: "GET", url: "/" }); expect(root.statusCode).toBe(200); expect(root.body).toContain("OnePlate"); const acc = await one.inject({ method: "GET", url: "/account.html" }); expect(acc.body).toContain("account");
     const health = await one.inject({ method: "GET", url: "/health" }); expect(health.json().status).toBe("ok"); await one.close();
+  });
+  it("ingests Apple Health numbers through a per-person token", async () => {
+    const mk = await app.inject({ method: "POST", url: `/households/${hid}/ingest-tokens`, headers: { cookie: owner }, payload: { memberId: "tafseer" } }); expect(mk.statusCode).toBe(200); const token = mk.json().url.split("/ingest/")[1];
+    const kid = await app.inject({ method: "POST", url: `/households/${hid}/ingest-tokens`, headers: { cookie: owner }, payload: { memberId: "abbas" } }); expect(kid.statusCode).toBe(422);
+    const other = await app.inject({ method: "POST", url: `/households/${hid}/ingest-tokens`, headers: { cookie: wife }, payload: { memberId: "tafseer" } }); expect(other.statusCode).toBe(403);
+    const self = await app.inject({ method: "POST", url: `/households/${hid}/ingest-tokens`, headers: { cookie: wife }, payload: { memberId: "uzma" } }); expect(self.statusCode).toBe(200);
+    const bad = await app.inject({ method: "POST", url: `/ingest/not-a-token`, payload: { steps: 100 } }); expect(bad.statusCode).toBe(404);
+    const r1 = await app.inject({ method: "POST", url: `/ingest/${token}`, payload: { date: "2026-11-03", weight: "83.4 kg", steps: "9120", sleepMin: 455, cycleMin: 32, activeKcal: 410 } }); expect(r1.statusCode).toBe(200); expect(r1.json().written).toEqual(["day", "weighin"]);
+    const day = await app.inject({ method: "GET", url: `/households/${hid}/docs/days/2026-11-03`, headers: { cookie: owner } }); expect(day.json().body.health.steps).toBe(9120); expect(day.json().body.steps).toBe(true); expect(day.json().body.train).toBe(true); expect(day.json().body.sleep).toBe(7.5);
+    const w = await app.inject({ method: "GET", url: `/households/${hid}/docs/weighins/2026-11-03`, headers: { cookie: owner } }); expect(w.json().body).toEqual({ date: "2026-11-03", weight: 83.4, src: "health" });
+    await app.inject({ method: "PUT", url: `/households/${hid}/docs/weighins/2026-11-02`, headers: { cookie: owner }, payload: { body: { date: "2026-11-02", weight: 83.9 } } });
+    const r2 = await app.inject({ method: "POST", url: `/ingest/${token}`, payload: { date: "2026-11-02", weight: 83.1 } }); expect(r2.json().written).toEqual([]); // a manual weigh-in is never overwritten
+    const latest = await app.inject({ method: "GET", url: `/ingest/${token}/latest` }); expect(latest.json().weight).toBe(83.4);
+    const list = await app.inject({ method: "GET", url: `/households/${hid}/ingest-tokens`, headers: { cookie: owner } }); expect(list.json().length).toBe(2); expect(list.json().find((t: any) => t.member_id === "tafseer").uses).toBe(2);
+    const wifeList = await app.inject({ method: "GET", url: `/households/${hid}/ingest-tokens`, headers: { cookie: wife } }); expect(wifeList.json().length).toBe(1);
+    await app.inject({ method: "DELETE", url: `/households/${hid}/ingest-tokens/${mk.json().id}`, headers: { cookie: owner } }); const gone = await app.inject({ method: "POST", url: `/ingest/${token}`, payload: { steps: 1 } }); expect(gone.statusCode).toBe(404);
+  });
+  it("normalises Health payloads and sets habits without clearing them", () => {
+    const n = normalizeHealth({ weight: "185 lb", steps: "7,950", sleepHours: "7.25", waist: 95 } as any, "2026-11-04"); expect(n.weight).toBe(83.9); expect(n.health.steps).toBe(7950); expect(n.health.sleepMin).toBe(435); expect(n.waist).toBe(95); expect(n.date).toBe("2026-11-04");
+    const d = applyHealthToDay({ date: "2026-11-04", steps: true, sleep: 6 }, "2026-11-04", { steps: 3000, sleepMin: 480 }); expect(d.steps).toBe(true); expect(d.sleep).toBe(6); expect(d.health.steps).toBe(3000);
+    const d2 = applyHealthToDay(null, "2026-11-04", { sleepMin: 470 }); expect(d2.sleep).toBe(8); expect(d2.sleepSrc).toBe("health");
+  });
+  it("decides reminders by household local time, once each", () => {
+    const base = { timezone: "Asia/Karachi", settings: { fastHours: 21, quranStart: "2026-11-01" }, fast: {}, days: {}, weighins: {}, qprog: {}, sentKeys: new Set<string>() };
+    const at = (iso: string) => new Date(iso); // 19:05 Karachi = 14:05 UTC
+    expect(dueReminders(at("2026-11-04T14:05:00Z"), base).map(r => r.kind)).toEqual(["starter"]);
+    expect(dueReminders(at("2026-11-04T15:35:00Z"), base).map(r => r.kind)).toEqual(["circle"]);
+    expect(dueReminders(at("2026-11-04T16:40:00Z"), base).map(r => r.kind)).toEqual(["quran"]);
+    expect(dueReminders(at("2026-11-06T02:10:00Z"), base).map(r => r.kind)).toEqual(["weighin"]); // Friday 07:10
+    expect(dueReminders(at("2026-11-06T02:10:00Z"), { ...base, weighins: { "2026-11-06": { date: "2026-11-06", weight: 82 } } })).toEqual([]);
+    const fasting = { ...base, fast: { startedAt: "2026-11-03T17:00:00Z" } }; expect(dueReminders(at("2026-11-04T14:05:00Z"), fasting).map(r => r.kind)).toEqual(["fastEnd", "starter"]);
+    const sent = { ...fasting, sentKeys: new Set(["fastend:2026-11-03T17:00:00Z", "starter:2026-11-04"]) }; expect(dueReminders(at("2026-11-04T14:05:00Z"), sent)).toEqual([]);
+    expect(dueReminders(at("2026-11-04T15:35:00Z"), { ...base, days: { "2026-11-04": { circle: true } } })).toEqual([]);
+    expect(localParts(at("2026-11-04T19:30:00Z"), "Asia/Karachi")).toEqual({ date: "2026-11-05", hm: 30, weekday: "Thu" });
+  });
+  it("registers and tests push subscriptions", async () => {
+    const vapid = await app.inject({ method: "GET", url: "/push/vapid" }); expect(vapid.json().publicKey.length).toBeGreaterThan(60); const again = await app.inject({ method: "GET", url: "/push/vapid" }); expect(again.json().publicKey).toBe(vapid.json().publicKey);
+    const sub = { endpoint: "https://push.example.com/send/abc", keys: { p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM", auth: "tBHItJI5svbpez7KI4CCXg" } };
+    const r = await app.inject({ method: "POST", url: `/households/${hid}/push/subscribe`, headers: { cookie: owner }, payload: { subscription: sub, prefs: { quran: false } } }); expect(r.statusCode).toBe(200);
+    const st = await app.inject({ method: "GET", url: `/households/${hid}/push/status`, headers: { cookie: owner } }); expect(st.json().subscriptions[0].prefs.quran).toBe(false);
+    const t = await app.inject({ method: "POST", url: `/households/${hid}/push/test`, headers: { cookie: owner } }); expect(t.statusCode).toBe(200); expect(t.json().sent).toBe(0); // the example endpoint rejects, so nothing is counted as sent
+    const un = await app.inject({ method: "POST", url: `/households/${hid}/push/unsubscribe`, headers: { cookie: owner }, payload: { endpoint: sub.endpoint } }); expect(un.statusCode).toBe(200);
+    const st2 = await app.inject({ method: "GET", url: `/households/${hid}/push/status`, headers: { cookie: owner } }); expect(st2.json().subscriptions.length).toBe(0);
+  });
+  it("runs the scheduler once per reminder per household", async () => {
+    const sub = { endpoint: "https://push.example.com/send/tick", keys: { p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM", auth: "tBHItJI5svbpez7KI4CCXg" } };
+    await app.inject({ method: "POST", url: `/households/${hid}/push/subscribe`, headers: { cookie: owner }, payload: { subscription: sub, prefs: {} } });
+    const at = new Date("2026-11-04T15:35:00Z"); // 20:35 in Karachi: family circle
+    await schedulerTick(db, cfg, at); const log = await db.query("select key from push_log where household_id=$1 order by key", [hid]); expect(log.rows.map((r: any) => r.key)).toEqual(["circle:2026-11-04"]);
+    await schedulerTick(db, cfg, at); const log2 = await db.query("select count(*)::int as n from push_log where household_id=$1", [hid]); expect(log2.rows[0].n).toBe(1);
+    const failed = await db.query("select failures from push_subscriptions where endpoint=$1", [sub.endpoint]); expect(failed.rows[0].failures).toBeGreaterThanOrEqual(1); // the example push service is unreachable; the subscription is kept
+    await app.inject({ method: "POST", url: `/households/${hid}/push/unsubscribe`, headers: { cookie: owner }, payload: { endpoint: sub.endpoint } });
   });
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);

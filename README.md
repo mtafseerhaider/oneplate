@@ -52,6 +52,12 @@ Install it like an app: on Android, Chrome's menu → Install app (or the Instal
 
 The claude.ai artifact cannot do this: its database is only readable by people signed in to claude.ai whom the owner has shared it with, so a link that opens on a date of birth alone has to come from your own hosted copy.
 
+## Notifications and Apple Health
+
+Installed to the Home Screen, the self-hosted app sends reminders as notifications: fast complete, protein starter at 7 pm, weigh-in on Friday morning, family circle at 8:30 pm and the Quran reading at 9:30 pm, each once and only when the thing is not already recorded. Turn them on per device from Progress → Account. iPhone needs iOS 16.4 or later and the app opened from the Home Screen icon.
+
+Apple Health cannot be read by a web app, so OnePlate takes the free route: an iPhone Shortcut reads Health and posts weight, steps, sleep, cycling minutes and active energy to a private per-person address every night. Weight becomes a weigh-in (never overwriting one typed by hand), steps, sleep and cycling fill the day's check-ins, and the raw numbers show on Today. The Account card gives the address and the eight-step recipe for the Shortcut; `docs/SHORTCUTS.md` has the same with notes. The reverse Shortcut writes OnePlate's weigh-ins into Health. Android has no equivalent for a web app.
+
 ## Deploy it for free in ten minutes
 
 One service runs the API and the web app together (`Dockerfile` at the root, `WEB_DIST` set), and only needs a PostgreSQL URL.

@@ -4,7 +4,7 @@ Run through this before exposing OnePlate beyond a laptop. Each line names where
 
 ## Before deploying
 - [ ] `pnpm typecheck && pnpm test` green; `node scripts/build-app.mjs --check` passes (CI does both).
-- [ ] `infra/.env` set: strong `SESSION_SECRET` (32+ random chars), `POSTGRES_PASSWORD`, `PUBLIC_HOST`, `PUBLIC_ORIGIN`, `MAIL_TRANSPORT=smtp` with `SMTP_URL` and `MAIL_FROM`, `ADMIN_EMAILS` (also the content reviewers), optionally `ERROR_WEBHOOK_URL`. Single-service hosts (Render): `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAILS`; `PUBLIC_URL` once a custom domain is attached, since passkeys are bound to it.
+- [ ] `infra/.env` set: strong `SESSION_SECRET` (32+ random chars), `POSTGRES_PASSWORD`, `PUBLIC_HOST`, `PUBLIC_ORIGIN`, `MAIL_TRANSPORT=smtp` with `SMTP_URL` and `MAIL_FROM`, `ADMIN_EMAILS` (also the content reviewers), optionally `ERROR_WEBHOOK_URL`. Single-service hosts (Render): `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAILS`; `PUBLIC_URL` once a custom domain is attached, since passkeys are bound to it. Push keys are generated and stored on first use; set `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` only when moving databases and wanting existing subscriptions to keep working.
 - [ ] DNS points `PUBLIC_HOST` at the server; ports 80 and 443 open; Caddy obtains a certificate on first start.
 - [ ] Backups: `infra/backup.sh` in cron nightly; `infra/drill.sh` run once against the real data and passing.
 - [ ] Load: `node scripts/loadtest.mjs https://your-host 20 10` shows p95 under 300 ms with zero failures.

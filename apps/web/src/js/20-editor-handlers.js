@@ -111,6 +111,14 @@ document.addEventListener("click",e=>{
   if(a==="acc_link_share"){navigator.share({title:"OnePlate",text:"Open our family's OnePlate",url:S._link.url}).catch(()=>{});return}
   if(a==="acc_link_revoke"){window.oneplate.revokeMemberLink(b.dataset.id).then(()=>window.oneplate.memberLinks()).then(l=>{S._links=l;S._link=null;toast("Link revoked");render()}).catch(e=>toast(e.message));return}
   if(a==="acc_install"){window.oneplate.install().then(ok=>toast(ok?"Installed":"Not installed")).catch(()=>{});render();return}
+  if(a==="push_status"){window.oneplate.pushStatus().then(ps=>{S._push=ps;render()}).catch(e=>toast(e.message));return}
+  if(a==="push_on"){const prefs={};document.querySelectorAll("[data-pk]").forEach(c=>{prefs[c.dataset.pk]=c.checked});window.oneplate.pushSubscribe(prefs).then(()=>window.oneplate.pushStatus()).then(ps=>{S._push=ps;toast("Notifications on");render()}).catch(e=>toast(e.message||"Could not turn on"));return}
+  if(a==="push_off"){window.oneplate.pushUnsubscribe().then(()=>window.oneplate.pushStatus()).then(ps=>{S._push=ps;toast("Notifications off");render()}).catch(e=>toast(e.message));return}
+  if(a==="push_test"){window.oneplate.pushTest().then(r=>toast(r.sent?"Test sent":"Nothing sent · check the browser's notification setting")).catch(e=>toast(e.message));return}
+  if(a==="ingest_new"){const m=member(b.dataset.m);window.oneplate.createIngestToken(b.dataset.m).then(r=>{S._ingestNew={name:m?m.name:b.dataset.m,url:r.url};return window.oneplate.ingestTokens()}).then(t=>{S._ingest=t;render()}).catch(e=>toast(e.message||"Could not create"));return}
+  if(a==="ingest_list"){window.oneplate.ingestTokens().then(t=>{S._ingest=t;if(!t.length)toast("No Health addresses yet");render()}).catch(e=>toast(e.message));return}
+  if(a==="ingest_copy"){const i=document.getElementById("ingestUrl");i.select();(navigator.clipboard?navigator.clipboard.writeText(i.value):Promise.reject()).then(()=>toast("Address copied"),()=>{document.execCommand("copy");toast("Address selected · copy it")});return}
+  if(a==="ingest_revoke"){window.oneplate.revokeIngestToken(b.dataset.id).then(()=>window.oneplate.ingestTokens()).then(t=>{S._ingest=t;S._ingestNew=null;toast("Revoked");render()}).catch(e=>toast(e.message));return}
   if(a==="acc_signout"){window.oneplate.signOut();return}
   if(a==="acc_passkey"){window.oneplate.addPasskey().then(()=>toast("Passkey added")).catch(e=>toast(e.message||"Passkey not added"));return}
   if(a==="acc_delete"){if(S._delconfirm){window.oneplate.deleteHousehold().then(()=>{localStorage.removeItem(LS);location.href="./account.html"}).catch(e=>toast(e.message))}else{S._delconfirm=true;toast("Tap again within 5 s to delete everything");setTimeout(()=>{S._delconfirm=false},5000)}return}

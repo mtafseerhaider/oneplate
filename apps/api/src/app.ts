@@ -17,6 +17,7 @@ import fastifyStatic from "@fastify/static";
 import path from "node:path";
 import { registerPasskeyRoutes } from "./auth/passkeys.js";
 import { registerOpsRoutes, createErrorReporter } from "./ops.js";
+import { registerIntegrationRoutes } from "./integrations.js";
 
 declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string } }
 
@@ -144,6 +145,8 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const pk = await db.query("select count(*)::int as n from passkeys where user_id=$1", [userId]);
     return { householdId: link.household_id, memberId: link.member_id, level: link.level, name: fam.rows[0]!.body.name, passkeys: pk.rows[0]!.n };
   });
+
+  registerIntegrationRoutes(app, cfg, db, { audit: async (r, a, x) => { await audit(r, a, x); }, withHousehold, requireUser });
 
   // ---- documents: the same contract the artifact database serves ----
   const COLL = /^[a-z][a-z0-9_-]{0,39}$/, DOC = /^[A-Za-z0-9_\-.~:@+]{1,200}$/;
