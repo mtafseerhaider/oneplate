@@ -234,6 +234,10 @@ ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
 .sheet h3{font-size:18px}
 .sheet p{font-size:14px;line-height:1.5}
 .sheet .x{position:absolute;top:14px;right:16px;border:0;background:var(--panel2);color:var(--muted);width:30px;height:30px;border-radius:50%;font:600 15px var(--body);cursor:pointer}
+.erows{display:flex;flex-direction:column;gap:6px}
+.erow{display:grid;grid-template-columns:1fr 72px 36px;gap:6px;align-items:center}
+.erow select,.erow input{padding:8px 10px;border-radius:10px}
+.erow .btn{padding:6px;color:var(--muted)}
 .glist{display:flex;flex-direction:column;gap:6px}
 .glist button{appearance:none;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px}
 .glist button b{font-family:var(--display);font-weight:600;font-size:14px}
@@ -329,23 +333,71 @@ tibia:["Tibia and fibula","The two bones of the lower leg. The tibia is the big 
 function I(k){return `<span class="info" role="button" tabindex="0" data-a="info" data-k="${k}" aria-label="What does this mean?">i</span>`}
 
 /* ---------- content ---------- */
-const MEALS=[
-{n:"Chicken Karahi Plate",tag:"chicken",kcal:850,p:70,c:50,f:38,pr:"2 palms chicken karahi (lots of tomato)",vg:"2 fists kachumber",cb:"1 roti",ft:"1 thumb oil, already in the karahi",plus:"1 bowl yogurt",why:"Chicken and yogurt give ~70 g protein; tomato and salad add volume at low calories; one roti keeps the deficit intact."},
-{n:"Chicken Tikka Plate",tag:"chicken",kcal:800,p:75,c:45,f:30,pr:"1 leg tikka + 1 palm breast tikka",vg:"2 fists salad with lemon",cb:"1 cupped hand rice or 1 roti",ft:"1 thumb mint-yogurt chutney",plus:"1 bowl raita",why:"Grilling needs almost no oil, so protein is high and fat is low; raita adds calcium."},
-{n:"Chicken BBQ Mix",tag:"chicken",kcal:900,p:70,c:40,f:48,pr:"1 palm tikka + 1 palm malai boti",vg:"2 fists salad",cb:"1 roti",ft:"the cream in the malai boti",plus:"1 bowl yogurt",why:"High protein and very filling; the cream pushes fat up, so skip the naan. A Saturday-friendly plate."},
-{n:"Seekh Kebab & Daal Plate",tag:"beef",kcal:920,p:62,c:70,f:40,pr:"3 beef seekh kebabs + 1 bowl daal",vg:"2 fists salad",cb:"1 roti (daal counts too)",ft:"kebab fat; no extra oil",plus:"1 bowl mint raita",why:"Beef brings iron, zinc and creatine; daal adds fibre for long fullness. Cheap and family-friendly."},
-{n:"Grilled Fish Plate",tag:"fish",kcal:780,p:64,c:45,f:24,pr:"2 palms grilled fish (rahu, surmai, tilapia)",vg:"2 fists sautéed veg or salad",cb:"1 cupped hand rice",ft:"1 thumb oil for the pan",plus:"1 bowl yogurt",why:"The leanest protein on the list; omega-3 supports recovery; low fat leaves room for a full carb portion on training days."},
-{n:"Fish Curry Plate",tag:"fish",kcal:800,p:60,c:50,f:30,pr:"2 palms fish in masala",vg:"2 fists bhindi or mixed sabzi",cb:"1 roti",ft:"1 thumb oil across curry and sabzi",plus:"1 bowl yogurt",why:"Same lean protein in a family-style format; the tomato base adds volume without calories."},
-{n:"Keema Anday Plate",tag:"beef",kcal:850,p:60,c:45,f:42,pr:"1 bowl lean keema + 2 fried eggs",vg:"1 fist peas in the keema + 1 fist salad",cb:"1 roti",ft:"1 thumb oil for the whole dish share",plus:"1 bowl yogurt",why:"Eggs add leucine-rich protein cheaply; keema reheats well for a busy week. Ask for lean mince."},
-{n:"Beef Boti / Pasanda Plate",tag:"beef",kcal:820,p:62,c:45,f:30,pr:"2 palms grilled lean beef (undercut)",vg:"2 fists salad or grilled onion and capsicum",cb:"1 cupped hand rice",ft:"1 thumb oil in the marinade",plus:"1 bowl yogurt",why:"Very high satiety per calorie; red meat once or twice a week supports iron and creatine stores."},
-{n:"Chicken Shorba / Haandi Plate",tag:"chicken",kcal:850,p:65,c:55,f:32,pr:"2 palms chicken from the curry (drain the oil layer)",vg:"1 fist salad + 1 fist onion-tomato base",cb:"1 cupped hand rice",ft:"1 thumb oil",plus:"1 bowl yogurt",why:"The everyday home dish, made plan-friendly by draining the oil and holding rice to one cupped hand."},
-{n:"Omelette & Chana Plate",tag:"meatless",kcal:820,p:48,c:65,f:38,pr:"3-egg vegetable omelette + 1 bowl chana",vg:"1 fist salad (plus veg in the omelette)",cb:"1 roti (chana counts too)",ft:"1 thumb oil for the omelette",plus:"1 bowl yogurt",why:"Cheapest and fastest. Protein is lower, so use a whey starter on this night."},
-{n:"Daal & Chicken Boti Plate",tag:"chicken",kcal:680,p:56,c:75,f:20,pr:"1 bowl masoor or mash daal + 1 palm chicken boti",vg:"2 fists salad",cb:"1 roti",ft:"1 thumb tarka oil shared across the daal",plus:"1 bowl yogurt",why:"The lightest plate; daal fibre gives long satiety. Good for rest days or the night after a cheat meal."},
-{n:"Paneer & Chana Plate",tag:"meatless",kcal:790,p:44,c:60,f:40,pr:"1 palm paneer + 1 bowl chana",vg:"2 fists salad or palak",cb:"1 roti",ft:"paneer is the thumb; no extra oil",plus:"1 bowl yogurt",why:"Calcium-rich (≈500 mg) for the tibia; pair with an egg or whey starter for protein."},
-{n:"Tikka Boti Salad Bowl",tag:"chicken",kcal:700,p:70,c:20,f:30,pr:"2 palms boti",vg:"3 fists salad",cb:"none tonight",ft:"1 thumb olive oil + lemon",plus:"1 bowl yogurt",why:"Highest protein, lowest calories. Use on rest days or to speed up a slow week without hunger."},
-{n:"Palak Gosht Plate",tag:"beef",kcal:820,p:60,c:40,f:40,pr:"2 palms mutton",vg:"2 fists spinach in the dish + 1 fist kachumber",cb:"1 roti",ft:"mutton fat; drain surface oil",plus:"1 bowl yogurt",why:"Spinach adds volume, iron and magnesium. Mutton is fattier, so keep it to once a week."},
-{n:"Controlled Chicken Pulao",tag:"chicken",kcal:710,p:67,c:45,f:22,pr:"2 palms chicken pulled from the pulao",vg:"2 fists salad",cb:"1 cupped hand pulao rice",ft:"already in the rice",plus:"1 bowl raita",why:"Family cooks pulao anyway; take more chicken and one cupped hand of rice instead of a mound."},
-{n:"Controlled Chicken Biryani",tag:"chicken",kcal:780,p:65,c:55,f:25,pr:"2 palms chicken from the biryani",vg:"2 fists salad",cb:"1 heaped cupped hand biryani rice",ft:"already in the rice",plus:"1 bowl raita",why:"No food is banned. Protein first, salad second, rice last; stop at one cupped hand."}
+/* ---------- food database: values per hand portion / unit ---------- */
+const UNITS={palm:["palm","palms"],fist:["fist","fists"],hand:["cupped hand","cupped hands"],thumb:["thumb","thumbs"],bowl:["bowl","bowls"],roti:["roti","rotis"],naan:["naan","naans"],egg:["egg","eggs"],piece:["piece","pieces"],scoop:["scoop","scoops"],handful:["handful","handfuls"],slice:["slice","slices"],glass:["glass","glasses"],item:["",""]};
+const FOODS={
+chk_breast:{n:"Chicken breast, grilled",short:"grilled chicken breast",u:"palm",cat:"protein",kcal:165,p:31,c:0,f:3.5},
+chk_thigh:{n:"Chicken leg / thigh, cooked",short:"chicken (leg or thigh)",u:"palm",cat:"protein",kcal:210,p:26,c:0,f:12},
+chk_karahi:{n:"Chicken karahi",short:"chicken karahi",u:"palm",cat:"protein",kcal:250,p:26,c:5,f:14},
+chk_curry:{n:"Chicken shorba / haandi",short:"chicken curry",u:"palm",cat:"protein",kcal:230,p:25,c:5,f:12},
+chk_tikka:{n:"Chicken tikka / boti",short:"chicken tikka",u:"palm",cat:"protein",kcal:190,p:30,c:2,f:7},
+malai_boti:{n:"Malai boti",short:"malai boti",u:"palm",cat:"protein",kcal:260,p:26,c:3,f:16},
+beef_lean:{n:"Beef, lean grilled (boti / pasanda)",short:"grilled lean beef",u:"palm",cat:"protein",kcal:220,p:30,c:0,f:11},
+keema:{n:"Beef keema",short:"keema",u:"palm",cat:"protein",kcal:250,p:22,c:4,f:16},
+seekh:{n:"Seekh kebab (beef)",short:"seekh kebab",u:"piece",cat:"protein",kcal:140,p:11,c:2,f:9.5},
+chapli:{n:"Chapli kebab",short:"chapli kebab",u:"piece",cat:"protein",kcal:230,p:14,c:6,f:17},
+shami:{n:"Shami kebab",short:"shami kebab",u:"piece",cat:"protein",kcal:130,p:9,c:8,f:7},
+mutton:{n:"Mutton / palak gosht",short:"mutton",u:"palm",cat:"protein",kcal:260,p:25,c:0,f:17},
+fish_grill:{n:"Fish, grilled",short:"grilled fish",u:"palm",cat:"protein",kcal:160,p:27,c:0,f:5},
+fish_curry:{n:"Fish curry / masala",short:"fish curry",u:"palm",cat:"protein",kcal:220,p:25,c:4,f:11},
+egg:{n:"Egg (boiled or fried in shared oil)",short:"",u:"egg",cat:"protein",kcal:75,p:6,c:0.5,f:5},
+paneer:{n:"Paneer",short:"paneer",u:"palm",cat:"protein",kcal:265,p:18,c:3,f:20},
+whey:{n:"Whey protein in water",short:"whey",u:"scoop",cat:"protein",kcal:120,p:25,c:3,f:1.5},
+daal:{n:"Daal (masoor / mash / chana)",short:"daal",u:"bowl",cat:"plus",kcal:200,p:12,c:28,f:5},
+chana:{n:"Chana (chickpeas)",short:"chana",u:"bowl",cat:"plus",kcal:220,p:12,c:35,f:4},
+haleem:{n:"Haleem",short:"haleem",u:"bowl",cat:"plus",kcal:320,p:18,c:30,f:14},
+nihari:{n:"Nihari",short:"nihari",u:"bowl",cat:"protein",kcal:450,p:30,c:8,f:33},
+yogurt:{n:"Yogurt, plain (dahi)",short:"yogurt",u:"bowl",cat:"plus",kcal:130,p:8,c:9,f:7},
+raita:{n:"Raita",short:"raita",u:"bowl",cat:"plus",kcal:110,p:6,c:8,f:5},
+milk:{n:"Milk",short:"milk",u:"glass",cat:"plus",kcal:125,p:7,c:10,f:7},
+salad:{n:"Salad / kachumber",short:"salad",u:"fist",cat:"veg",kcal:25,p:1,c:5,f:0},
+sabzi:{n:"Cooked sabzi (bhindi, gobi, mixed), measured oil",short:"sabzi",u:"fist",cat:"veg",kcal:90,p:2.5,c:9,f:5},
+palak:{n:"Spinach / palak, cooked",short:"palak",u:"fist",cat:"veg",kcal:60,p:3,c:5,f:3},
+roti:{n:"Roti, medium, no ghee",short:"",u:"roti",cat:"carb",kcal:120,p:4,c:25,f:1.5},
+naan:{n:"Naan",short:"",u:"naan",cat:"carb",kcal:300,p:9,c:55,f:5},
+rice:{n:"Rice, plain boiled",short:"rice",u:"hand",cat:"carb",kcal:170,p:3.5,c:37,f:0.5},
+pulao:{n:"Pulao rice",short:"pulao rice",u:"hand",cat:"carb",kcal:200,p:4,c:34,f:6},
+biryani:{n:"Biryani rice",short:"biryani rice",u:"hand",cat:"carb",kcal:230,p:5,c:35,f:8},
+potato:{n:"Potato, boiled",short:"boiled potato",u:"hand",cat:"carb",kcal:120,p:2.5,c:27,f:0},
+fries:{n:"French fries",short:"fries",u:"fist",cat:"carb",kcal:150,p:2,c:19,f:7},
+pizza:{n:"Pizza slice",short:"pizza",u:"slice",cat:"carb",kcal:280,p:12,c:34,f:11},
+burger:{n:"Burger, single patty",short:"burger",u:"item",cat:"protein",kcal:520,p:26,c:42,f:27},
+oil:{n:"Oil / ghee / butter",short:"oil",u:"thumb",cat:"fat",kcal:120,p:0,c:0,f:14},
+olive:{n:"Olive oil + lemon dressing",short:"olive oil",u:"thumb",cat:"fat",kcal:120,p:0,c:0,f:14},
+cream:{n:"Cream",short:"cream",u:"thumb",cat:"fat",kcal:50,p:0.5,c:1,f:5},
+chutney:{n:"Mint chutney",short:"mint chutney",u:"thumb",cat:"fat",kcal:20,p:0.5,c:3,f:0.5},
+almonds:{n:"Almonds (10)",short:"almonds",u:"handful",cat:"fat",kcal:70,p:2.5,c:2.5,f:6},
+fruit:{n:"Fruit (banana, apple, orange)",short:"fruit",u:"piece",cat:"plus",kcal:90,p:1,c:23,f:0},
+dates:{n:"Dates (3)",short:"dates",u:"handful",cat:"plus",kcal:70,p:0.5,c:18,f:0},
+colddrink:{n:"Cold drink, 250 ml",short:"cold drink",u:"glass",cat:"plus",kcal:105,p:0,c:26,f:0}
+};
+const BASE_MEALS=[
+{id:"karahi",n:"Chicken Karahi Plate",tag:"chicken",items:[["chk_karahi",2],["salad",2],["roti",1],["yogurt",1]],note:"Chicken and yogurt give the protein; tomato and salad add volume at low calories; one roti keeps the deficit intact. The oil is already inside the karahi, so cook it with a measured tablespoon."},
+{id:"tikka",n:"Chicken Tikka Plate",tag:"chicken",items:[["chk_tikka",2],["salad",2],["rice",1],["chutney",1],["raita",1]],note:"Grilling needs almost no oil, so protein is high and fat is low; raita adds calcium."},
+{id:"bbq",n:"Chicken BBQ Mix",tag:"chicken",items:[["chk_tikka",1],["malai_boti",1],["salad",2],["roti",1],["yogurt",1]],note:"High protein and very filling; the cream in the malai boti pushes fat up, so skip the naan. A Saturday-friendly plate."},
+{id:"seekh",n:"Seekh Kebab & Daal Plate",tag:"beef",items:[["seekh",3],["daal",1],["salad",2],["roti",1],["raita",1]],note:"Beef brings iron, zinc and creatine; daal adds fibre for long fullness. Cheap and family-friendly."},
+{id:"fish",n:"Grilled Fish Plate",tag:"fish",items:[["fish_grill",2],["sabzi",2],["rice",1],["yogurt",1]],note:"The leanest protein on the list; omega-3 supports recovery; low fat leaves room for a full carb portion on training days."},
+{id:"fishcurry",n:"Fish Curry Plate",tag:"fish",items:[["fish_curry",2],["sabzi",2],["roti",1],["yogurt",1]],note:"Same lean protein in a family-style format; the tomato base adds volume without calories."},
+{id:"keema",n:"Keema Anday Plate",tag:"beef",items:[["keema",2],["egg",2],["salad",1],["roti",1],["yogurt",1]],note:"Eggs add leucine-rich protein cheaply; keema reheats well for a busy week. Ask for lean mince."},
+{id:"beef",n:"Beef Boti / Pasanda Plate",tag:"beef",items:[["beef_lean",2],["salad",2],["rice",1],["yogurt",1]],note:"Very high satiety per calorie; red meat once or twice a week supports iron and creatine stores."},
+{id:"shorba",n:"Chicken Shorba / Haandi Plate",tag:"chicken",items:[["chk_curry",2],["salad",1],["rice",1],["yogurt",1]],note:"The everyday home dish, made plan-friendly by draining the oil layer and holding rice to one cupped hand."},
+{id:"omelette",n:"Omelette & Chana Plate",tag:"meatless",items:[["egg",3],["oil",1],["chana",1],["salad",1],["roti",1],["yogurt",1]],note:"Cheapest and fastest. Protein is lower, so use a whey starter on this night."},
+{id:"daalboti",n:"Daal & Chicken Boti Plate",tag:"chicken",items:[["daal",1],["chk_tikka",1],["salad",2],["roti",1],["yogurt",1]],note:"The lightest plate; daal fibre gives long satiety. Good for rest days or the night after a cheat meal."},
+{id:"paneer",n:"Paneer & Chana Plate",tag:"meatless",items:[["paneer",1],["chana",1],["salad",2],["roti",1],["yogurt",1]],note:"Calcium-rich for the tibia; pair with an egg or whey starter for protein."},
+{id:"botisalad",n:"Tikka Boti Salad Bowl",tag:"chicken",items:[["chk_tikka",2],["salad",3],["olive",1],["yogurt",1]],note:"Highest protein, lowest calories. Use on rest days or to speed up a slow week without hunger."},
+{id:"palak",n:"Palak Gosht Plate",tag:"beef",items:[["mutton",2],["palak",2],["salad",1],["roti",1],["yogurt",1]],note:"Spinach adds volume, iron and magnesium. Mutton is fattier, so keep it to once a week and drain the surface oil."},
+{id:"pulao",n:"Controlled Chicken Pulao",tag:"chicken",items:[["chk_thigh",2],["salad",2],["pulao",1],["raita",1]],note:"Family cooks pulao anyway; take more chicken and one cupped hand of rice instead of a mound."},
+{id:"biryani",n:"Controlled Chicken Biryani",tag:"chicken",items:[["chk_thigh",2],["salad",2],["biryani",1],["raita",1]],note:"No food is banned. Protein first, salad second, rice last; stop at one cupped hand."}
 ];
 const STARTERS=[
 {n:"Bowl of yogurt + 2 boiled eggs",kcal:280,p:20},
@@ -423,11 +475,11 @@ const CHECKS=[
 
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{}};
+let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{}};
 let db=null,syncState="wait",readOnly=false,tab=(location.hash||"#today").slice(1);
 if(!["today","plate","train","progress","guide"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{}}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{}}}catch(e){}}
 function saveLocal(){if(readOnly)return;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const queues={};
 function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
@@ -437,6 +489,8 @@ function persistFast(){saveLocal();dbWrite("fast/current",S.fast)}
 function persistDay(d){saveLocal();dbWrite("days/"+d,S.days[d])}
 function persistWeigh(d){saveLocal();dbWrite("weighins/"+d,S.weighins[d])}
 function removeWeigh(d){delete S.weighins[d];saveLocal();dbDelete("weighins/"+d)}
+function persistMeal(id){saveLocal();dbWrite("meals/"+id,S.meals[id])}
+function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
 function setChip(){const c=document.getElementById("syncChip");const k=readOnly?"viewonly":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
 
 async function connect(){
@@ -444,11 +498,12 @@ async function connect(){
   if(!db){ syncState="local"; setChip(); render(); return; }
   try{ const u=await window.claude.use("user"); if(u){ const w=await u.can("data.write"); if(w===false){ readOnly=true; setChip(); render(); } } }catch(e){}
   let got=0; const timer=setTimeout(()=>{ if(syncState==="wait"){syncState="local";setChip()} },10000);
-  const ready=()=>{ got++; if(got>=4){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
+  const ready=()=>{ got++; if(got>=5){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
   const err=e=>{ console.warn("db",e); clearTimeout(timer); syncState="local"; setChip(); render(); };
-  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<4&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
+  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<5&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
   db.doc("fast/current").onSnapshot(s=>{ if(s.exists)S.fast=Object.assign({},S.fast,s.data()); saveLocal(); ready(); },err);
   db.collection("days").orderBy("date","desc").limit(120).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.days=o;saveLocal()} ready(); },err);
+  db.collection("meals").limit(200).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.meals=o;saveLocal()} ready(); },err);
   db.collection("weighins").orderBy("date","asc").limit(400).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.weighins=o;saveLocal()} ready(); },err);
 }
 
@@ -525,11 +580,44 @@ function swRow(id,label,sub,done,ro,leadIcon,g){return `<div class="crow sw-row 
 function fmtClock(d){return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}
 
 /* ---------- views ---------- */
+/* ---------- meal maths ---------- */
+function normItems(items){return (items||[]).map(it=>Array.isArray(it)?{f:it[0],q:Number(it[1])}:{f:it.f,q:Number(it.q)}).filter(it=>FOODS[it.f]&&it.q>0)}
+function mealCalc(m){let k=0,p=0,c=0,f=0;normItems(m.items).forEach(it=>{const fd=FOODS[it.f];k+=fd.kcal*it.q;p+=fd.p*it.q;c+=fd.c*it.q;f+=fd.f*it.q});return {kcal:Math.round(k/5)*5,p:Math.round(p),c:Math.round(c),f:Math.round(f)}}
+function qtyStr(q){const w=Math.floor(q),r=q-w;const fr=r>=.74?"¾":r>=.49?"½":r>=.24?"¼":"";return (w?w:"")+(fr?(w?" ":"")+fr:"")||String(q)}
+function portion(q,fd){const u=UNITS[fd.u]||["",""];return (qtyStr(q)+" "+(q<=1?u[0]:u[1])+" "+(fd.short||"")).replace(/\s+/g," ").trim()}
+function hands(m){const g={protein:[],veg:[],carb:[],fat:[],plus:[]};normItems(m.items).forEach(it=>{const fd=FOODS[it.f];g[fd.cat].push(portion(it.q,fd))});return g}
+function handLine(m){const g=hands(m);return [].concat(g.protein,g.veg,g.carb,g.fat,g.plus).join(" · ")}
+function allMeals(){const o=S.meals||{};const list=BASE_MEALS.map(b=>{const v=o[b.id];if(v&&v.deleted)return null;return Object.assign({},b,v||{},{base:true})}).filter(Boolean);Object.values(o).forEach(v=>{if(v&&v.id&&/^c_/.test(v.id)&&!v.deleted)list.push(Object.assign({},v,{base:false}))});return list}
+function tonightMeal(){const l=allMeals();if(!l.length)return null;return l[(new Date().getDate()+new Date().getMonth())%l.length]}
+function foodOptions(sel){const cats=[["protein","Protein"],["veg","Vegetables"],["carb","Carbs"],["fat","Fats"],["plus","Daal, dairy & extras"]];return cats.map(c=>`<optgroup label="${c[1]}">${Object.keys(FOODS).filter(k=>FOODS[k].cat===c[0]).map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(FOODS[k].n)} · per ${esc((UNITS[FOODS[k].u]||[""])[0]||"item")}</option>`).join("")}</optgroup>`).join("")}
+function mealTotals(d){const t=mealCalc(d);const line=handLine(d);return `${mbar(t)}<p class="small"><b>By hand:</b> ${line?esc(line):"<span class='muted'>add foods to see the portions</span>"}</p>`}
+function mealEditor(d){return `
+  <section class="card" id="meditor">
+    <div class="row between"><p class="eyebrow">${ic("plate")} ${d.id?"Edit meal":"New meal"}</p>${d.base?`<span class="pill grey">built-in</span>`:`<span class="pill soft">custom</span>`}</div>
+    <div class="form">
+      <label class="f" style="flex:2 1 180px">Name<input type="text" id="me_n" value="${esc(d.n||"")}" placeholder="e.g. Chicken Karahi Plate" maxlength="60"></label>
+      <label class="f">Type<select id="me_tag">${["chicken","beef","fish","meatless","other"].map(t=>`<option value="${t}" ${d.tag===t?"selected":""}>${t}</option>`).join("")}</select></label>
+    </div>
+    <div class="erows">
+      ${d.items.map((it,i)=>`<div class="erow"><select data-me="food" data-i="${i}" aria-label="food">${foodOptions(it.f)}</select><input type="number" data-me="qty" data-i="${i}" value="${it.q}" min="0" max="12" step="0.5" inputmode="decimal" aria-label="how many"><button class="btn ghost" type="button" data-a="me_del" data-i="${i}" aria-label="remove">✕</button></div>`).join("")}
+    </div>
+    <button class="btn" type="button" data-a="me_add">+ Add a food</button>
+    <div id="mtot">${mealTotals(d)}</div>
+    <label class="f">Why it works (optional)<input type="text" id="me_note" value="${esc(d.note||"")}" maxlength="200"></label>
+    <div class="row">
+      <button class="btn primary" type="button" data-a="me_save">Save meal</button>
+      <button class="btn" type="button" data-a="me_cancel">Cancel</button>
+      ${d.base&&S.meals[d.id]?`<button class="btn ghost" type="button" data-a="me_reset">Reset to default</button>`:""}
+      ${d.id?`<button class="btn ghost" type="button" data-a="me_delete" style="color:var(--red)">${d.base?"Hide":"Delete"}</button>`:""}
+    </div>
+    <p class="small muted">Values are per hand portion, from the plan's food table. Change a food or quantity and the calories, protein, carbs, fat and the by-hand line update instantly.</p>
+  </section>`}
+
 function vToday(){
   const t=todayStr(),d=day(t),wd=new Date().getDay(),plan=planFor(wd),w=weekNo(),hint=nowHint(),ro=readOnly;
   const on=!!S.fast.startedAt,goal=S.settings.fastHours||21,dn=doneCount(d),st=streak();
   const h=new Date().getHours()+new Date().getMinutes()/60;
-  const tonight=MEALS[(new Date().getDate()+new Date().getMonth())%MEALS.length];
+  const tonight=tonightMeal();
   let kv="";
   if(on){const s=new Date(S.fast.startedAt),e=new Date(s.getTime()+goal*36e5);kv=`<div class="kv"><span>Started</span><b>${s.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(s)}</b><span>Goal at</span><b>${e.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(e)}</b></div>`}
   else kv=`<div class="kv"><span>Goal</span><b>${goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
@@ -549,9 +637,15 @@ function vToday(){
         <div class="lbl">${on?`<b id="ringTime"></b><span id="ringSub"></span>`:`${ic("moon")}<span id="ringSub">not fasting</span><b id="ringTime" hidden></b>`}</div></div>
       <div class="side">
         ${kv}
-        ${ro?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} End fast, eat</button><button class="btn ghost" data-a="cancelfast">Cancel this fast</button>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} Start fast now</button><button class="btn ghost" data-a="startfast930">Start from 9:30 PM</button>`}
+        ${ro?"":on?`<button class="btn primary wide" data-a="endfast">${ic("egg")} End fast, eat</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="cancelfast">Cancel</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`:`<button class="btn primary wide" data-a="startfast">${ic("moon")} Start fast now</button><div class="row" style="justify-content:center;gap:0"><button class="btn ghost" data-a="startfast930">From 9:30 PM</button><button class="btn ghost" data-a="ftimes">Set times</button></div>`}
       </div>
     </div>
+    ${S._ft&&!ro?`<form class="form" id="fform" autocomplete="off" style="border-top:1px solid var(--line);padding-top:12px">
+      <label class="f">Fast started<input type="datetime-local" id="f_start" value="${dtl(S.fast.startedAt||(()=>{const x=new Date();x.setHours(21,30,0,0);if(x>new Date())x.setDate(x.getDate()-1);return x})())}" required></label>
+      <label class="f">Fast ended (leave empty if still fasting)<input type="datetime-local" id="f_end" value=""></label>
+      <button class="btn primary" type="submit">Save times</button><button class="btn" type="button" data-a="ftcancel">Cancel</button>
+      <p class="small muted" style="flex-basis:100%">Enter both times to log a finished fast. Enter only the start to correct the running one.</p>
+    </form>`:""}
   </section>
   <section class="card accent">
     <p class="eyebrow">${ic(hintIcon(h))} Right now</p>
@@ -573,11 +667,11 @@ function vToday(){
       ${swRow("closed","Kitchen closed by 9:30 PM","Then start the fast",d.closed,ro,"moon","closed")}
     </div>
   </section>
-  <section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
+  ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
     <div class="row between"><p class="eyebrow">${ic("plate")} Tonight's plate</p>${ic("chev","")}</div>
     <h3>${esc(tonight.n)}</h3>
-    <p class="small muted">${esc(tonight.pr)} · ${esc(tonight.vg)} · ${esc(tonight.cb)}</p>
-  </section>`;
+    <p class="small muted">${esc(handLine(tonight))} · ${mealCalc(tonight).kcal} kcal</p>
+  </section>`:""}`;
 }
 function arc(cx,cy,r,a0,a1){const p=a=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${cx} ${cy}L${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}Z`}
 function plateSvg(){return `<svg viewBox="0 0 160 160" role="img" aria-label="Plate: half vegetables, a quarter protein, a quarter carbs, a thumb of fat">
@@ -592,9 +686,11 @@ function plateSvg(){return `<svg viewBox="0 0 160 160" role="img" aria-label="Pl
 </svg>`}
 function mbar(m){const p=m.p*4,c=m.c*4,f=m.f*9,t=p+c+f;return `<div class="mbar"><i class="p" style="width:${(p/t*100).toFixed(0)}%"></i><i class="c" style="width:${(c/t*100).toFixed(0)}%"></i><i class="f" style="width:${(f/t*100).toFixed(0)}%"></i></div><div class="mkey"><span><b>${m.kcal}</b> kcal ${I("kcal")}</span><span><i style="background:var(--accent)"></i>P <b>${m.p}g</b></span><span><i style="background:var(--amber)"></i>C <b>${m.c}g</b></span><span><i style="background:var(--muted)"></i>F <b>${m.f}g</b> ${I("macros")}</span></div>`}
 function vPlate(){
-  const filt=S._mf||"all";
-  const tonight=MEALS[(new Date().getDate()+new Date().getMonth())%MEALS.length];
-  const list=MEALS.filter(m=>filt==="all"||m.tag===filt);
+  const filt=S._mf||"all",ro=readOnly;
+  const tonight=tonightMeal();
+  const meals=allMeals();
+  const list=meals.filter(m=>filt==="all"||m.tag===filt);
+  const ed=S._medit;
   return `
   <div class="hdr"><div><p class="eyebrow">Build by hand, no scales</p><h1>The Plate</h1></div></div>
   <section class="card">
@@ -607,23 +703,27 @@ function vPlate(){
       </div></div>
     <p class="small muted">Plus 1 bowl of yogurt ${I("bowl")}. About 800–950 kcal and 60–75 g protein. On a night with no starter, add 1 palm and 1 bowl.</p>
   </section>
-  <section class="card accent">
+  ${tonight?`<section class="card accent">
     <p class="eyebrow">${ic("plate")} Tonight's suggestion</p>
     <h2>${esc(tonight.n)}</h2>
-    ${mbar(tonight)}
-    <p class="small">${esc(tonight.pr)} · ${esc(tonight.vg)} · ${esc(tonight.cb)} · ${esc(tonight.plus)}</p>
-  </section>
+    ${mbar(mealCalc(tonight))}
+    <p class="small">${esc(handLine(tonight))}</p>
+  </section>`:""}
   <section class="card">
     <p class="eyebrow">${ic("home")} Course 1 · starter at home, ≈7:00 PM ${I("starter")}</p>
     <div class="list">${STARTERS.map(s=>`<div class="item"><div class="t"><b>${esc(s.n)}</b></div><span class="kcal">${s.kcal} kcal · P ${s.p}</span></div>`).join("")}</div>
     <p class="small muted">Dinner at 8:00 PM. Kitchen closed 9:30 PM.</p>
   </section>
-  <div class="hdr"><h2>16 dinners</h2><span class="small muted">${list.length} shown</span></div>
-  <div class="seg">${["all","chicken","beef","fish","meatless"].map(k=>`<button class="${filt===k?"on":""}" data-a="mf" data-v="${k}">${k}</button>`).join("")}</div>
-  ${list.map(m=>`<details><summary><span>${esc(m.n)}<br><span class="kcal">${m.kcal} kcal · ${m.p} g protein</span></span>${ic("chev","chev")}</summary><div class="body">
-    ${mbar(m)}
-    <div class="hands"><span>Protein</span><div>${esc(m.pr)}</div><span>Veg</span><div>${esc(m.vg)}</div><span>Carbs</span><div>${esc(m.cb)}</div><span>Fat</span><div>${esc(m.ft)}</div><span>Plus</span><div>${esc(m.plus)}</div></div>
-    <p class="small muted">${esc(m.why)}</p></div></details>`).join("")}
+  <div class="hdr"><h2>${meals.length} dinners</h2>${ro?`<span class="small muted">${list.length} shown</span>`:`<button class="btn" type="button" data-a="me_new">+ New meal</button>`}</div>
+  ${ed&&!ed.id?mealEditor(ed):""}
+  <div class="seg">${["all","chicken","beef","fish","meatless","other"].map(k=>`<button class="${filt===k?"on":""}" data-a="mf" data-v="${k}">${k}</button>`).join("")}</div>
+  ${list.map(m=>{if(ed&&ed.id===m.id)return mealEditor(ed);const t=mealCalc(m),g=hands(m);return `<details ${S._mopen===m.id?"open":""} data-mid="${m.id}"><summary><span>${esc(m.n)}${m.base?"":` <span class="pill soft" style="font-size:10px;padding:1px 7px">custom</span>`}${m.base&&S.meals[m.id]?` <span class="pill grey" style="font-size:10px;padding:1px 7px">edited</span>`:""}<br><span class="kcal">${t.kcal} kcal · ${t.p} g protein</span></span>${ic("chev","chev")}</summary><div class="body">
+    ${mbar(t)}
+    <div class="hands"><span>Protein</span><div>${esc(g.protein.join(" · ")||"—")}</div><span>Veg</span><div>${esc(g.veg.join(" · ")||"—")}</div><span>Carbs</span><div>${esc(g.carb.join(" · ")||"—")}</div><span>Fat</span><div>${esc(g.fat.join(" · ")||"—")}</div><span>Plus</span><div>${esc(g.plus.join(" · ")||"—")}</div></div>
+    ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
+    ${ro?"":`<div class="row"><button class="btn" type="button" data-a="me_edit" data-id="${m.id}">Edit meal</button></div>`}
+    </div></details>`}).join("")}
+  ${list.length?"":`<p class="small muted">No meals of this type yet.</p>`}
   <div class="note">Three cooking rules: measure oil with a tablespoon, roti without ghee, salad on the plate first.</div>`;
 }
 function vTrain(){
@@ -803,6 +903,35 @@ function vGuide(){
 }
 
 /* ---------- render & events ---------- */
+/* ---------- meal editor & fast-time handlers ---------- */
+function dtl(d){d=new Date(d);const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+"T"+z(d.getHours())+":"+z(d.getMinutes())}
+function draftFrom(m){return {id:m.id||null,base:!!m.base,n:m.n||"",tag:m.tag||"chicken",note:m.note||"",items:normItems(m.items).map(it=>({f:it.f,q:it.q}))}}
+function refreshTotals(){const el=document.getElementById("mtot");if(el&&S._medit)el.innerHTML=mealTotals(S._medit)}
+function mealAction(a,b){
+  const d=S._medit;
+  if(a==="me_new"){S._medit={id:null,base:false,n:"",tag:"chicken",note:"",items:[{f:"chk_tikka",q:2},{f:"salad",q:2},{f:"roti",q:1},{f:"yogurt",q:1}]};render();const n=document.getElementById("me_n");if(n)n.focus();return true}
+  if(a==="me_edit"){const m=allMeals().find(x=>x.id===b.dataset.id);if(m){S._medit=draftFrom(m);S._mopen=m.id;render()}return true}
+  if(!d)return false;
+  if(a==="me_cancel"){S._medit=null;render();return true}
+  if(a==="me_add"){d.items.push({f:"salad",q:1});render();return true}
+  if(a==="me_del"){d.items.splice(Number(b.dataset.i),1);render();return true}
+  if(a==="me_save"){const n=(document.getElementById("me_n")||{}).value||d.n;d.n=n.trim();d.items=d.items.filter(it=>FOODS[it.f]&&it.q>0);if(!d.n){toast("Give the meal a name");return true}if(!d.items.length){toast("Add at least one food");return true}const id=d.id||("c_"+Date.now().toString(36));const rec={id,n:d.n,tag:d.tag,note:d.note||"",items:d.items.map(it=>({f:it.f,q:it.q}))};S.meals[id]=rec;persistMeal(id);S._medit=null;S._mopen=id;toast("Meal saved · "+mealCalc(rec).kcal+" kcal");render();return true}
+  if(a==="me_reset"){removeMeal(d.id);S._medit=null;toast("Reset to default");render();return true}
+  if(a==="me_delete"){if(d.base){S.meals[d.id]={id:d.id,deleted:true};persistMeal(d.id);toast("Hidden")}else{removeMeal(d.id);toast("Deleted")}S._medit=null;render();return true}
+  return false;
+}
+document.addEventListener("change",e=>{
+  const t=e.target,d=S._medit;
+  if(t.id==="me_tag"&&d){d.tag=t.value;return}
+  if(t.dataset&&t.dataset.me&&d){const i=Number(t.dataset.i);if(!d.items[i])return;if(t.dataset.me==="food")d.items[i].f=t.value;else d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}
+});
+document.addEventListener("input",e=>{
+  const t=e.target,d=S._medit;
+  if(t.id==="me_n"&&d)d.n=t.value;
+  if(t.id==="me_note"&&d)d.note=t.value;
+  if(t.dataset&&t.dataset.me==="qty"&&d){const i=Number(t.dataset.i);if(d.items[i]){d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}}
+});
+
 const VIEWS={today:vToday,plate:vPlate,train:vTrain,progress:vProgress,guide:vGuide};
 const TAB_ICON={today:"clock",plate:"plate",train:"bike",progress:"trend",guide:"book"};
 function render(){
@@ -828,6 +957,7 @@ function closeInfo(){document.getElementById("sheet").classList.remove("show");d
 document.getElementById("scrim").addEventListener("click",closeInfo);
 document.getElementById("sheetClose").addEventListener("click",closeInfo);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeInfo();return}if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[data-a]:not(button):not(input)")){e.preventDefault();e.target.click()}});
+document.addEventListener("toggle",e=>{const dt=e.target;if(dt.tagName==="DETAILS"&&dt.dataset.mid){S._mopen=dt.open?dt.dataset.mid:(S._mopen===dt.dataset.mid?null:S._mopen)}},true);
 document.addEventListener("input",e=>{if(e.target.id==="gq"){S._gq=e.target.value;document.getElementById("gres").innerHTML=glossaryList(S._gq)}});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
@@ -837,6 +967,9 @@ document.addEventListener("click",e=>{
   if(a==="mf"){S._mf=b.dataset.v;render();return}
   if(a==="ff"){S._ff=b.dataset.v;render();return}
   if(readOnly){toast("View only");return}
+  if(a==="ftimes"){S._ft=!S._ft;render();return}
+  if(a==="ftcancel"){S._ft=false;render();return}
+  if(/^me_/.test(a)){mealAction(a,b);return}
   if(a==="startfast"){S.fast={startedAt:new Date().toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fast started");render();return}
   if(a==="startfast930"){const d=new Date();d.setHours(21,30,0,0);if(d>new Date())d.setDate(d.getDate()-1);S.fast={startedAt:d.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fast started from 9:30 PM");render();return}
   if(a==="cancelfast"){S.fast={startedAt:null,lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();render();return}
@@ -847,6 +980,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("submit",e=>{
   if(readOnly){e.preventDefault();return}
+  if(e.target.id==="fform"){e.preventDefault();const sv=document.getElementById("f_start").value,ev=document.getElementById("f_end").value;if(!sv)return;const st=new Date(sv);if(isNaN(st))return;if(ev){const en=new Date(ev);if(isNaN(en)||en<=st){toast("End must be after start");return}const h=(en-st)/36e5;if(h>72){toast("That is longer than 72 h; check the dates");return}S.fast={startedAt:null,lastHours:Math.round(h*10)/10,lastEndedAt:en.toISOString()};persistFast();const k=todayStr(en),dd=day(k);dd.fastH=Math.round(h*10)/10;persistDay(k);toast("Logged "+h.toFixed(1)+" h fast")}else{if(st>new Date()){toast("Start is in the future");return}S.fast={startedAt:st.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Start time set")}S._ft=false;render();return}
   if(e.target.id==="wform"){e.preventDefault();const d=document.getElementById("wdate").value,kg=parseFloat(document.getElementById("wkg").value),cm=parseFloat(document.getElementById("wcm").value);if(!d||!(kg>0))return;const r={date:d,weight:Math.round(kg*10)/10};if(cm>0)r.waist=Math.round(cm*2)/2;S.weighins[d]=r;persistWeigh(d);toast("Saved "+kg.toFixed(1)+" kg"+(strengthOn()?" · strength unlocked!":""));render()}
   if(e.target.id==="sform"){e.preventDefault();const sw=parseFloat(document.getElementById("s_sw").value),tw=parseFloat(document.getElementById("s_tw").value),sd=document.getElementById("s_sd").value,fh=parseInt(document.getElementById("s_fh").value,10),uk=parseFloat(document.getElementById("s_uk").value);if(sw>0)S.settings.startWeight=sw;if(tw>0)S.settings.targetWeight=tw;if(sd)S.settings.startDate=sd;if(fh>=14&&fh<=24)S.settings.fastHours=fh;if(uk>0)S.settings.unlockKg=uk;persistSettings();toast("Settings saved");render()}
 });
