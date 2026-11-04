@@ -8,7 +8,7 @@
 >
 > **Not a substitute for your own doctor.** This plan is educational. Sections 15 and 16 say exactly when to get medical clearance. If you have diabetes, take any regular medication, or have kidney, liver, heart or gout history, show this plan to your physician before starting.
 
-**Assumptions used for the numbers** (adjust if yours differ): height ≈ 175 cm, age ≈ 30. If you are 5 cm shorter, subtract ~30 kcal from every maintenance figure; if 10 years older, subtract ~50 kcal. The hand-portion rules in this plan do not change.
+**Assumptions used for the numbers:** height ≈ 175 cm (adjust if yours differs: 5 cm shorter is about 30 kcal less maintenance), age 38 (born 5 February 1988). The calculations below were first drafted at age 30; at 38 the basal rate is about 40 kcal/day lower, which is inside the rounding of every figure here and changes nothing in the plan. The hand-portion rules do not change.
 
 ---
 
