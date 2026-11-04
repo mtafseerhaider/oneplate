@@ -7,13 +7,15 @@ import path from "node:path"; import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import { chromium } from "playwright";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const DB = process.env.TEST_DATABASE_URL, PORT = 3456, BASE = `http://localhost:${PORT}`;
+const TEST_DB = process.env.TEST_DATABASE_URL, DB = TEST_DB && TEST_DB.replace(/\/[^/?]+(\?|$)/, "/oneplate_e2e$1"), PORT = 3456, BASE = `http://localhost:${PORT}`;
 const executablePath = process.env.ONEPLATE_CHROMIUM || (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 const enabled = !!DB && existsSync(path.join(root, "apps/web/dist/index.html")) && existsSync(path.join(root, "apps/api/dist/server.js"));
 let api, browser;
 before(async () => {
   if (!enabled) return;
-  const { default: pg } = await import(path.join(root, "apps/api/node_modules/pg/lib/index.js")); const pool = new pg.Pool({ connectionString: DB }); await pool.query("drop schema public cascade; create schema public"); await pool.end();
+  // Its own database, so it can run beside the API unit tests that reset oneplate_test.
+  const { default: pg } = await import(path.join(root, "apps/api/node_modules/pg/lib/index.js")); const admin = new pg.Pool({ connectionString: TEST_DB }); const ex = await admin.query("select 1 from pg_database where datname='oneplate_e2e'"); if (!ex.rowCount) await admin.query("create database oneplate_e2e"); await admin.end();
+  const pool = new pg.Pool({ connectionString: DB }); await pool.query("drop schema public cascade; create schema public"); await pool.end();
   api = spawn(process.execPath, ["apps/api/dist/server.js"], { cwd: root, env: { ...process.env, NODE_ENV: "test", PORT: String(PORT), DATABASE_URL: DB, PUBLIC_URL: BASE, WEB_DIST: path.join(root, "apps/web/dist"), LOG_LEVEL: "silent", SESSION_SECRET: "e2e-secret-e2e-secret-e2e-secret" }, stdio: "ignore" });
   for (let i = 0; i < 100; i++) { try { const r = await fetch(BASE + "/health"); if (r.ok) break; } catch {} await new Promise(r => setTimeout(r, 200)); }
   browser = await chromium.launch({ executablePath });
