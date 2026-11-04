@@ -48,6 +48,12 @@ It is published as a private Claude Artifact, which works on iOS, Android and de
 
 The Family tab covers Tafseer, Uzma, Abbas and Eliyya. Everyone eats the same OnePlate dinner; the app works out each person's portion and the total to cook. Adults get an optional goal, weigh-ins and, for Uzma, pregnancy or breastfeeding adjustments. Children are never restricted: no calories, no fasting under 7, practice fasts only by the parents' choice, growth logs shown as a trend only, and seconds whenever they are hungry. Profiles, dates of birth and logs sync through the same database.
 
+## Daily learning, from The Bayan Library
+
+The Learn tab turns OnePlate into a whole-self companion. Every day it serves a verse, a word, a teaching of the Prophet or the Ahl al-Bayt, a Quranic story with a moral, a surah summary, an idea, a book, a dua, a poem and a question, each written in two layers after [the-bayan-library](https://github.com/mtafseerhaider/the-bayan-library)'s notes system: one for an eight-year-old, one for an adult. Switch between Tafseer, Uzma, Abbas and Eliyya at the top. A five-minute family circle script, a reflection journal in the Bayan template, and 1/7/30-day spaced review complete it. The Today tab adds a whole-self check-in across five dimensions: Body, Mind, Heart, Soul and Family.
+
+Verses are paraphrased meanings with references, not translations of record. Teachings carry the work they are found in and a verification label following the Bayan dua program: "graded" where a named grading exists, "received" where the attribution is as found in that work and not yet checked against the printed edition. The app cites; it never rules.
+
 ## Borrowed from Qānūn al-Thuluth
 
 Parts of the app are adapted from the [qanun-al-thuluth](https://github.com/mtafseerhaider/qanun-al-thuluth) family-nutrition project, which encodes the Prophetic rule of thirds:
