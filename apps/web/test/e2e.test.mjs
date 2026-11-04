@@ -36,7 +36,7 @@ test("family link: date of birth, then a passkey, then it opens by itself", { sk
   await q.fill("#dob", "1993-02-04"); await q.click("#go"); await q.waitForFunction(() => document.getElementById("err").textContent.length > 0); assert.match(await q.$eval("#err", e => e.textContent), /does not match/);
   await q.fill("#dob", "1993-02-03"); await q.click("#go"); await q.waitForSelector("#pkSetup:not([hidden])"); assert.match(await q.$eval("#hint", e => e.textContent), /Welcome, Uzma/);
   await q.click("#pkSetup"); await q.waitForURL(BASE + "/"); await q.waitForTimeout(1200);
-  assert.match(await q.$eval("#syncChip", e => e.textContent), /Family editor/); assert.equal(await q.evaluate(() => isOwner), false); assert.equal(await q.evaluate(() => readOnly), false);
+  assert.match(await q.$eval("#syncChip", e => e.textContent), /Family editor/); assert.match(await q.$eval(".hdr h1", e => e.textContent), /, Uzma$/); assert.equal(await q.evaluate(() => isOwner), false); assert.equal(await q.evaluate(() => readOnly), false);
   // The same link again on the same device goes straight in; after signing out, the passkey signs her back in.
   await q.goto(link); await q.waitForURL(BASE + "/"); 
   await q.evaluate(() => fetch("/auth/logout", { method: "POST" })); await q.goto(BASE + "/account.html"); assert.match(await q.$eval("#hint", e => e.textContent), /Face ID or fingerprint/);

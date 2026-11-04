@@ -68,6 +68,12 @@ test("review queue lists drafts of a kind in course order and imports reviews", 
   await page.click("[data-a='rvimport']"); await page.waitForTimeout(150); assert.equal(await page.evaluate(() => Object.keys(S.reviews).length), 2); assert.equal(await page.evaluate(() => S.reviews["quran-1-1-7"].status), "verified");
   await page.evaluate(() => { canReview = false; S.reviews = {}; S._rvx = false; render(); });
 });
+test("the home screen names who is signed in", async () => {
+  await page.evaluate(() => { S.family.tafseer = { id: "tafseer", name: "Tafseer", rel: "me", role: "adult", sex: "male", goal: "fat_loss", dob: "1988-02-05" }; isOwner = true; readOnly = false; tab = "today"; render(); });
+  assert.match(await page.$eval(".hdr h1", e => e.textContent), /, Tafseer$/); assert.match(await page.$eval(".hdr p.small", e => e.textContent), /Signed in as Tafseer · owner/);
+  await page.evaluate(() => { readOnly = true; isOwner = false; render(); }); assert.doesNotMatch(await page.$eval(".hdr h1", e => e.textContent), /,/);
+  await page.evaluate(() => { readOnly = false; isOwner = true; render(); });
+});
 test("urdu toggle flips direction without overflow", async () => {
   await page.click("#langBtn"); await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 402);
