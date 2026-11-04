@@ -69,7 +69,7 @@ button.btn:focus-visible,.check:focus-visible,.stepper button:focus-visible,.seg
 .ring .lbl span{font-size:11px;color:var(--muted)}
 .checks{display:flex;flex-direction:column;gap:6px}
 .check{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
-.check[disabled]{cursor:default}
+.check:not([data-a]){cursor:default}
 .check .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:0 0 auto;display:grid;place-items:center}
 .check.done .box{background:var(--green);border-color:var(--green)}
 .check.done .box::after{content:"";width:6px;height:11px;border:solid var(--panel);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
@@ -149,6 +149,25 @@ ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 .sheet h3{font-size:17px}
 .sheet p{font-size:14px}
 .sheet .x{position:absolute;top:12px;right:16px;border:0;background:none;color:var(--muted);font:600 18px var(--body);cursor:pointer}
+/* Desktop / web layout: top bar, left sidebar, two-column content */
+@media (min-width:900px){
+  #app{display:grid;grid-template-columns:230px 1fr;grid-template-rows:auto 1fr}
+  .top{grid-column:1/-1;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+  .brand{font-size:22px}
+  .tabs{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:4px;align-items:stretch;border-top:0;border-right:1px solid var(--line);padding:18px 12px;overflow-y:auto}
+  .tabs button{flex-direction:row;justify-content:flex-start;gap:12px;padding:10px 12px;border-radius:10px;font:600 14px var(--body);text-transform:capitalize;letter-spacing:0;color:var(--muted)}
+  .tabs button.on{background:var(--soft);color:var(--accent)}
+  .tabs button:hover{background:var(--line)}
+  main{grid-column:2;grid-row:2;padding-block:28px 48px;padding-left:32px;padding-right:32px}
+  .wrap{max-width:1040px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  .wrap>div:first-child,.wrap>h2,.wrap>.seg,.wrap>.note,.wrap>p,.wrap>.row{grid-column:1/-1}
+  .wrap>.list{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  h1{font-size:30px}
+  .ring{width:150px;height:150px}
+  .sheet{bottom:auto;top:50%;left:50%;right:auto;transform:translate(-50%,-50%);width:480px;border-radius:18px;padding-block:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .sheet .grab{display:none}
+  .toast{bottom:32px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -216,7 +235,7 @@ viewonly:["View only","You can see everything live: the fast timer, today's chec
 nail:["Titanium nail","The metal rod inside the left shin bone from the fracture. Walking and cycling are good for it. No running or jumping until an orthopaedic surgeon says so."],
 tibia:["Tibia and fibula","The two bones of the lower leg. The tibia is the big shin bone that holds the nail."]
 };
-function I(k){return `<button class="info" type="button" data-a="info" data-k="${k}" aria-label="What does this mean?">i</button>`}
+function I(k){return `<span class="info" role="button" tabindex="0" data-a="info" data-k="${k}" aria-label="What does this mean?">i</span>`}
 
 /* ---------- content ---------- */
 const MEALS=[
@@ -409,7 +428,7 @@ function vToday(){
     <div class="checks">
       <div class="check"><div class="t">Water bottles ${I("water")}<small>700 ml each · ${((d.water||0)*0.7).toFixed(1)} L today. Aim 4–5 bottles.</small></div>${ro?`<b class="kcal">${d.water||0}</b>`:`<div class="stepper"><button data-a="water" data-v="-1" aria-label="one bottle less">−</button><b>${d.water||0}</b><button data-a="water" data-v="1" aria-label="one bottle more">+</button></div>`}</div>
       <div class="check"><div class="t">Protein palms ${I("palms")}<small>4 minimum, 5 on training days.</small></div>${ro?`<b class="kcal">${d.palms||0}</b>`:`<div class="stepper"><button data-a="palms" data-v="-1" aria-label="fewer palms">−</button><b>${d.palms||0}</b><button data-a="palms" data-v="1" aria-label="more palms">+</button></div>`}</div>
-      ${CHECKS.map(c=>`<button class="check ${d[c.id]?"done":""}" ${ro?"disabled":""} data-a="tog" data-k="${c.id}"><span class="box"></span><div class="t">${esc(c.id==="train"?plan.t+" done":c.t)} ${I(c.g)}${c.s?`<small>${esc(c.s)}</small>`:""}</div></button>`).join("")}
+      ${CHECKS.map(c=>`<div class="check ${d[c.id]?"done":""}" role="checkbox" aria-checked="${d[c.id]?"true":"false"}" ${ro?"":`tabindex="0" data-a="tog"`} data-k="${c.id}"><span class="box"></span><div class="t">${esc(c.id==="train"?plan.t+" done":c.t)} ${I(c.g)}${c.s?`<small>${esc(c.s)}</small>`:""}</div></div>`).join("")}
     </div>
     <p class="small muted">${dayCount} day${dayCount===1?"":"s"} logged.</p>
   </section>`;
@@ -637,7 +656,7 @@ function openInfo(k){const g=G[k];if(!g)return;document.getElementById("sheetTit
 function closeInfo(){document.getElementById("sheet").classList.remove("show");document.getElementById("scrim").classList.remove("show")}
 document.getElementById("scrim").addEventListener("click",closeInfo);
 document.getElementById("sheetClose").addEventListener("click",closeInfo);
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeInfo()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeInfo();return}if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[data-a]:not(button)")){e.preventDefault();e.target.click()}});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
   const a=b.dataset.a,t=todayStr();
