@@ -41,3 +41,5 @@ function reviewQueue(){if(!canReview)return "";const q=S._rq||{st:"draft",kind:"
 function importReviews(text){let j;try{j=JSON.parse(text)}catch(e){throw new Error("Not valid JSON")}if(!j||typeof j!=="object"||Array.isArray(j))throw new Error("Expected an object keyed by content key");
   const entries=Object.entries(j).filter(([k,v])=>/^[a-z]+-[a-z0-9-]{1,60}$/.test(k)&&v&&core.isReviewStatus(v.status)&&(v.status==="draft"||v.by));if(!entries.length)throw new Error("Nothing importable in the box");
   return entries.reduce((pr,[k,v])=>pr.then(()=>persistReview(k,{status:v.status,by:v.by,source:v.source,note:v.note,date:v.date||todayStr()})),Promise.resolve()).then(()=>entries.length)}
+
+applyTheme();if(window.matchMedia)try{window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>applyTheme())}catch(e){}

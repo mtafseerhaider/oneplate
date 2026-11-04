@@ -74,6 +74,15 @@ test("the home screen names who is signed in", async () => {
   await page.evaluate(() => { readOnly = true; isOwner = false; render(); }); assert.doesNotMatch(await page.$eval(".hdr h1", e => e.textContent), /,/);
   await page.evaluate(() => { readOnly = false; isOwner = true; render(); });
 });
+test("appearance cycles auto, light, dark and is remembered per device", async () => {
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
+  await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
+  await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "dark"); assert.equal(await page.evaluate(() => localStorage.getItem("oneplate.theme")), "dark");
+  const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor); assert.equal(bg, "rgb(15, 20, 18)");
+  await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
+  await page.evaluate(() => { tab = "progress"; render(); document.querySelector("details:has(#s_theme) summary").click(); }); await page.selectOption("#s_theme", "light"); await page.click("#sform button[type=submit], #sform .btn.primary"); await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(() => localStorage.getItem("oneplate.theme")), "light"); await page.evaluate(() => setTheme("auto"));
+});
 test("urdu toggle flips direction without overflow", async () => {
   await page.click("#langBtn"); await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => document.documentElement.dir), "rtl"); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 402);
