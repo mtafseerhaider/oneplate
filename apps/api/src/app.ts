@@ -191,7 +191,9 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     req.raw.on("close", () => { clearInterval(beat); unsub(); });
     await new Promise(() => {}); // held open until the client disconnects
   });
-  if (cfg.WEB_DIST) { await app.register(fastifyStatic, { root: path.resolve(cfg.WEB_DIST), prefix: "/", wildcard: true, index: ["index.html"], decorateReply: false, cacheControl: true, maxAge: "1h" }); }
+  if (cfg.WEB_DIST) { await app.register(fastifyStatic, { root: path.resolve(cfg.WEB_DIST), prefix: "/", wildcard: true, index: ["index.html"], decorateReply: false, cacheControl: true, maxAge: "1h" });
+    // Pages, scripts and the service worker are revalidated on every open, so a deploy shows on the next launch; images and fonts keep the hour.
+    app.addHook("onSend", async (req, reply) => { const u = req.url.split("?")[0] ?? ""; if (req.method === "GET" && (/\.(html|js|webmanifest)$/.test(u) || u.endsWith("/"))) reply.header("cache-control", "no-cache"); }); }
   app.setErrorHandler((err: any, req, reply) => { app.log.error(err); const status = (err as any).statusCode ?? 500; if (status >= 500) reporter.report({ message: err.message, stack: err.stack, requestId: req.id, route: req.routeOptions?.url, status }); reply.code(status).send({ error: { code: status >= 500 ? "INTERNAL" : "ERROR", message: status >= 500 ? "something went wrong" : err.message, requestId: req.id } }); });
   return app;
 }

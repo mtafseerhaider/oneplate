@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import path from "node:path"; import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
+import { cp, readFile, writeFile, mkdtemp } from "node:fs/promises"; import os from "node:os";
 import { chromium } from "playwright";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const TEST_DB = process.env.TEST_DATABASE_URL, DB = TEST_DB && TEST_DB.replace(/\/[^/?]+(\?|$)/, "/oneplate_e2e$1"), PORT = 3456, BASE = `http://localhost:${PORT}`;
@@ -42,4 +43,22 @@ test("family link: date of birth, then a passkey, then it opens by itself", { sk
   await q.evaluate(() => fetch("/auth/logout", { method: "POST" })); await q.goto(BASE + "/account.html"); assert.match(await q.$eval("#hint", e => e.textContent), /Face ID or fingerprint/);
   await q.click("#pk"); await q.waitForURL(BASE + "/"); await q.waitForTimeout(800); assert.match(await q.$eval("#syncChip", e => e.textContent), /Family editor/);
   await her.close();
+});
+
+test("a new deploy shows on the next open, and the shell still opens offline", { skip: !enabled && "needs TEST_DATABASE_URL and built dist" }, async () => {
+  // A copy of dist served by its own API process, so this test can change the deployed files underneath a running browser.
+  const dist = await mkdtemp(path.join(os.tmpdir(), "oneplate-dist-")); await cp(path.join(root, "apps/web/dist"), dist, { recursive: true }); const PORT2 = PORT + 1, BASE2 = `http://localhost:${PORT2}`;
+  const api2 = spawn(process.execPath, ["apps/api/dist/server.js"], { cwd: root, env: { ...process.env, NODE_ENV: "test", PORT: String(PORT2), DATABASE_URL: DB, PUBLIC_URL: BASE2, WEB_DIST: dist, LOG_LEVEL: "silent", SESSION_SECRET: "e2e-secret-e2e-secret-e2e-secret" }, stdio: "ignore" });
+  try {
+    for (let i = 0; i < 100; i++) { try { const r = await fetch(BASE2 + "/health"); if (r.ok) break; } catch {} await new Promise(r => setTimeout(r, 200)); }
+    const ctx = await browser.newContext(); const p = await ctx.newPage();
+    await p.goto(BASE2 + "/account.html"); await p.evaluate(() => navigator.serviceWorker.ready); await p.waitForTimeout(500);
+    const h = await fetch(BASE2 + "/sw.js"); assert.equal(h.headers.get("cache-control"), "no-cache"); assert.match(await h.text(), /oneplate-shell-[a-f0-9]{12}/);
+    // "Deploy" a changed account page and a restamped worker.
+    await writeFile(path.join(dist, "account.html"), (await readFile(path.join(dist, "account.html"), "utf8")).replace("<h1>OnePlate</h1>", "<h1>OnePlate v2</h1>"));
+    await writeFile(path.join(dist, "sw.js"), (await readFile(path.join(dist, "sw.js"), "utf8")).replace(/oneplate-shell-[a-f0-9]+/, "oneplate-shell-deploy2"));
+    await p.goto(BASE2 + "/account.html"); assert.match(await p.$eval("h1", e => e.textContent), /v2/); // network first: the new page on the very next open
+    await p.waitForTimeout(800); await ctx.setOffline(true); await p.goto(BASE2 + "/account.html"); assert.match(await p.$eval("h1", e => e.textContent), /OnePlate/); // offline: the cached shell
+    await ctx.setOffline(false); await ctx.close();
+  } finally { api2.kill(); }
 });

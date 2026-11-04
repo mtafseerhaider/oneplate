@@ -1,5 +1,6 @@
 /* Builds apps/web/dist from the single-file app: wraps app/index.html in a real document, adds the manifest, the service worker and the API adapter. */
 import { readFile, writeFile, mkdir, cp } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path"; import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url)); const root = path.resolve(here, "../../.."); const out = path.resolve(here, "../dist");
 // Assemble the single-file app from apps/web/src first, so the PWA always reflects the sources.
@@ -10,6 +11,8 @@ const api = process.env.ONEPLATE_API ?? "";
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#C4731A"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="apple-touch-icon" href="./icon.svg"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="OnePlate">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style>
 <script>window.ONEPLATE_API=${JSON.stringify(api)};window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();window.__installPrompt=e;});</script><script src="./webauthn.js"></script><script src="./oneplate-adapter.js"></script></head><body>${body}
-<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});</script></body></html>`;
-await mkdir(out, { recursive: true }); await cp(path.resolve(here, "../public"), out, { recursive: true }); await writeFile(path.join(out, "index.html"), html); await writeFile(path.join(out, "webauthn.js"), wa || "/* @simplewebauthn/browser not installed */");
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").then(r=>{r.update().catch(()=>{});setInterval(()=>r.update().catch(()=>{}),6*3600*1000)}).catch(()=>{});let reloaded=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloaded)return;reloaded=true;location.reload()})}</script></body></html>`;
+await mkdir(out, { recursive: true }); await cp(path.resolve(here, "../public"), out, { recursive: true }); await writeFile(path.join(out, "index.html"), html);
+// Stamp the service worker cache with a hash of everything it serves, so each deploy invalidates the previous shell.
+const stamp = createHash("sha256").update(html).update(await readFile(path.join(out, "account.html"))).update(await readFile(path.join(out, "oneplate-adapter.js"))).digest("hex").slice(0, 12); await writeFile(path.join(out, "sw.js"), (await readFile(path.join(out, "sw.js"), "utf8")).replace("__BUILD__", stamp)); await writeFile(path.join(out, "webauthn.js"), wa || "/* @simplewebauthn/browser not installed */");
 console.log(`built ${out} (${(html.length / 1024).toFixed(0)} KB) · API base: ${api || "same origin"}`);

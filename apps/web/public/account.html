@@ -8,6 +8,7 @@
 <div id="pkBox" hidden><p class="muted" id="pkHint">Signed in. Set up Face ID or fingerprint now and this link opens on its own next time.</p><button type="button" id="pkSetup" style="background:#2F8F63">Set up Face ID / fingerprint</button><button type="button" class="ghost" id="pkSkip">Not now, open OnePlate</button></div>
 <div id="resetBox" hidden><label>New password<input id="npw" type="password" minlength="8" autocomplete="new-password"></label></div><p class="err" id="err"></p><button type="submit" id="go">Sign in</button><button type="button" class="ghost" id="toggle">Create an account</button><button type="button" class="ghost" id="forgot">Forgot password?</button><button type="button" id="pk" style="background:#2F8F63">Sign in with a passkey (Face ID / fingerprint)</button><p class="muted" style="text-align:center;margin:4px 0 0"><a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a> · <a href="./status.html">Status</a></p></form>
 <script src="./webauthn.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").then(r=>r.update().catch(()=>{})).catch(()=>{});</script>
 <script>
 const API=window.ONEPLATE_API||"";let mode="login";const $=id=>document.getElementById(id);
 $("toggle").onclick=()=>{mode=mode==="login"?"register":"login";$("extra").hidden=mode==="login";$("go").textContent=mode==="login"?"Sign in":"Create account";$("toggle").textContent=mode==="login"?"Create an account":"I already have an account";};
