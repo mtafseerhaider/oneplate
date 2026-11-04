@@ -5,7 +5,7 @@ import { createPool } from "../src/db/pool.js";
 import { migrate } from "../src/db/migrate.js";
 import { ChangeBus } from "../src/events.js";
 import { MemoryMailer, createMailer, SmtpMailer } from "../src/mail.js";
-const cfg = loadConfig({ ...process.env, NODE_ENV: "test", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
+const cfg = loadConfig({ ...process.env, NODE_ENV: "test", ADMIN_EMAILS: "tafseer@example.com", MAX_HOUSEHOLDS_PER_USER: "2", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
 const db = createPool(cfg.DATABASE_URL); let app: Awaited<ReturnType<typeof buildApp>>; const mailer = new MemoryMailer(); const bus = new ChangeBus(cfg.DATABASE_URL);
 const cookieOf = (res: any) => String(res.headers["set-cookie"]).split(";")[0];
 beforeAll(async () => { await db.query("drop schema public cascade; create schema public"); await migrate(db); await bus.start(); app = await buildApp(cfg, db, { bus, mailer }); });
@@ -60,6 +60,17 @@ describe("OnePlate API", () => {
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
     expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);
+  });
+  it("serves status and metrics, guards admin routes, and enforces limits", async () => {
+    const st = await app.inject({ method: "GET", url: "/status" }); expect(st.json().status).toBe("ok"); expect(st.json().households).toBeGreaterThan(0);
+    const met = await app.inject({ method: "GET", url: "/metrics" }); expect(met.json().active_sessions).toBeGreaterThan(0);
+    const anon = await app.inject({ method: "GET", url: "/admin/stats" }); expect(anon.statusCode).toBe(404);
+    const notAdmin = await app.inject({ method: "GET", url: "/admin/stats", headers: { cookie: wife } }); expect(notAdmin.statusCode).toBe(404);
+    const adm = await app.inject({ method: "GET", url: "/admin/stats", headers: { cookie: owner } }); expect(adm.statusCode).toBe(200); expect(adm.json().users).toBe(2);
+    const hh = await app.inject({ method: "GET", url: "/admin/households", headers: { cookie: owner } }); expect(hh.json()[0].owner).toBe("tafseer@example.com");
+    const h2 = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "second" } }); expect(h2.statusCode).toBe(200);
+    const h3 = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "third" } }); expect(h3.statusCode).toBe(429);
+    const ret = await app.inject({ method: "POST", url: "/admin/retention", headers: { cookie: owner } }); expect(ret.statusCode).toBe(200); expect(typeof ret.json().sessions).toBe("number");
   });
   it("exports and audits", async () => {
     const ex = await app.inject({ method: "GET", url: `/households/${hid}/export`, headers: { cookie: owner } }); expect(ex.json().documents.length).toBeGreaterThan(1);

@@ -36,9 +36,15 @@ Step 2, done:
 Step 3, later:
 - Convert the interface chunks themselves to ES modules by tab, with TypeScript, once the content review workflow (phase 4) settles the data shapes.
 
-## Phase 3: Launch readiness (2–3 weeks)
-- Multi-household admin, usage limits, status page, structured error reporting, privacy policy and terms, data retention policy, backup restore drill, load test of the sync endpoints.
-- App-store wrappers (Capacitor) only if a store presence is wanted; the PWA already installs on both platforms.
+## Phase 3: Launch readiness
+Done in this commit:
+- Admin routes for the addresses in `ADMIN_EMAILS` (stats, households, audit, retention run), hidden as 404 to everyone else.
+- Limits: households per account (`MAX_HOUSEHOLDS_PER_USER`, default 3) and documents per household (`MAX_DOCS_PER_HOUSEHOLD`, default 25,000), plus the existing rate limits.
+- `/status` and `/metrics` on the API and a public status page; structured error reporting to `ERROR_WEBHOOK_URL` on server errors, with a request id returned to the client.
+- Privacy policy and terms pages linked from sign-in; data retention job every six hours (expired sessions, reset links, challenges, invites; audit events after `AUDIT_RETENTION_DAYS`).
+- Backup restore drill (`infra/drill.sh`, run locally and passing), production restore script, and `docs/RELEASE-CHECKLIST.md`.
+- Load test (`scripts/loadtest.mjs`) against the local API on one laptop core set: 20 clients, 1,615 requests/s, p95 39 ms; 50 clients, 1,659 requests/s, p95 80 ms; zero failures. The first run found and fixed a connection-pool deadlock in the write path (a pool client was held while awaiting a second pool query).
+Not planned: app-store wrappers; the PWA installs on both platforms.
 
 ## Phase 4: Content and scholarship
 - Scholar review workflow for teachings and al-Mizan notes with verification status shown in the UI, following the Bayan Library's review gates.

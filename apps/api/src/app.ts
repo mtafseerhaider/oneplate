@@ -14,6 +14,7 @@ import { ChangeBus, type Change } from "./events.js";
 import { createMailer, type Mailer } from "./mail.js";
 import { createHash, randomBytes } from "node:crypto";
 import { registerPasskeyRoutes } from "./auth/passkeys.js";
+import { registerOpsRoutes, createErrorReporter } from "./ops.js";
 
 declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string } }
 
@@ -23,13 +24,15 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: cfg.CORS_ORIGIN.split(","), credentials: true });
   await app.register(cookie, { secret: cfg.SESSION_SECRET });
-  await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+  await app.register(rateLimit, { max: cfg.RATE_LIMIT_PER_MINUTE, timeWindow: "1 minute" });
   await app.register(swagger, { openapi: { info: { title: "OnePlate API", version: "0.1.0" } } });
   await app.register(swaggerUi, { routePrefix: "/docs" });
   const COOKIE = "op_session";
   const mailer = deps.mailer ?? createMailer(cfg.MAIL_TRANSPORT, m => app.log.info(m), { smtpUrl: cfg.SMTP_URL, from: cfg.MAIL_FROM });
   const bus = deps.bus ?? null;
   app.decorate("mailer", mailer);
+  const reporter = createErrorReporter(cfg.ERROR_WEBHOOK_URL, m => app.log.warn(m));
+  registerOpsRoutes(app, cfg, db, () => !!bus);
   const audit = (req: any, action: string, extra: Partial<{ collection: string; doc_id: string; version: number }> = {}) => db.query("insert into audit_events(household_id,user_id,action,collection,doc_id,version,ip) values($1,$2,$3,$4,$5,$6,$7)", [req.householdId ?? null, req.userId ?? null, action, extra.collection ?? null, extra.doc_id ?? null, extra.version ?? null, req.ip]).catch(e => app.log.warn(e, "audit failed"));
 
   app.get("/health", async () => ({ status: "ok" }));
@@ -80,7 +83,9 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   // ---- households ----
   app.post("/households", { preHandler: requireUser }, async (req, reply) => {
     const p = z.object({ name: z.string().min(1).max(80), memberId: z.string().min(1).max(40).default("tafseer") }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "name required" } });
-    const c = await db.connect(); try { await c.query("begin"); const h = await c.query<{ id: string }>("insert into households(name,owner_user_id) values($1,$2) returning id", [p.data.name, req.userId]); await c.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,'owner',$3)", [h.rows[0]!.id, req.userId, p.data.memberId]); await c.query("commit"); req.householdId = h.rows[0]!.id; await audit(req, "household.create"); return { id: h.rows[0]!.id }; } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
+    const owned = await db.query("select count(*)::int as n from households where owner_user_id=$1", [req.userId]); if (owned.rows[0]!.n >= cfg.MAX_HOUSEHOLDS_PER_USER) return reply.code(429).send({ error: { code: "LIMIT", message: `at most ${cfg.MAX_HOUSEHOLDS_PER_USER} households per account` } });
+    const c = await db.connect(); let id: string; try { await c.query("begin"); const h = await c.query<{ id: string }>("insert into households(name,owner_user_id) values($1,$2) returning id", [p.data.name, req.userId]); await c.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,'owner',$3)", [h.rows[0]!.id, req.userId, p.data.memberId]); await c.query("commit"); id = h.rows[0]!.id; } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
+    req.householdId = id; await audit(req, "household.create"); return { id };
   });
   const withHousehold = async (req: any, reply: any) => {
     if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });
@@ -122,14 +127,16 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const p = z.object({ body: z.record(z.any()), ifVersion: z.number().int().optional() }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "body must be an object" } });
     if (JSON.stringify(p.data.body).length > 256 * 1024) return reply.code(413).send({ error: { code: "TOO_LARGE", message: "document over 256 KiB" } });
     if (collection === "family") { const err = validateFamilyDoc(p.data.body); if (err) return reply.code(422).send({ error: { code: "CHILD_RULE", message: err } }); }
-    const c = await db.connect(); try {
+    const c = await db.connect(); let written = 0; try {
       await c.query("begin"); const ex = await c.query<{ body: any; version: number }>("select body,version from documents where household_id=$1 and collection=$2 and doc_id=$3 for update", [req.householdId, collection, docId]); const existing = ex.rows[0];
       if (!canWrite(req.actor, collection, docId, p.data.body, existing?.body)) { await c.query("rollback"); return reply.code(403).send({ error: { code: "FORBIDDEN", message: "your access level cannot change this" } }); }
       if (existing && p.data.ifVersion !== undefined && p.data.ifVersion !== existing.version) { await c.query("rollback"); return reply.code(409).send({ error: { code: "CONFLICT", message: "document changed", currentVersion: existing.version, body: existing.body } }); }
+      if (!existing) { const n = await c.query("select count(*)::int as n from documents where household_id=$1", [req.householdId]); if (n.rows[0]!.n >= cfg.MAX_DOCS_PER_HOUSEHOLD) { await c.query("rollback"); return reply.code(429).send({ error: { code: "QUOTA", message: "this household has reached its document limit; delete old entries or export" } }); } }
       const v = existing ? existing.version + 1 : 1;
       await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,$2,$3,$4,$5,$6) on conflict (household_id,collection,doc_id) do update set body=excluded.body, version=excluded.version, updated_by=excluded.updated_by, updated_at=now()", [req.householdId, collection, docId, p.data.body, v, req.userId]);
-      await ChangeBus.publish(c, { hid: req.householdId, collection, doc_id: docId, version: v }); await c.query("commit"); await audit(req, "doc.write", { collection, doc_id: docId, version: v }); return { version: v };
+      await ChangeBus.publish(c, { hid: req.householdId, collection, doc_id: docId, version: v }); await c.query("commit"); written = v;
     } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
+    await audit(req, "doc.write", { collection, doc_id: docId, version: written }); return { version: written };
   });
   app.delete("/households/:hid/docs/:collection/:docId", { preHandler: withHousehold }, async (req: any, reply) => {
     const { collection, docId } = req.params; const ex = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection=$2 and doc_id=$3", [req.householdId, collection, docId]);
@@ -146,6 +153,6 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     req.raw.on("close", () => { clearInterval(beat); unsub(); });
     await new Promise(() => {}); // held open until the client disconnects
   });
-  app.setErrorHandler((err: any, _req, reply) => { app.log.error(err); reply.code((err as any).statusCode ?? 500).send({ error: { code: "INTERNAL", message: (err as any).statusCode ? err.message : "something went wrong" } }); });
+  app.setErrorHandler((err: any, req, reply) => { app.log.error(err); const status = (err as any).statusCode ?? 500; if (status >= 500) reporter.report({ message: err.message, stack: err.stack, requestId: req.id, route: req.routeOptions?.url, status }); reply.code(status).send({ error: { code: status >= 500 ? "INTERNAL" : "ERROR", message: status >= 500 ? "something went wrong" : err.message, requestId: req.id } }); });
   return app;
 }

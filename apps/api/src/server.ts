@@ -9,5 +9,6 @@ const app = await buildApp(cfg, db, { bus });
 await migrate(db, m => app.log.info(m));
 await bus.start(m => app.log.info(m));
 await app.listen({ port: cfg.PORT, host: cfg.HOST });
+import("./ops.js").then(({ retention }) => { const run = () => retention(db, cfg.AUDIT_RETENTION_DAYS).then(r => app.log.info({ retention: r }, "retention run")).catch(e => app.log.warn(e, "retention failed")); run(); setInterval(run, 6 * 3600 * 1000).unref(); });
 const stop = async () => { await bus.stop(); await app.close(); await db.end(); process.exit(0); };
 process.on("SIGTERM", stop); process.on("SIGINT", stop);
