@@ -328,6 +328,7 @@ wholeself:["Whole self","Five dimensions of the day: Body (at least 4 of the 7 h
 mood:["Mood","One honest word for how you feel right now. Naming a feeling lowers its charge. Over weeks the pattern tells you what helps and what hurts."],
 quranplan:["Daily Quran reading","A 67-reading course: one surah or cluster of verses a day, with a summary, notes from al-Mizan, a reflection question and a line for the children. It starts from the date in Settings and repeats; the count on the right is how many readings you have marked done."],
 mizan:["Al-Mizan","Tafsir al-Mizan by Allamah Muhammad Husayn Tabataba'i (d. 1981), twenty volumes in Arabic, whose method is to explain the Quran by the Quran. The notes in the app summarise the main lines of his discussion on each passage as the app's author understands them. They are summaries, not quotations: verify in the printed al-Mizan or its English translations before citing him."],
+mizanvol:["Volume references","The English al-Mizan is 40 volumes: 1 to 13 by WOFIS in Rizvi's translation, 14 to 40 by Tawheed Institute Australia, about two English volumes per Arabic volume. The volume shown is taken from publisher and bookseller listings; a volume marked 'inferred' is worked out from the neighbouring volumes. Page numbers for a passage are not published anywhere, so record the page from your own copy in the field; it syncs and shows in the course index."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -506,11 +507,11 @@ const CHECKS=[
 
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{}};
+let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{}};
 let db=null,syncState="wait",readOnly=false,isOwner=true,tab=(location.hash||"#today").slice(1);
 if(tab==="guide")tab="learn";if(!["today","plate","family","train","progress","learn"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{}}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{};S.qnotes=j.qnotes||{}}}catch(e){}}
 function saveLocal(){if(readOnly)return;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const queues={};
 function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
@@ -522,6 +523,7 @@ function persistWeigh(d){saveLocal();dbWrite("weighins/"+d,S.weighins[d])}
 function removeWeigh(d){delete S.weighins[d];saveLocal();dbDelete("weighins/"+d)}
 function persistMeal(id){saveLocal();dbWrite("meals/"+id,S.meals[id])}
 function persistFamily(id){saveLocal();dbWrite("family/"+id,S.family[id])}
+function persistQnote(i){saveLocal();dbWrite("qnotes/"+i,S.qnotes[i])}
 function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
 function setChip(){const c=document.getElementById("syncChip");const fam=!readOnly&&!isOwner;const k=readOnly?"viewonly":fam?"familyeditor":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":fam?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":fam?"Family editor":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
 
@@ -530,11 +532,12 @@ async function connect(){
   if(!db){ syncState="local"; setChip(); render(); return; }
   try{ const u=await window.claude.use("user"); if(u){ const w=await u.can("data.write"); const o=await u.isOwner(); isOwner=!!o||w===null; if(w===false){ readOnly=true; } setChip(); render(); } }catch(e){}
   let got=0; const timer=setTimeout(()=>{ if(syncState==="wait"){syncState="local";setChip()} },10000);
-  const ready=()=>{ got++; if(got>=6){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
+  const ready=()=>{ got++; if(got>=7){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
   const err=e=>{ console.warn("db",e); clearTimeout(timer); syncState="local"; setChip(); render(); };
-  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<6&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
+  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<7&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
   db.doc("fast/current").onSnapshot(s=>{ if(s.exists)S.fast=Object.assign({},S.fast,s.data()); saveLocal(); ready(); },err);
   db.collection("days").orderBy("date","desc").limit(120).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.days=o;saveLocal()} ready(); },err);
+  db.collection("qnotes").limit(200).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.qnotes=o;saveLocal()} ready(); },err);
   db.collection("family").limit(20).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.family=o;saveLocal()} ready(); },err);
   db.collection("meals").limit(200).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.meals=o;saveLocal()} ready(); },err);
   db.collection("weighins").orderBy("date","asc").limit(400).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.weighins=o;saveLocal()} ready(); },err);
@@ -1422,6 +1425,22 @@ const QPLAN=[
 {s:112,f:1,t:4,n:"Al-Ikhlas: say, He is Allah, One",sum:"Say: He is Allah, One; Allah, the Eternal Refuge; He neither begets nor is begotten; and there is none comparable to Him.",mz:"Tabataba'i explains 'ahad' as a oneness that admits no division and no second, distinct from 'wahid', and reads 'samad' as the One to whom all needs are directed while He needs none. Al-Mizan treats the surah as the whole of tawhid, which is why the narrations weigh it as a third of the Quran.",q:"What do I treat as 'samad', the thing I turn to first in need?",k:"Allah is One. He does not need anyone. Nobody is like Him. Four lines that say everything."}
 ];
 /* ---------- daily Quran reading ---------- */
+/* ---------- English al-Mizan volume map. 40 volumes: 1–13 WOFIS (tr. Sayyid Saeed Akhtar Rizvi), 14–40 Tawheed Institute Australia. Ranges as [startSurah,startVerse,endSurah,endVerse]; c = 'confirmed' from a publisher or bookseller listing, 'inferred' from the neighbouring volumes. Arabic volume ≈ ceil(English/2), as the WOFIS publisher's notes state for the volumes they cover. ---------- */
+const MIZAN_EN=[
+[1,[1,1,2,93],"confirmed"],[2,[2,94,2,182],"confirmed"],[3,[2,183,2,223],"confirmed"],[4,[2,224,2,286],"confirmed"],[5,[3,1,3,41],"confirmed"],[6,[3,42,3,120],"confirmed"],
+[7,[3,121,3,200],"inferred"],[8,[4,1,4,76],"inferred"],[9,[4,77,5,3],"confirmed"],[10,[5,4,5,54],"inferred"],[11,[5,55,5,105],"inferred"],[12,[5,106,5,120],"confirmed"],
+[13,[6,1,6,83],"confirmed"],[14,[6,84,6,165],"confirmed"],[15,[7,1,7,100],"confirmed"],[16,[7,101,7,206],"confirmed"],[17,[8,1,8,75],"confirmed"],[18,[9,1,9,129],"confirmed"],
+[19,[10,1,11,24],"confirmed"],[20,[11,25,11,99],"confirmed"],[21,[11,100,12,57],"confirmed"],[22,[12,58,13,43],"confirmed"],[23,[14,1,15,99],"confirmed"],[24,[16,1,16,128],"confirmed"],
+[25,[17,1,17,111],"confirmed"],[26,[18,1,18,110],"confirmed"],[27,[19,1,20,135],"confirmed"],[28,[21,1,22,78],"confirmed"],[29,[23,1,25,77],"confirmed"],[30,[26,1,27,93],"confirmed"],
+[31,[28,1,30,60],"confirmed (one listing says 28–29 only)"],[32,[31,1,34,54],"confirmed (one listing says 32–34)"],[33,[35,1,38,88],"confirmed"],[34,[39,1,41,54],"confirmed"],[35,[42,1,46,35],"confirmed"],
+[36,[47,1,51,60],"confirmed"],[37,[52,1,57,29],"confirmed"],[38,[58,1,69,52],"confirmed"],[39,[70,1,77,50],"confirmed"],[40,[78,1,114,6],"confirmed"]];
+function mizanVol(s,v){const key=s*1000+v;for(const [n,r,c] of MIZAN_EN){const a=r[0]*1000+r[1],b=r[2]*1000+r[3];if(key>=a&&key<=b)return {vol:n,range:r,conf:c,ar:Math.ceil(n/2),pub:n<=13?"WOFIS, tr. S. S. A. Rizvi":"Tawheed Institute Australia",url:n<=13?"https://al-islam.org/al-mizan-exegesis-quran-volume-"+n+"-sayyid-muhammad-husayn-tabatabai":"https://www.shiabooks.com.au/collections/quran/al-mizan"}}return null}
+function rangeStr(r){return r[0]+":"+r[1]+" – "+r[2]+":"+r[3]}
+function mizanRefBlock(e,i,ro){const m=mizanVol(e.s,e.f);if(!m)return "";const n=(S.qnotes||{})[String(i)]||{};const inferred=m.conf!=="confirmed";
+  return `<div class="hands" style="font-size:13px"><span>English</span><div>Al-Mizan vol. <b>${m.vol}</b> of 40 (${esc(m.pub)}), covering ${esc(rangeStr(m.range))}${inferred?` <span class="pill amber" style="font-size:10px;padding:1px 7px">${esc(m.conf)}</span>`:""}. <a href="${m.url}" target="_blank" rel="noopener">${m.vol<=13?"Read online":"Publisher's list"}</a></div>
+  <span>Arabic</span><div>vol. ${m.ar} of 20 (approximate, half of each Arabic volume per English volume)</div>
+  <span>My copy</span><div>${ro?(n.page?`p. ${esc(n.page)}${n.note?" · "+esc(n.note):""}`:"<span class='muted'>no page recorded</span>"):`<div class="form"><label class="f" style="flex:0 1 120px">Page<input type="text" data-qn="page" data-i="${i}" value="${esc(n.page||"")}" placeholder="e.g. 212" maxlength="20"></label><label class="f">Note<input type="text" data-qn="note" data-i="${i}" value="${esc(n.note||"")}" placeholder="edition, chapter, remark" maxlength="120"></label></div>`}</div></div>`}
+
 function qStart(){return (S.settings||{}).quranStart||S.settings.startDate||todayStr()}
 function qIndex(dateStr){const a=new Date(qStart()+"T00:00:00"),b=new Date((dateStr||todayStr())+"T00:00:00");const n=Math.floor((b-a)/864e5);return ((n%QPLAN.length)+QPLAN.length)%QPLAN.length}
 function qRound(dateStr){const a=new Date(qStart()+"T00:00:00"),b=new Date((dateStr||todayStr())+"T00:00:00");return Math.floor(Math.max(0,Math.floor((b-a)/864e5))/QPLAN.length)+1}
@@ -1442,12 +1461,13 @@ function quranCard(d,ro,compact){
     <div class="row"><a class="btn primary" href="${qLink(e)}" target="_blank" rel="noopener">${ic("book")} Read ${esc(qRef(e))} on Quran.com</a></div>
     <p class="small"><b>Summary.</b> ${esc(e.sum)}</p>
     <div class="note" style="border-left-color:var(--green)"><b>From al-Mizan ${I("mizan")}</b><br>${esc(e.mz)}</div>
+    <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Where to find it in al-Mizan ${I("mizanvol")}</span>${ic("chev","chev")}</summary><div class="body">${mizanRefBlock(e,qIndex(),ro)}</div></details>
     <p class="small"><b>Tadabbur.</b> ${esc(e.q)}</p>
     <p class="small muted"><b>For Abbas and Eliyya.</b> ${esc(e.k)}</p>
     ${ro?"":`<button class="btn ${done?"":"primary"} wide" data-a="qdone">${done?ic("check")+" Read and understood · undo":"I read it and understood it"}</button>`}
   </section>`;
 }
-function quranIndex(){const cur=qIndex();return `<details><summary><span>The ${QPLAN.length}-day course</span>${ic("chev","chev")}</summary><div class="body"><p class="small muted">One reading a day from your start date (${esc(qStart())}, change it in Settings). The course repeats; the second round is where understanding deepens.</p><div class="scroll"><table class="tbl"><tbody>${QPLAN.map((e,i)=>`<tr class="${i===cur?"today":""}"><td class="kcal">${i+1}</td><td><b>${esc(qRef(e))}</b> · ${esc(e.n)}</td></tr>`).join("")}</tbody></table></div></div></details>`}
+function quranIndex(){const cur=qIndex();return `<details><summary><span>The ${QPLAN.length}-day course</span>${ic("chev","chev")}</summary><div class="body"><p class="small muted">One reading a day from your start date (${esc(qStart())}, change it in Settings). The course repeats; the second round is where understanding deepens.</p><div class="scroll"><table class="tbl"><tbody>${QPLAN.map((e,i)=>`<tr class="${i===cur?"today":""}"><td class="kcal">${i+1}</td><td><b>${esc(qRef(e))}</b> · ${esc(e.n)}<br><span class="small muted">English al-Mizan vol. ${(mizanVol(e.s,e.f)||{}).vol||"?"}${(S.qnotes||{})[String(i)]&&S.qnotes[String(i)].page?" · p. "+esc(S.qnotes[String(i)].page):""}</span></td></tr>`).join("")}</tbody></table></div></div></details>`}
 
 function dayOfYear(d){d=d||new Date();const s=new Date(d.getFullYear(),0,1);return Math.floor((d-s)/864e5)}
 function pick(arr,off,back){const i=dayOfYear()-(back||0)+(off||0);return arr[((i%arr.length)+arr.length)%arr.length]}
@@ -1537,6 +1557,7 @@ document.addEventListener("change",e=>{
   const t=e.target,d=S._medit;
   if(t.id==="sleepH"&&isOwner&&!readOnly){const dd=day(todayStr());const v=parseFloat(t.value);if(v>=0&&v<=14)dd.sleep=v;else delete dd.sleep;persistDay(todayStr());toast("Sleep saved");return}
   if(t.id==="gratIn"&&isOwner&&!readOnly){const dd=day(todayStr());dd.grat=t.value.trim();persistDay(todayStr());if(dd.grat)toast("Alhamdulillah");render();return}
+  if(t.dataset&&t.dataset.qn){if(readOnly)return;const i=String(t.dataset.i);S.qnotes[i]=Object.assign({i},S.qnotes[i]||{});S.qnotes[i][t.dataset.qn]=t.value.trim();persistQnote(i);toast("Reference saved");return}
   if(t.dataset&&t.dataset.j){const m=t.dataset.m;if(!canWriteFor(m))return;const dd=day(todayStr());dd.journal=Object.assign({},dd.journal||{});dd.journal[m]=Object.assign({},dd.journal[m]||{});dd.journal[m][t.dataset.j]=t.value.trim();persistDay(todayStr());toast("Journal saved");return}
   if(t.id==="me_tag"&&d){d.tag=t.value;return}
   if(t.dataset&&t.dataset.me&&d){const i=Number(t.dataset.i);if(!d.items[i])return;if(t.dataset.me==="food")d.items[i].f=t.value;else d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}
