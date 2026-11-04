@@ -240,6 +240,17 @@ ul,ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
 .erow .btn{padding:6px;color:var(--muted)}
 .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 14px var(--display);background:var(--soft);color:var(--accent-text);flex:0 0 auto}
 .avatar.female{background:var(--blue-soft);color:var(--blue)}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:5px}
+.qc{appearance:none;border:1.5px solid var(--line);background:var(--panel2);color:var(--muted);font:500 11px var(--mono);height:34px;border-radius:9px;cursor:pointer;padding:0;transition:transform .1s}
+.qc:active{transform:scale(.92)}
+.qc.read{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.qc.revisit{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+.qc.cur{box-shadow:0 0 0 2px var(--accent)}
+.qc[disabled]{cursor:default}
+.qk{display:inline-block;width:12px;height:12px;border-radius:4px;border:1.5px solid var(--line);background:var(--panel2);vertical-align:middle;margin-right:4px}
+.qk.read{background:var(--green-soft);border-color:var(--green)}.qk.revisit{background:var(--amber-soft);border-color:var(--amber)}.qk.cur{box-shadow:0 0 0 2px var(--accent)}
+.seg.qstate button{display:inline-flex;align-items:center;gap:5px;padding:9px 13px;font-size:13px}
+.seg.qstate button .ic{width:15px;height:15px}
 .glist{display:flex;flex-direction:column;gap:6px}
 .glist button{appearance:none;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:12px;padding:10px 12px;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px}
 .glist button b{font-family:var(--display);font-weight:600;font-size:14px}
@@ -329,6 +340,7 @@ mood:["Mood","One honest word for how you feel right now. Naming a feeling lower
 quranplan:["Daily Quran reading","A 67-reading course: one surah or cluster of verses a day, with a summary, notes from al-Mizan, a reflection question and a line for the children. It starts from the date in Settings and repeats; the count on the right is how many readings you have marked done."],
 mizan:["Al-Mizan","Tafsir al-Mizan by Allamah Muhammad Husayn Tabataba'i (d. 1981), twenty volumes in Arabic, whose method is to explain the Quran by the Quran. The notes in the app summarise the main lines of his discussion on each passage as the app's author understands them. They are summaries, not quotations: verify in the printed al-Mizan or its English translations before citing him."],
 mizanvol:["Volume references","The English al-Mizan is 40 volumes: 1 to 13 by WOFIS in Rizvi's translation, 14 to 40 by Tawheed Institute Australia, about two English volumes per Arabic volume. The volume shown is taken from publisher and bookseller listings; a volume marked 'inferred' is worked out from the neighbouring volumes. Page numbers for a passage are not published anywhere, so record the page from your own copy in the field; it syncs and shows in the course index."],
+qprogress:["Recording progress","Three states per reading: read, read but worth revisiting, or not yet. Tap the big buttons for today, or tap any square in the grid to cycle it. Bulk update marks a range at once, or everything up to today, for catching up or reading ahead. Progress is stored once per reading, not per day, so it survives the course repeating."],
 steps:["Steps","Your phone counts them. 8,000 a day is the target, including the walk after dinner. More is a bonus, not a requirement."],
 phase:["Phase","Where you are in the plan. Weeks 1 to 3 are the beginner phase, 4 to 7 intermediate, 8 to 12 intervals, then maintenance. Your start date sets it."],
 week:["Week number","Counted from your start date in Settings."],
@@ -507,11 +519,11 @@ const CHECKS=[
 
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{}};
+let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{},qprog:{done:{},flag:{}}};
 let db=null,syncState="wait",readOnly=false,isOwner=true,tab=(location.hash||"#today").slice(1);
 if(tab==="guide")tab="learn";if(!["today","plate","family","train","progress","learn"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{};S.qnotes=j.qnotes||{}}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{};S.qnotes=j.qnotes||{};S.qprog=j.qprog||{done:{},flag:{}}}}catch(e){}}
 function saveLocal(){if(readOnly)return;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const queues={};
 function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
@@ -524,6 +536,7 @@ function removeWeigh(d){delete S.weighins[d];saveLocal();dbDelete("weighins/"+d)
 function persistMeal(id){saveLocal();dbWrite("meals/"+id,S.meals[id])}
 function persistFamily(id){saveLocal();dbWrite("family/"+id,S.family[id])}
 function persistQnote(i){saveLocal();dbWrite("qnotes/"+i,S.qnotes[i])}
+function persistQprog(){saveLocal();dbWrite("quran/progress",S.qprog)}
 function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
 function setChip(){const c=document.getElementById("syncChip");const fam=!readOnly&&!isOwner;const k=readOnly?"viewonly":fam?"familyeditor":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":fam?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=(readOnly?"View only":fam?"Family editor":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"")}
 
@@ -532,11 +545,12 @@ async function connect(){
   if(!db){ syncState="local"; setChip(); render(); return; }
   try{ const u=await window.claude.use("user"); if(u){ const w=await u.can("data.write"); const o=await u.isOwner(); isOwner=!!o||w===null; if(w===false){ readOnly=true; } setChip(); render(); } }catch(e){}
   let got=0; const timer=setTimeout(()=>{ if(syncState==="wait"){syncState="local";setChip()} },10000);
-  const ready=()=>{ got++; if(got>=7){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
+  const ready=()=>{ got++; if(got>=8){ clearTimeout(timer); syncState="db"; setChip(); } render(); };
   const err=e=>{ console.warn("db",e); clearTimeout(timer); syncState="local"; setChip(); render(); };
-  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<7&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
+  db.doc("settings/main").onSnapshot(s=>{ if(s.exists)S.settings=Object.assign({},S.settings,s.data()); else if(got<8&&!readOnly)dbWrite("settings/main",S.settings); saveLocal(); ready(); },err);
   db.doc("fast/current").onSnapshot(s=>{ if(s.exists)S.fast=Object.assign({},S.fast,s.data()); saveLocal(); ready(); },err);
   db.collection("days").orderBy("date","desc").limit(120).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.days=o;saveLocal()} ready(); },err);
+  db.doc("quran/progress").onSnapshot(sn=>{ if(sn.exists)S.qprog=Object.assign({done:{},flag:{}},sn.data()); saveLocal(); ready(); },err);
   db.collection("qnotes").limit(200).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.qnotes=o;saveLocal()} ready(); },err);
   db.collection("family").limit(20).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.family=o;saveLocal()} ready(); },err);
   db.collection("meals").limit(200).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.meals=o;saveLocal()} ready(); },err);
@@ -621,8 +635,8 @@ function greeting(){const h=new Date().getHours();return h<12?"Good morning":h<1
 function doneCount(d){let n=0;["starter","train","walk","steps","closed"].forEach(k=>{if(d[k])n++});if((d.water||0)>=4)n++;if((d.palms||0)>=4)n++;return n}
 function streak(){let n=0;const t=new Date();if(!(S.days[todayStr(t)]||{}).closed)t.setDate(t.getDate()-1);for(let i=0;i<400;i++){const k=todayStr(t);if((S.days[k]||{}).closed){n++;t.setDate(t.getDate()-1)}else break}return n}
 function hintIcon(h){return h<6.75?"bed":h<8?"sun":h<9?"bike":h<14?"coffee":h<18?"clock":h<19?"home":h<19.5?"egg":h<20?"bike":h<21.5?"plate":h<22.75?"walk":"moon"}
-function dots(f,v,n,ro,cls){return `<div class="dots ${cls||""} ${ro?"ro":""}">${Array.from({length:n},(_,i)=>i+1).map(i=>`<button class="dot ${i<=v?"on":""}" ${ro?"disabled":""} data-a="dot" data-f="${f}" data-v="${i}" aria-label="${i}" aria-pressed="${i<=v}">${i}</button>`).join("")}</div>`}
-function swRow(id,label,sub,done,ro,leadIcon,g){return `<div class="crow sw-row ${done?"done":""}" role="switch" aria-checked="${done?"true":"false"}" ${ro?"":`tabindex="0" data-a="tog"`} data-k="${id}"><span class="lead">${ic(leadIcon)}</span><div class="t"><b>${esc(label)} ${g?I(g):""}</b>${sub?`<small>${esc(sub)}</small>`:""}</div><span class="sw"><i></i></span></div>`}
+function dots(f,v,n,ro,cls,dd){return `<div class="dots ${cls||""} ${ro?"ro":""}">${Array.from({length:n},(_,i)=>i+1).map(i=>`<button class="dot ${i<=v?"on":""}" ${ro?"disabled":""} data-a="dot" data-f="${f}" data-v="${i}" ${dd?`data-d="${dd}"`:""} aria-label="${i}" aria-pressed="${i<=v}">${i}</button>`).join("")}</div>`}
+function swRow(id,label,sub,done,ro,leadIcon,g,dd){return `<div class="crow sw-row ${done?"done":""}" role="switch" aria-checked="${done?"true":"false"}" ${ro?"":`tabindex="0" data-a="tog"`} data-k="${id}" ${dd?`data-d="${dd}"`:""}><span class="lead">${ic(leadIcon)}</span><div class="t"><b>${esc(label)} ${g?I(g):""}</b>${sub?`<small>${esc(sub)}</small>`:""}</div><span class="sw"><i></i></span></div>`}
 function fmtClock(d){return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}
 
 /* ---------- views ---------- */
@@ -827,7 +841,13 @@ function vToday(){
     <p class="small">${esc(plan.d)}</p>
   </section>
   <section class="card">
-    <p class="eyebrow">Check-ins</p>
+    <div class="row between"><p class="eyebrow">Check-ins · ${dn} of 7</p>${roMe?"":`<div class="row" style="gap:6px"><button class="btn ghost" data-a="habits_all">${ic("check")} All done</button><button class="btn ghost" data-a="catch">${S._catch?"Close":"Catch up"}</button></div>`}</div>
+    ${S._catch&&!roMe?(()=>{const cd=S._catch,c=day(cd);return `<div class="card flat" style="padding:12px 14px"><div class="row between"><p class="eyebrow">Catch up a past day</p><input type="date" id="catchDate" value="${cd}" max="${t}" style="width:160px"></div>
+      <div class="checks">
+      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water bottles</b>${dots("water",c.water||0,6,false,"",cd)}</div></div>
+      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms</b>${dots("palms",c.palms||0,6,false,"palms",cd)}</div></div>
+      ${[["starter","Protein starter","home"],["train","Training session","bike"],["walk","Walk after dinner","walk"],["steps","8,000 steps","foot"],["closed","Kitchen closed by 9:30","moon"]].map(x=>swRow(x[0],x[1],"",c[x[0]],false,x[2],null,cd)).join("")}
+      </div><div class="row"><button class="btn primary" data-a="habits_all" data-d="${cd}">${ic("check")} Everything done that day</button><button class="btn ghost" data-a="catch">Close</button></div></div>`})():""}
     <div class="checks">
       <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>Water ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
       <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>Protein palms ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
@@ -1448,14 +1468,16 @@ function qDone(){return Object.values(S.days).filter(d=>d.quran).length}
 function qRef(e){return e.s+":"+(e.f===e.t?e.f:e.f+"–"+e.t)}
 function qLink(e){return "https://quran.com/"+e.s+"/"+(e.f===e.t?e.f:e.f+"-"+e.t)}
 function quranCard(d,ro,compact){
-  const e=QPLAN[qIndex()],done=!!d.quran,idx=qIndex()+1,su=SURAHS.find(x=>x.n===e.s);
+  const e=QPLAN[qIndex()],st=qState(qIndex()),done=st==="read",idx=qIndex()+1,su=SURAHS.find(x=>x.n===e.s),cnt=qCount();
   if(compact)return `<section class="card ${done?"":"accent"}">
-    <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} ${I("quranplan")}</p>${done?`<span class="pill green">${ic("check")} read</span>`:""}</div>
+    <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} ${I("quranplan")}</p>${st==="read"?`<span class="pill green">${ic("check")} read</span>`:st==="revisit"?`<span class="pill amber">${ic("flame")} revisit</span>`:""}</div>
     <h3>${esc(e.n)}</h3><p class="small muted">Surah ${e.s}${su?" "+esc(su.a):""}, verses ${esc(qRef(e).split(":")[1])}</p>
+    <div class="goalbar"><div class="bar"><i style="width:${(cnt/QPLAN.length*100).toFixed(0)}%"></i></div><div class="lbls"><span>${cnt} of ${QPLAN.length} readings</span><span>${(cnt/QPLAN.length*100).toFixed(0)}%</span></div></div>
+    ${qStateButtons(qIndex(),ro)}
     <div class="row"><a class="btn" href="${qLink(e)}" target="_blank" rel="noopener">Read the verses</a><button class="btn ghost" data-a="tab" data-v="learn">Summary and al-Mizan</button></div>
   </section>`;
   return `<section class="card ${done?"":"accent"}">
-    <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} · round ${qRound()} ${I("quranplan")}</p>${done?`<span class="pill green">${ic("check")} read</span>`:`<span class="pill grey">${qDone()} done</span>`}</div>
+    <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} · round ${qRound()} ${I("quranplan")}</p><span class="pill ${st==="read"?"green":st==="revisit"?"amber":"grey"}">${st==="read"?ic("check")+" read":st==="revisit"?ic("flame")+" revisit":cnt+" of "+QPLAN.length}</span></div>
     <h2>${esc(e.n)}</h2>
     <p class="small muted">Surah ${e.s}${su?" · "+esc(su.a)+" ("+esc(su.t)+")":""} · verses ${esc(qRef(e).split(":")[1])}${su?" · "+esc(su.p):""}</p>
     <div class="row"><a class="btn primary" href="${qLink(e)}" target="_blank" rel="noopener">${ic("book")} Read ${esc(qRef(e))} on Quran.com</a></div>
@@ -1464,10 +1486,26 @@ function quranCard(d,ro,compact){
     <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Where to find it in al-Mizan ${I("mizanvol")}</span>${ic("chev","chev")}</summary><div class="body">${mizanRefBlock(e,qIndex(),ro)}</div></details>
     <p class="small"><b>Tadabbur.</b> ${esc(e.q)}</p>
     <p class="small muted"><b>For Abbas and Eliyya.</b> ${esc(e.k)}</p>
-    ${ro?"":`<button class="btn ${done?"":"primary"} wide" data-a="qdone">${done?ic("check")+" Read and understood · undo":"I read it and understood it"}</button>`}
+    <p class="eyebrow">Record progress ${I("qprogress")}</p>
+    ${qStateButtons(qIndex(),ro)}
+    <div class="goalbar"><div class="bar"><i style="width:${(cnt/QPLAN.length*100).toFixed(0)}%"></i></div><div class="lbls"><span>${cnt} of ${QPLAN.length} readings</span><span>${Object.keys((S.qprog||{}).flag||{}).length} to revisit</span><span>${(cnt/QPLAN.length*100).toFixed(0)}%</span></div></div>
+    ${qGrid(ro)}
+    ${qBulk(ro)}
   </section>`;
 }
-function quranIndex(){const cur=qIndex();return `<details><summary><span>The ${QPLAN.length}-day course</span>${ic("chev","chev")}</summary><div class="body"><p class="small muted">One reading a day from your start date (${esc(qStart())}, change it in Settings). The course repeats; the second round is where understanding deepens.</p><div class="scroll"><table class="tbl"><tbody>${QPLAN.map((e,i)=>`<tr class="${i===cur?"today":""}"><td class="kcal">${i+1}</td><td><b>${esc(qRef(e))}</b> · ${esc(e.n)}<br><span class="small muted">English al-Mizan vol. ${(mizanVol(e.s,e.f)||{}).vol||"?"}${(S.qnotes||{})[String(i)]&&S.qnotes[String(i)].page?" · p. "+esc(S.qnotes[String(i)].page):""}</span></td></tr>`).join("")}</tbody></table></div></div></details>`}
+/* ---------- Quran course progress: one document quran/progress {done:{idx:date}, flag:{idx:true}} ---------- */
+function qState(i){const p=S.qprog||{};if((p.flag||{})[i])return "revisit";if((p.done||{})[i])return "read";for(const k in S.days){if(S.days[k].quran&&qIndex(k)===i)return "read"}return ""}
+function qSet(idxs,state){S.qprog=S.qprog||{};S.qprog.done=Object.assign({},S.qprog.done||{});S.qprog.flag=Object.assign({},S.qprog.flag||{});const t=todayStr();idxs.forEach(i=>{i=String(i);delete S.qprog.flag[i];if(state==="read"){S.qprog.done[i]=S.qprog.done[i]||t}else if(state==="revisit"){S.qprog.done[i]=S.qprog.done[i]||t;S.qprog.flag[i]=true}else{delete S.qprog.done[i]}if(Number(i)===qIndex()){const d=day(t);d.quran=state==="read";persistDay(t)}});persistQprog()}
+function qCount(){let n=0;for(let i=0;i<QPLAN.length;i++)if(qState(i))n++;return n}
+function qGrid(ro){const cur=qIndex();return `<div class="qgrid">${QPLAN.map((e,i)=>{const st=qState(i);return `<button class="qc ${st} ${i===cur?"cur":""}" ${ro?"disabled":""} data-a="qcell" data-i="${i}" title="${esc(qRef(e))} · ${esc(e.n)}" aria-label="Reading ${i+1}, ${st||"not read"}">${i+1}</button>`}).join("")}</div>
+  <div class="row" style="gap:10px;font-size:12px;color:var(--muted)"><span><i class="qk read"></i> read</span><span><i class="qk revisit"></i> revisit</span><span><i class="qk cur"></i> today</span><span><i class="qk"></i> not yet</span></div>`}
+function qStateButtons(i,ro){if(ro)return "";const st=qState(i);return `<div class="seg qstate"><button class="${st==="read"?"on":""}" data-a="qmark" data-i="${i}" data-s="read">${ic("check")} Read it</button><button class="${st==="revisit"?"on":""}" data-a="qmark" data-i="${i}" data-s="revisit">${ic("flame")} Read, revisit later</button><button class="${st===""?"on":""}" data-a="qmark" data-i="${i}" data-s="">Not yet</button></div>`}
+function qBulk(ro){if(ro)return "";const n=QPLAN.length;return `<details class="flat" style="box-shadow:none" data-qbulk ${S._qbulk?"open":""}><summary style="font-size:13px;padding:9px 0"><span>Bulk update</span>${ic("chev","chev")}</summary><div class="body">
+  <div class="form"><label class="f" style="flex:0 1 90px">From<input type="number" id="qb_from" min="1" max="${n}" value="1"></label><label class="f" style="flex:0 1 90px">To<input type="number" id="qb_to" min="1" max="${n}" value="${qIndex()+1}"></label><button class="btn" type="button" data-a="qbulk" data-s="read">Mark as read</button><button class="btn" type="button" data-a="qbulk" data-s="revisit">Mark to revisit</button><button class="btn ghost" type="button" data-a="qbulk" data-s="">Clear range</button></div>
+  <div class="row"><button class="btn" type="button" data-a="qbulkto">${ic("check")} Everything up to today as read</button><button class="btn ghost" type="button" data-a="qclear">Clear all progress</button></div>
+  <p class="small muted">Use this after reading ahead or catching up. Nothing here changes the daily rotation; the course still shows today's reading by date.</p></div></details>`}
+
+function quranIndex(){const cur=qIndex();return `<details><summary><span>The ${QPLAN.length}-day course</span>${ic("chev","chev")}</summary><div class="body"><p class="small muted">One reading a day from your start date (${esc(qStart())}, change it in Settings). The course repeats; the second round is where understanding deepens.</p><div class="scroll"><table class="tbl"><tbody>${QPLAN.map((e,i)=>`<tr class="${i===cur?"today":""}"><td class="kcal">${qState(i)==="read"?"✓":qState(i)==="revisit"?"↻":""} ${i+1}</td><td><b>${esc(qRef(e))}</b> · ${esc(e.n)}<br><span class="small muted">English al-Mizan vol. ${(mizanVol(e.s,e.f)||{}).vol||"?"}${(S.qnotes||{})[String(i)]&&S.qnotes[String(i)].page?" · p. "+esc(S.qnotes[String(i)].page):""}</span></td></tr>`).join("")}</tbody></table></div></div></details>`}
 
 function dayOfYear(d){d=d||new Date();const s=new Date(d.getFullYear(),0,1);return Math.floor((d-s)/864e5)}
 function pick(arr,off,back){const i=dayOfYear()-(back||0)+(off||0);return arr[((i%arr.length)+arr.length)%arr.length]}
@@ -1522,7 +1560,7 @@ function vLearn(){
   ${vReference()}`;
 }
 function wellbeingCard(d,ro){
-  const V=pick(VERSES);const body=doneCount(d)>=4,mind=!!((d.learn||{}).tafseer),heart=!!(d.mood&&d.grat),soul=!!(d.soul||d.quran),fam=!!d.circle;
+  const V=pick(VERSES);const body=doneCount(d)>=4,mind=!!((d.learn||{}).tafseer),heart=!!(d.mood&&d.grat),soul=!!(d.soul||d.quran||qState(qIndex())==="read"),fam=!!d.circle;
   const dim=(ok,label,icon)=>`<span class="pill ${ok?"green":"grey"}">${ic(icon)} ${label}</span>`;
   const MOODS=["Low","Meh","OK","Good","Great"];
   return `<section class="card">
@@ -1555,6 +1593,7 @@ function mealAction(a,b){
 }
 document.addEventListener("change",e=>{
   const t=e.target,d=S._medit;
+  if(t.id==="catchDate"){const v=t.value;if(v&&v<=todayStr()){S._catch=v;render()}return}
   if(t.id==="sleepH"&&isOwner&&!readOnly){const dd=day(todayStr());const v=parseFloat(t.value);if(v>=0&&v<=14)dd.sleep=v;else delete dd.sleep;persistDay(todayStr());toast("Sleep saved");return}
   if(t.id==="gratIn"&&isOwner&&!readOnly){const dd=day(todayStr());dd.grat=t.value.trim();persistDay(todayStr());if(dd.grat)toast("Alhamdulillah");render();return}
   if(t.dataset&&t.dataset.qn){if(readOnly)return;const i=String(t.dataset.i);S.qnotes[i]=Object.assign({i},S.qnotes[i]||{});S.qnotes[i][t.dataset.qn]=t.value.trim();persistQnote(i);toast("Reference saved");return}
@@ -1598,7 +1637,7 @@ function closeInfo(){document.getElementById("sheet").classList.remove("show");d
 document.getElementById("scrim").addEventListener("click",closeInfo);
 document.getElementById("sheetClose").addEventListener("click",closeInfo);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeInfo();return}if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[data-a]:not(button):not(input)")){e.preventDefault();e.target.click()}});
-document.addEventListener("toggle",e=>{const dt=e.target;if(dt.tagName==="DETAILS"&&dt.dataset.fid){S._fo=S._fo||{};S._fo[dt.dataset.fid]=dt.open}if(dt.tagName==="DETAILS"&&dt.dataset.mid){S._mopen=dt.open?dt.dataset.mid:(S._mopen===dt.dataset.mid?null:S._mopen)}},true);
+document.addEventListener("toggle",e=>{const dt=e.target;if(dt.tagName==="DETAILS"&&dt.hasAttribute("data-qbulk")){S._qbulk=dt.open}if(dt.tagName==="DETAILS"&&dt.dataset.fid){S._fo=S._fo||{};S._fo[dt.dataset.fid]=dt.open}if(dt.tagName==="DETAILS"&&dt.dataset.mid){S._mopen=dt.open?dt.dataset.mid:(S._mopen===dt.dataset.mid?null:S._mopen)}},true);
 document.addEventListener("input",e=>{if(e.target.id==="gq"){S._gq=e.target.value;document.getElementById("gres").innerHTML=glossaryList(S._gq)}});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
@@ -1609,7 +1648,7 @@ document.addEventListener("click",e=>{
   if(a==="ff"){S._ff=b.dataset.v;render();return}
   if(a==="lm"){S._lm=b.dataset.v;render();return}
   if(readOnly){toast("View only");return}
-  if(!isOwner&&["startfast","startfast930","cancelfast","endfast","dot","tog","mealstart","mealstop","ftimes","ftcancel","rfajr","mood","soul","qdone"].includes(a)){toast("Only Tafseer can change this");return}
+  if(!isOwner&&["startfast","startfast930","cancelfast","endfast","dot","tog","mealstart","mealstop","ftimes","ftcancel","rfajr","mood","soul","qmark","qcell","qbulk","qbulkto","qclear","habits_all","catch"].includes(a)){toast("Only Tafseer can change this");return}
   if(a==="ftimes"){S._ft=!S._ft;render();return}
   if(a==="rfajr"){const ft=fastingTimes(t);if(ft){S.fast={startedAt:ft.fajr.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fasting since Fajr "+fmtClock(ft.fajr));render()}return}
   if(a==="mealstart"){S._meal=Date.now();render();return}
@@ -1620,10 +1659,16 @@ document.addEventListener("click",e=>{
   if(a==="startfast930"){const d=new Date();d.setHours(21,30,0,0);if(d>new Date())d.setDate(d.getDate()-1);S.fast={startedAt:d.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Fast started from 9:30 PM");render();return}
   if(a==="cancelfast"){S.fast={startedAt:null,lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();render();return}
   if(a==="endfast"){const h=(Date.now()-new Date(S.fast.startedAt).getTime())/36e5;S.fast={startedAt:null,lastHours:Math.round(h*10)/10,lastEndedAt:new Date().toISOString()};persistFast();const d=day(t);d.fastH=Math.round(h*10)/10;persistDay(t);toast("Fast ended: "+h.toFixed(1)+" h");render();return}
-  if(a==="dot"){const d=day(t),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(t);render();return}
-  if(a==="tog"){const d=day(t);d[b.dataset.k]=!d[b.dataset.k];persistDay(t);render();return}
+  if(a==="dot"){const dd=b.dataset.d||t,d=day(dd),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(dd);render();return}
+  if(a==="tog"){const dd=b.dataset.d||t,d=day(dd);d[b.dataset.k]=!d[b.dataset.k];persistDay(dd);render();return}
   if(a==="mood"){const d=day(t);d.mood=Number(b.dataset.v);persistDay(t);render();return}
-  if(a==="qdone"){if(!isOwner){toast("Only Tafseer can mark this");return}const d=day(t);d.quran=!d.quran;persistDay(t);toast(d.quran?"Alhamdulillah · reading "+(qIndex()+1)+" done":"Undone");render();return}
+  if(a==="qmark"){qSet([Number(b.dataset.i)],b.dataset.s);toast(b.dataset.s==="read"?"Alhamdulillah":b.dataset.s==="revisit"?"Flagged to revisit":"Cleared");render();return}
+  if(a==="qcell"){const i=Number(b.dataset.i),st=qState(i);qSet([i],st===""?"read":st==="read"?"revisit":"");render();return}
+  if(a==="qbulk"){const f=Math.max(1,parseInt(document.getElementById("qb_from").value,10)||1),to=Math.min(QPLAN.length,parseInt(document.getElementById("qb_to").value,10)||1);if(to<f){toast("'To' must be after 'From'");return}const idxs=[];for(let i=f-1;i<to;i++)idxs.push(i);qSet(idxs,b.dataset.s);toast((to-f+1)+" readings "+(b.dataset.s||"cleared"));render();return}
+  if(a==="qbulkto"){const idxs=[];for(let i=0;i<=qIndex();i++)idxs.push(i);qSet(idxs,"read");toast((qIndex()+1)+" readings marked read");render();return}
+  if(a==="qclear"){if(S._qconfirm){S.qprog={done:{},flag:{}};Object.keys(S.days).forEach(k=>{if(S.days[k].quran){S.days[k].quran=false;persistDay(k)}});persistQprog();S._qconfirm=false;toast("Progress cleared");render()}else{S._qconfirm=true;toast("Tap again to confirm clearing all progress");setTimeout(()=>{S._qconfirm=false},4000)}return}
+  if(a==="habits_all"){const dd=b.dataset.d||t,d=day(dd);["starter","train","walk","steps","closed"].forEach(k=>d[k]=true);if((d.water||0)<4)d.water=4;if((d.palms||0)<4)d.palms=4;persistDay(dd);toast("All habits done · "+fmtDate(dd));render();return}
+  if(a==="catch"){S._catch=S._catch?null:todayStr(new Date(Date.now()-864e5));render();return}
   if(a==="soul"){const d=day(t);d.soul=!d.soul;persistDay(t);render();return}
   if(a==="delw"){removeWeigh(b.dataset.d);toast("Removed");render();return}
   if(a==="fedit"){S._fedit=b.dataset.id;S._fo=S._fo||{};S._fo[b.dataset.id]=true;render();return}
