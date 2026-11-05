@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdtemp } from "node:fs/promises";
 import path from "node:path"; import os from "node:os"; import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 // A pre-installed Chromium can be pointed at with ONEPLATE_CHROMIUM (the cloud sandbox ships one at /opt/pw-browsers/chromium); CI installs Playwright's own.
 const executablePath = process.env.ONEPLATE_CHROMIUM || (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -97,6 +98,21 @@ test("scan: a result renders in hand portions, adjusts, and saves as tonight's p
   const pantry = await page.evaluate(() => { S._scan = { mode: "pantry", result: normalizeScan("pantry", { ingredients: ["eggs", "palak", "atta"], plates: [{ name: "Palak anda", why: "cheap", missing: ["tomato"], items: [{ food: "egg", qty: 2 }, { food: "palak", qty: 2 }, { food: "roti", qty: 1 }] }, { name: "Egg bhurji", items: [{ food: "egg", qty: 3 }, { food: "salad", qty: 1 }] }] }) }; render(); return document.querySelectorAll(".scanplate").length; }); assert.equal(pantry, 2);
   assert.match(await page.$eval(".card.accent", e => e.textContent), /At home:[\s\S]*eggs, palak, atta[\s\S]*To buy:[\s\S]*tomato/);
   await page.evaluate(() => { S._scan = null; render(); });
+});
+test("tarbiyah: week card, library and a lecture's sections from the fetched file", async () => {
+  await page.evaluate(() => { tab = "tarbiyah"; S._tl = null; render(); });
+  assert.equal(await page.$$eval("#tabs button", b => b.length), 7); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 402);
+  assert.equal(await page.$$eval(".tbrow", r => r.length), 16); assert.match(await page.$eval(".card.accent h2", e => e.textContent), /\S{3,}/); assert.ok(await page.$('[data-a="tb_done"][data-m="tafseer"]'));
+  const file = JSON.parse(readFileSync(path.join(root, "apps/web/public/tarbiyah/lecture-02.json"), "utf8")); await page.evaluate(f => { TB_CACHE["02"] = f; }, file);
+  await page.click('.tbrow[data-n="2"]'); await page.waitForTimeout(100); assert.match(await page.$eval(".hdr h1", e => e.textContent), /Founding Principles/);
+  const secs = ["outline", "takeaways", "verses", "narrations", "actions", "questions", "activities", "memo", "nuggets", "corrections", "journal"]; for (const sct of secs) { await page.click(`[data-a="tb_sec"][data-s="${sct}"]`); const n = await page.$eval(".tbbody", e => e.textContent.trim().length); assert.ok(n > 200, sct + " " + n); }
+  await page.click('[data-a="tb_sec"][data-s="outline"]'); assert.match(await page.$eval(".tboutline a", e => e.getAttribute("href")), /youtube\.com\/watch\?v=4UqbGXdlz10&t=\d+s/);
+  await page.click('[data-a="tb_sec"][data-s="narrations"]'); assert.ok((await page.$$(".tbbody .pill")).length >= 10);
+  await page.click('[data-a="tb_mark"][data-n="2"][data-m="tafseer"][data-k="w"]'); assert.equal(await page.evaluate(() => tbState(2, "tafseer").w), true); assert.ok(await page.evaluate(() => tbState(2, "tafseer").wAt));
+  await page.click('[data-a="tb_sec"][data-s="journal"]'); await page.fill('textarea[data-tbnote="2"][data-m="tafseer"]', "Salaam first."); await page.$eval('textarea[data-tbnote="2"][data-m="tafseer"]', e => e.dispatchEvent(new Event("change", { bubbles: true }))); assert.equal(await page.evaluate(() => tbProg().notes["2"].tafseer), "Salaam first.");
+  const html = await page.evaluate(() => md2html("# T\n\nA **bold** and *it* [12:30]\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n> q\n\n- x\n- y\n\n1. one")); assert.match(html, /<h2>T<\/h2>[\s\S]*<b>bold<\/b>[\s\S]*<i>it<\/i>[\s\S]*<table[\s\S]*<blockquote>[\s\S]*<ul>[\s\S]*<ol>/);
+  await page.click('[data-a="tb_back"]'); await page.click('[data-a="tb_done"][data-m="tafseer"]'); assert.equal(await page.evaluate(() => !!S.days[logDate()].tarbiyah.tafseer), true);
+  await page.evaluate(() => { S._tl = null; tab = "today"; render(); });
 });
 test("appearance cycles auto, light, dark and is remembered per device", async () => {
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);

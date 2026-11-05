@@ -72,7 +72,7 @@ function vLearn(){
   ${vReference()}`;
 }
 function wellbeingCard(d,ro){
-  const V=pick(VERSES);const body=doneCount(d)>=4,mind=!!((d.learn||{}).tafseer),heart=!!(d.mood&&d.grat),soul=!!(d.soul||d.quran||qState(qIndex())==="read"),fam=!!d.circle;
+  const V=pick(VERSES);const body=doneCount(d)>=4,mind=!!((d.learn||{}).tafseer),heart=!!(d.mood&&d.grat),soul=!!(d.soul||d.quran||qState(qIndex())==="read"),fam=!!(d.circle||(d.tarbiyah&&Object.values(d.tarbiyah).some(Boolean)));
   const dim=(ok,label,icon)=>`<span class="pill ${ok?"green":"grey"}">${ic(icon)} ${label}</span>`;
   const MOODS=["Low","Meh","OK","Good","Great"];
   return `<section class="card">

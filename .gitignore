@@ -5,3 +5,4 @@ dist/
 .env.local
 coverage/
 infra/data/
+apps/web/public/tarbiyah/

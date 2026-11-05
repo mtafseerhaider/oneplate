@@ -75,6 +75,13 @@ Done in this commit:
 - UI on the Plate tab: capture, shrink to 1280 px, result with +/− per item, verdict and suggestions, set as tonight's plate or save to meals; kitchen mode lists ingredients and proposes plates with a short shopping list.
 - Tests: core prompt and normalisation (4), API route with an injected scanner, browser flow from result to saved tonight's plate.
 
+## Phase 8: Tarbiyah
+Done in this commit:
+- A Tarbiyah tab between Plate and Family, built from the sixteen audited lecture analyses in `docs/tarbiyah`. The build script parses the seventeen-section format into a bundled index (thesis, outline with timestamps, top ten, principles, daily practices, questions, activity titles, corrections) and per-lecture files fetched when a lecture is opened (every section, with a small markdown renderer in the app); the full analyses and the series corrections sheet ship alongside.
+- Weekly lecture by start date, a daily card drawn from it, per-parent watched/read/done marks and shared notes in one `tarbiyah/progress` document that both parents may write; the day's tarbiyah mark counts toward the Family dimension on Today.
+- Narrations carry their gradings; the series corrections sheet is surfaced as "before you repeat anything".
+- Tests: content index coverage, API policy for both parents, browser flow through every section of a lecture and the markdown renderer.
+
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.
 - No change to a domain rule without a test.

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import path from "node:path"; import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url)); const root = path.resolve(here, "../../.."); const out = path.resolve(here, "../dist");
 // Assemble the single-file app from apps/web/src first, so the PWA always reflects the sources.
+await import(path.join(root, "scripts/build-tarbiyah.mjs"));
 await import(path.join(root, "scripts/build-app.mjs"));
 const body = await readFile(path.join(root, "app/index.html"), "utf8");
 const wa = await readFile(path.resolve(here, "../node_modules/@simplewebauthn/browser/dist/bundle/index.umd.min.js"), "utf8").catch(() => "");

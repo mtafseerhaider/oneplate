@@ -14,3 +14,4 @@ export * from "./surah-index.js";
 export * from "./reviews.js";
 export * from "./course-v2-keys.js";
 export * from "./depth.js";
+export * from "./tarbiyah.js";

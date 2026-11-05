@@ -158,6 +158,11 @@ describe("OnePlate API", () => {
     const st2 = await fake.inject({ method: "GET", url: "/scan/status" }); expect(st2.json().available).toBe(true);
     const log = await db.query("select count(*)::int as n from audit_events where action='scan'"); expect(log.rows[0].n).toBe(1); await fake.close();
   });
+  it("lets both parents keep tarbiyah progress", async () => {
+    const w = await app.inject({ method: "PUT", url: `/households/${hid}/docs/tarbiyah/progress`, headers: { cookie: wife }, payload: { body: { lectures: { "1": { uzma: { w: true } } }, notes: {} } } }); expect(w.statusCode).toBe(200);
+    const cur = await app.inject({ method: "GET", url: `/households/${hid}/docs/days/2026-11-04`, headers: { cookie: owner } }); const body = Object.assign({}, cur.json().body, { tarbiyah: { uzma: true } });
+    const d = await app.inject({ method: "PUT", url: `/households/${hid}/docs/days/2026-11-04`, headers: { cookie: wife }, payload: { body, ifVersion: cur.json().version } }); expect(d.statusCode).toBe(200);
+  });
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
     expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);

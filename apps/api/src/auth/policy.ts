@@ -8,10 +8,10 @@ export function canWrite(actor: Actor, collection: string, docId: string, body: 
   if (actor.level === "owner") return true;
   if (actor.level === "viewer") return false;
   if (OWNER_ONLY_COLLECTIONS.has(collection)) return false;
-  if (collection === "meals") return true;
+  if (collection === "meals" || collection === "tarbiyah") return true;
   if (collection === "family") return docId !== "tafseer" && docId !== "owner";
   if (collection === "weighins") { const m = body?.m ?? existing?.m; return !!m && m !== "tafseer"; }
-  if (collection === "days") { if (!existing) return true; const changed = Object.keys(body).filter(k => JSON.stringify(body[k]) !== JSON.stringify(existing[k])); return changed.every(k => ["journal", "learn", "circle", "meal", "date"].includes(k)); }
+  if (collection === "days") { if (!existing) return true; const changed = Object.keys(body).filter(k => JSON.stringify(body[k]) !== JSON.stringify(existing[k])); return changed.every(k => ["journal", "learn", "circle", "meal", "date", "tarbiyah"].includes(k)); }
   return false;
 }
 /** Children are never restricted: reject weight targets on child members at the boundary too. */

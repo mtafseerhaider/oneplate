@@ -22,5 +22,10 @@ describe("content libraries", () => {
     }
     const words = Object.values(C.DEPTH).flatMap(m => Object.values(m)).flatMap(d => d.sections.flatMap(s => [...(s.p ?? []), ...(s.l ?? [])])).join(" ").split(/\s+/).length; expect(words).toBeGreaterThan(30000);
   });
+  it("tarbiyah index covers all sixteen lectures with every part the tab needs", () => {
+    expect(C.TARBIYAH.length).toBe(16); expect(C.TARBIYAH_SERIES.parts).toBe(16); expect(C.TARBIYAH_NO_REPEAT.length).toBeGreaterThanOrEqual(15);
+    for (const [i, l] of C.TARBIYAH.entries()) { expect(l.n).toBe(i + 1); expect(l.video).toMatch(/^[\w-]{11}$/); expect(l.minutes).toBeGreaterThan(20); expect(l.thesis.length).toBeGreaterThan(80); expect(l.topics.length).toBeGreaterThanOrEqual(6); expect(l.topics.filter(t => t.a != null).length).toBeGreaterThanOrEqual(5); expect(l.takeaways.length).toBe(10); expect(l.practices.length).toBeGreaterThanOrEqual(5); expect(l.questions.parent.length).toBe(3); expect(l.questions.spouse.length).toBe(3); expect(l.questions.family.length).toBe(3); expect(l.activities.abbas.length).toBeGreaterThanOrEqual(5); expect(l.activities.eliyya.length).toBeGreaterThanOrEqual(6); expect(l.nuggets.length).toBe(4); expect(l.corrections.length).toBeGreaterThanOrEqual(3); expect(l.principles.length).toBeGreaterThanOrEqual(3); expect(l.counts.narrations).toBeGreaterThanOrEqual(7); }
+    expect(C.TARBIYAH_NO_REPEAT.some(r => /Tabuk/.test(r.claim) && r.parts.includes(13))).toBe(true);
+  });
   it("verse references are well-formed", () => { for (const v of C.VERSES) expect(v.r).toMatch(/^\d{1,3}:\d{1,3}(–\d{1,3})?$/); });
 });

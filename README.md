@@ -52,6 +52,12 @@ Install it like an app: on Android, Chrome's menu → Install app (or the Instal
 
 The claude.ai artifact cannot do this: its database is only readable by people signed in to claude.ai whom the owner has shared it with, so a link that opens on a date of birth alone has to come from your own hosted copy.
 
+## Tarbiyah
+
+A dedicated tab for raising the children, built from `docs/tarbiyah`: sixteen analysis documents of Shaykh Usama Abdulghani's series *Raising Our Children as God Intended* (Light of Guidance), each audited against al-Kafi with al-Majlisi's and Behbudi's gradings, al-Mizan, Majma' al-Bayan, Nahj al-Balagha and the Sunni corpus. One lecture a week from the start date in Settings. The weekly card gives the thesis, the video, and watched, read and done marks for each parent. The daily card draws from that week's lecture a practice, a line worth carrying with a link into the video at its timestamp, a question for the couple, one for the table, and an activity each for Abbas and Eliyya. Opening a lecture gives the summary, the outline linked to the video by topic, the top ten, the verses with al-Mizan's reading, every narration with its grading, the action guide, the questions, the activities, the memorisation sheet, the golden lines, the corrections, a shared journal, and the full analysis. A "before you repeat anything" card carries the series corrections sheet: the stories and sayings found fabricated, misattributed or unlocated, never to be passed to the children as hadith.
+
+`scripts/build-tarbiyah.mjs` generates the bundled index (`packages/content/src/tarbiyah.ts`) and the per-lecture files the app fetches on demand (`apps/web/public/tarbiyah/`, not committed); CI checks the index is current. Drop new analyses into `docs/tarbiyah/lectures` in the same seventeen-section format and rerun it.
+
 ## Scan a plate, or the kitchen
 
 On the Plate tab, **Scan the plate** photographs tonight's plate and reads it: each food, its hand portion, calories and protein, matched to OnePlate's own food list where it can and estimated where it cannot, then judged against the plan (protein first, vegetables, one carb, measured fat) with two or three concrete changes. Adjust any amount with + and −, then set it as tonight's plate or save it to your meals; family portions and cook quantities follow from it. **Scan the kitchen** photographs the fridge or the shelf instead and proposes up to three plates from what is already at home, naming at most two cheap things to buy. Photos are shrunk on the phone and never stored.

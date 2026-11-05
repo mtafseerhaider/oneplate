@@ -23,6 +23,7 @@ document.addEventListener("change",e=>{
   if(t.id==="gratIn"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);dd.grat=t.value.trim();persistDay(ld);if(dd.grat)toast("Alhamdulillah");render();return}
   if(t.dataset&&t.dataset.qn){if(readOnly)return;const k=String(t.dataset.k);S.qnotes[k]=Object.assign({i:k},S.qnotes[k]||{});S.qnotes[k][t.dataset.qn]=t.value.trim();persistQnote(k);toast("Reference saved");return}
   if(t.id==="qsurah"){S._qsurah=Number(t.value);render();return}
+  if(t.dataset&&t.dataset.tbnote){const m=t.dataset.m;if(!canWriteFor(m))return;const p=tbProg();p.notes[t.dataset.tbnote]=Object.assign({},p.notes[t.dataset.tbnote]||{});p.notes[t.dataset.tbnote][m]=t.value.trim();persistTbprog();toast("Notes saved");return}
   if(t.id==="rq_kind"||t.id==="rq_st"){S._rq=Object.assign({st:"draft",kind:"close"},S._rq||{});S._rq[t.id==="rq_kind"?"kind":"st"]=t.value;S._rv=null;render();return}
   if(t.dataset&&t.dataset.j){const m=t.dataset.m;if(!canWriteFor(m))return;const ld=logDate(),dd=day(ld);dd.journal=Object.assign({},dd.journal||{});dd.journal[m]=Object.assign({},dd.journal[m]||{});dd.journal[m][t.dataset.j]=t.value.trim();persistDay(ld);toast("Journal saved · "+fmtDate(ld));return}
   if(t.id==="me_tag"&&d){d.tag=t.value;return}
@@ -35,14 +36,14 @@ document.addEventListener("input",e=>{
   if(t.dataset&&t.dataset.me==="qty"&&d){const i=Number(t.dataset.i);if(d.items[i]){d.items[i].q=Math.max(0,Math.min(12,parseFloat(t.value)||0));refreshTotals()}}
 });
 
-const VIEWS={today:vToday,plate:vPlate,family:vFamily,train:vTrain,progress:vProgress,learn:vLearn};
-const TAB_ICON={today:"clock",plate:"plate",family:"family",train:"bike",progress:"trend",learn:"book"};
+const VIEWS={today:vToday,plate:vPlate,tarbiyah:vTarbiyah,family:vFamily,train:vTrain,progress:vProgress,learn:vLearn};
+const TAB_ICON={today:"clock",plate:"plate",tarbiyah:"sprout",family:"family",train:"bike",progress:"trend",learn:"book"};
 function render(){
   const v=document.getElementById("view");
   const scroll=v.parentElement.scrollTop;
   v.innerHTML=VIEWS[tab]();
   v.parentElement.scrollTop=scroll;
-  document.getElementById("tabs").innerHTML=["today","plate","family","train","progress","learn"].map(k=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}" aria-label="${k}" aria-current="${k===tab?"page":"false"}"><span class="ib">${ic(TAB_ICON[k])}</span>${tr(k[0].toUpperCase()+k.slice(1))}</button>`).join("");
+  document.getElementById("tabs").innerHTML=["today","plate","tarbiyah","family","train","progress","learn"].map(k=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}" aria-label="${k}" aria-current="${k===tab?"page":"false"}"><span class="ib">${ic(TAB_ICON[k])}</span>${tr(k[0].toUpperCase()+k.slice(1))}</button>`).join("");
   tick();
 }
 function tick(){
@@ -92,6 +93,13 @@ document.addEventListener("click",e=>{
   if(a==="dot"){const dd=b.dataset.d||t,d=day(dd),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(dd);render();return}
   if(a==="tog"){const dd=b.dataset.d||t,d=day(dd);d[b.dataset.k]=!d[b.dataset.k];persistDay(dd);render();return}
   if(a==="mood"){const d=day(t);d.mood=Number(b.dataset.v);persistDay(t);render();return}
+  if(a==="tb_open"){S._tl=Number(b.dataset.n);S._ts=b.dataset.s||(S._tl===Number(S._tlLast)?S._ts:"summary");S._tlLast=S._tl;S._tbErr=null;S._tbErr2=null;tab="tarbiyah";render();document.querySelector(".main")&&document.querySelector(".main").scrollTo(0,0);return}
+  if(a==="tb_back"){S._tl=null;render();return}
+  if(a==="tb_sec"){S._ts=b.dataset.s;render();return}
+  if(a==="tb_mark"){const m=b.dataset.m;if(!canWriteFor(m)){toast("Only "+((member(m)||{}).name||m)+" or the owner can mark this");return}tbSet(Number(b.dataset.n),m,b.dataset.k);render();return}
+  if(a==="tb_done"){const m=b.dataset.m;if(!canWriteFor(m)){toast("Only the owner can do that");return}const d=day(t);d.tarbiyah=Object.assign({},d.tarbiyah||{});d.tarbiyah[m]=!d.tarbiyah[m];persistDay(t);render();return}
+  if(a==="tb_full"){S._tbFull=b.dataset.f;tbFetchText(b.dataset.f).then(txt=>{document.getElementById("sheetTitle").textContent="Series corrections";document.getElementById("sheetBody").innerHTML='<div class="md full">'+md2html(txt)+'</div>';document.getElementById("sheet").classList.add("show");document.getElementById("scrim").classList.add("show")}).catch(e=>toast(e.message));return}
+  if(a==="tb_copy"||a==="tb_share"){const L=TARBIYAH.find(l=>l.n===Number(b.dataset.n));if(!L)return;const text=tbShareText(L);if(a==="tb_share"&&navigator.share){navigator.share({title:"Tarbiyah · "+L.title,text}).catch(()=>{});return}copyText(text).then(ok=>{if(ok)toast(tr("Copied"))});return}
   if(a==="scan_pick"){if(SCAN.ok===false){toast(SCAN.why||"Scanning is not set up");return}const inp=document.getElementById("scanFile");if(!inp)return;inp.dataset.mode=b.dataset.mode;inp.value="";inp.click();return}
   if(a==="scan_reset"){S._scan=null;render();return}
   if(a==="scan_qty"||a==="scan_del"){const pl=scanPlates()[Number(b.dataset.pi)];if(!pl)return;const i=Number(b.dataset.i);if(a==="scan_del")pl.items.splice(i,1);else{pl.items[i].q=Math.max(0.25,Math.min(12,Math.round((pl.items[i].q+Number(b.dataset.d))*4)/4))}rescan(pl);render();return}
@@ -144,7 +152,7 @@ document.addEventListener("submit",e=>{
   if(e.target.classList&&e.target.classList.contains("grow-form")){e.preventDefault();const id=e.target.dataset.m;const g=k=>{const el=e.target.querySelector(`[data-k="${k}"]`);return el?el.value:""};const date=g("date"),kg=parseFloat(g("weight")),h=parseFloat(g("height")),wc=parseFloat(g("waist"));if(!date||!(kg>0))return;const key=id==="tafseer"?date:id+"-"+date;const r={date,weight:Math.round(kg*10)/10};if(id!=="tafseer")r.m=id;if(h>0)r.height=Math.round(h*2)/2;if(wc>0)r.waist=Math.round(wc*2)/2;S.weighins[key]=r;persistWeigh(key);S._fo=S._fo||{};S._fo[id]=true;toast("Logged "+kg.toFixed(1)+" kg");render();return}
   if(e.target.id==="fform"){e.preventDefault();const sv=document.getElementById("f_start").value,ev=document.getElementById("f_end").value;if(!sv)return;const st=new Date(sv);if(isNaN(st))return;if(ev){const en=new Date(ev);if(isNaN(en)||en<=st){toast("End must be after start");return}const h=(en-st)/36e5;if(h>72){toast("That is longer than 72 h; check the dates");return}S.fast={startedAt:null,lastHours:Math.round(h*10)/10,lastEndedAt:en.toISOString()};persistFast();const k=todayStr(en),dd=day(k);dd.fastH=Math.round(h*10)/10;persistDay(k);toast("Logged "+h.toFixed(1)+" h fast")}else{if(st>new Date()){toast("Start is in the future");return}S.fast={startedAt:st.toISOString(),lastHours:S.fast.lastHours||null,lastEndedAt:S.fast.lastEndedAt||null};persistFast();toast("Start time set")}S._ft=false;render();return}
   if(e.target.id==="wform"){e.preventDefault();const d=document.getElementById("wdate").value,kg=parseFloat(document.getElementById("wkg").value),cm=parseFloat(document.getElementById("wcm").value);if(!d||!(kg>0))return;const r={date:d,weight:Math.round(kg*10)/10};if(cm>0)r.waist=Math.round(cm*2)/2;S.weighins[d]=r;persistWeigh(d);toast("Saved "+kg.toFixed(1)+" kg"+(strengthOn()?" · strength unlocked!":""));render()}
-  if(e.target.id==="sform"){e.preventDefault();const sw=parseFloat(document.getElementById("s_sw").value),tw=parseFloat(document.getElementById("s_tw").value),sd=document.getElementById("s_sd").value,fh=parseInt(document.getElementById("s_fh").value,10),uk=parseFloat(document.getElementById("s_uk").value);if(sw>0)S.settings.startWeight=sw;if(tw>0)S.settings.targetWeight=tw;if(sd)S.settings.startDate=sd;if(fh>=14&&fh<=24)S.settings.fastHours=fh;if(uk>0)S.settings.unlockKg=uk;const cty=document.getElementById("s_city"),ram=document.getElementById("s_ram"),hoff=document.getElementById("s_hoff"),trad=document.getElementById("s_trad");const th=document.getElementById("s_theme");if(th&&th.value!==THEME)setTheme(th.value);const qs=document.getElementById("s_qs");if(qs&&qs.value)S.settings.quranStart=qs.value;if(cty&&CITIES[cty.value])S.settings.city=cty.value;if(ram)S.settings.ramadan=ram.value;if(hoff)S.settings.hijriOffset=Number(hoff.value);if(trad)S.settings.tradition=trad.value;persistSettings();toast("Settings saved");render()}
+  if(e.target.id==="sform"){e.preventDefault();const sw=parseFloat(document.getElementById("s_sw").value),tw=parseFloat(document.getElementById("s_tw").value),sd=document.getElementById("s_sd").value,fh=parseInt(document.getElementById("s_fh").value,10),uk=parseFloat(document.getElementById("s_uk").value);if(sw>0)S.settings.startWeight=sw;if(tw>0)S.settings.targetWeight=tw;if(sd)S.settings.startDate=sd;if(fh>=14&&fh<=24)S.settings.fastHours=fh;if(uk>0)S.settings.unlockKg=uk;const cty=document.getElementById("s_city"),ram=document.getElementById("s_ram"),hoff=document.getElementById("s_hoff"),trad=document.getElementById("s_trad");const tbs=document.getElementById("s_tbs");if(tbs&&tbs.value)S.settings.tarbiyahStart=tbs.value;const th=document.getElementById("s_theme");if(th&&th.value!==THEME)setTheme(th.value);const qs=document.getElementById("s_qs");if(qs&&qs.value)S.settings.quranStart=qs.value;if(cty&&CITIES[cty.value])S.settings.city=cty.value;if(ram)S.settings.ramadan=ram.value;if(hoff)S.settings.hijriOffset=Number(hoff.value);if(trad)S.settings.tradition=trad.value;persistSettings();toast("Settings saved");render()}
 });
 window.addEventListener("hashchange",()=>{let h=location.hash.slice(1);if(h==="guide")h="learn";if(VIEWS[h]&&h!==tab){tab=h;render()}});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});

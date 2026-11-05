@@ -285,6 +285,7 @@ function vProgress(){
       <label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>
       <label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>
       <label class="f">Quran course start date<input type="date" id="s_qs" value="${st.quranStart||st.startDate}"></label>
+      <label class="f">Tarbiyah course start date<input type="date" id="s_tbs" value="${st.tarbiyahStart||st.startDate}"></label>
       <label class="f">${tr("Appearance")} ${I("appearance")}<select id="s_theme">${THEMES_UI.map(([v,l])=>`<option value="${v}" ${THEME===v?"selected":""}>${tr(l)}${v==="auto"?" · "+tr("follows the device"):""}</option>`).join("")}</select></label>
       <label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
       <label class="f">Ramadan mode<select id="s_ram">${[["auto","Auto (by Hijri date)"],["on","On"],["off","Off"]].map(o=>`<option value="${o[0]}" ${(st.ramadan||"auto")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>

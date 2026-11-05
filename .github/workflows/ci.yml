@@ -17,6 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install
+      - run: node scripts/build-tarbiyah.mjs --check
       - run: node scripts/build-app.mjs --check
       - run: pnpm -r --filter @oneplate/content --filter @oneplate/core --filter @oneplate/api build
       - run: pnpm typecheck

@@ -1,11 +1,11 @@
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{},qprog:{done:{},flag:{}},reviews:{}};
+let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{},qprog:{done:{},flag:{}},reviews:{},tbprog:{lectures:{},notes:{}}};
 let canReview=false;
 let db=null,syncState="wait",readOnly=false,isOwner=true,tab=(location.hash||"#today").slice(1);
-if(tab==="guide")tab="learn";if(!["today","plate","family","train","progress","learn"].includes(tab))tab="today";
+if(tab==="guide")tab="learn";if(!["today","plate","tarbiyah","family","train","progress","learn"].includes(tab))tab="today";
 function todayStr(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
-function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{};S.qnotes=j.qnotes||{};S.qprog=j.qprog||{done:{},flag:{}};S.reviews=j.reviews||{};migrateCourse(false)}}catch(e){}}
+function loadLocal(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.settings=Object.assign(S.settings,j.settings||{});S.fast=Object.assign(S.fast,j.fast||{});S.days=j.days||{};S.weighins=j.weighins||{};S.meals=j.meals||{};S.family=j.family||{};S.qnotes=j.qnotes||{};S.qprog=j.qprog||{done:{},flag:{}};S.reviews=j.reviews||{};S.tbprog=j.tbprog||{lectures:{},notes:{}};migrateCourse(false)}}catch(e){}}
 function saveLocal(){if(readOnly)return;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const queues={};
 function dbWrite(path,data){ if(!db||readOnly)return; const run=()=>db.doc(path).set(data).catch(e=>{console.warn("db set",path,e);if(e&&e.code==="invalid_argument"){readOnly=true;setChip();render();toast("View only")}else if(e&&e.code==="conflict"){toast("Changed on another device · refreshed");render()}else toast("Could not sync")}); queues[path]=(queues[path]||Promise.resolve()).then(run); }
@@ -34,6 +34,7 @@ function persistReview(key,body){
   dbWrite("reviews/all",S.reviews);return Promise.resolve();
 }
 function persistQprog(){saveLocal();dbWrite("quran/progress",S.qprog)}
+function persistTbprog(){saveLocal();dbWrite("tarbiyah/progress",S.tbprog)}
 function removeMeal(id){delete S.meals[id];saveLocal();dbDelete("meals/"+id)}
 function setChip(){const c=document.getElementById("syncChip");const fam=!readOnly&&!isOwner;const k=readOnly?"viewonly":fam?"familyeditor":syncState==="db"?"sync":syncState==="local"?"local":null;c.className="chip "+(readOnly?"view":fam?"view":syncState==="db"?"":syncState==="local"?"local":"wait");c.innerHTML=tr(readOnly?"View only":fam?"Family editor":syncState==="db"?"Synced":syncState==="local"?"This device only":"Loading")+(k?" "+I(k):"");const lb=document.getElementById("langBtn");if(lb)lb.textContent=LANG==="ur"?"EN":"اردو"}
 
@@ -50,6 +51,7 @@ async function connect(){
   let qp=false,qn=false; const maybeMigrate=()=>{ if(qp&&qn)migrateCourse(true); };
   db.doc("quran/progress").onSnapshot(sn=>{ if(sn.exists)S.qprog=Object.assign({done:{},flag:{}},sn.data()); qp=true; maybeMigrate(); saveLocal(); ready(); },err);
   db.collection("qnotes").limit(400).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.qnotes=o;saveLocal()} qn=true; maybeMigrate(); ready(); },err);
+  db.doc("tarbiyah/progress").onSnapshot(sn=>{ if(sn.exists)S.tbprog=Object.assign({lectures:{},notes:{}},sn.data()); saveLocal(); render(); },e=>console.warn("tarbiyah",e));
   if(typeof window.oneplate==="object"){ window.oneplate.reviews().then(r=>{ S.reviews=r.reviews||{}; canReview=!!r.canReview; saveLocal(); render(); }).catch(e=>console.warn("reviews",e)); }
   else { canReview=isOwner&&!readOnly; db.doc("reviews/all").onSnapshot(sn=>{ if(sn.exists)S.reviews=sn.data()||{}; saveLocal(); render(); },e=>console.warn("reviews",e)); }
   db.collection("family").limit(20).onSnapshot(q=>{ if(!q.metadata.fromCache||q.size){const o={};q.docs.forEach(d=>{o[d.id]=d.data()});S.family=o;saveLocal()} ready(); },err);

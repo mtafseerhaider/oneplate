@@ -5,6 +5,7 @@ RUN corepack enable
 WORKDIR /repo
 COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
 COPY scripts ./scripts
+COPY docs/tarbiyah ./docs/tarbiyah
 COPY app ./app
 COPY packages ./packages
 COPY apps/api ./apps/api
