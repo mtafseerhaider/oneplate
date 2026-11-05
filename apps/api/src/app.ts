@@ -19,7 +19,7 @@ import { registerPasskeyRoutes } from "./auth/passkeys.js";
 import { registerOpsRoutes, createErrorReporter } from "./ops.js";
 import { registerIntegrationRoutes } from "./integrations.js";
 import { registerScanRoutes, type Scanner } from "./scan.js";
-import { memberIdFor } from "@oneplate/core";
+import { memberIdFor, isGoal } from "@oneplate/core";
 
 declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string; ownerMemberId?: string } }
 
@@ -49,14 +49,14 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const r = await db.query<{ user_id: string }>("select user_id from sessions where id=$1 and expires_at>now()", [sid]); if (r.rowCount) req.userId = r.rows[0]!.user_id;
   });
   const setSession = async (reply: any, userId: string, ua?: string) => { const id = newSessionId(); const exp = new Date(Date.now() + cfg.SESSION_DAYS * 864e5); await db.query("insert into sessions(id,user_id,expires_at,user_agent) values($1,$2,$3,$4)", [id, userId, exp, ua ?? null]); reply.setCookie(COOKIE, id, { httpOnly: true, sameSite: "lax", secure: cfg.COOKIE_SECURE, path: "/", expires: exp }); };
-  const Creds = z.object({ email: z.string().email().max(200), password: z.string().min(8).max(200), displayName: z.string().min(1).max(60).optional(), code: z.string().max(80).optional(), householdName: z.string().max(80).optional() });
+  const Creds = z.object({ email: z.string().email().max(200), password: z.string().min(8).max(200), displayName: z.string().min(1).max(60).optional(), code: z.string().max(80).optional(), householdName: z.string().max(80).optional(), goals: z.array(z.string()).max(6).optional() });
   /** The owner's family record and the household's settings, so a new household opens with its owner on the Family tab. */
-  const seedHousehold = async (c: any, hid: string, userId: string, memberId: string, name: string) => {
+  const seedHousehold = async (c: any, hid: string, userId: string, memberId: string, name: string, goals: string[] = []) => {
     await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,'family',$2,$3,1,$4) on conflict do nothing", [hid, memberId, JSON.stringify({ id: memberId, name, rel: "me", role: "adult", sex: "male", goal: "fat_loss" }), userId]);
-    await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,'settings','main',$2,1,$3) on conflict do nothing", [hid, JSON.stringify({ ownerMember: memberId, startWeight: null, targetWeight: null, startDate: new Date().toISOString().slice(0, 10), fastHours: 21, unlockKg: 5, city: "karachi", hijriOffset: 0, ramadan: "auto", tradition: "sunni" }), userId]);
+    await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,'settings','main',$2,1,$3) on conflict do nothing", [hid, JSON.stringify({ ownerMember: memberId, goals: goals.filter(isGoal), startWeight: null, targetWeight: null, startDate: new Date().toISOString().slice(0, 10), fastHours: 21, unlockKg: 5, city: "karachi", hijriOffset: 0, ramadan: "auto", tradition: "sunni" }), userId]);
   };
-  const createHousehold = async (userId: string, name: string, memberId: string, ownerName: string): Promise<string> => {
-    const c = await db.connect(); try { await c.query("begin"); const h = await c.query<{ id: string }>("insert into households(name,owner_user_id,scan_quota) values($1,$2,$3) returning id", [name, userId, cfg.SCAN_QUOTA_DEFAULT]); await c.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,'owner',$3)", [h.rows[0]!.id, userId, memberId]); await seedHousehold(c, h.rows[0]!.id, userId, memberId, ownerName); await c.query("commit"); return h.rows[0]!.id; } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
+  const createHousehold = async (userId: string, name: string, memberId: string, ownerName: string, goals: string[] = []): Promise<string> => {
+    const c = await db.connect(); try { await c.query("begin"); const h = await c.query<{ id: string }>("insert into households(name,owner_user_id,scan_quota) values($1,$2,$3) returning id", [name, userId, cfg.SCAN_QUOTA_DEFAULT]); await c.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,'owner',$3)", [h.rows[0]!.id, userId, memberId]); await seedHousehold(c, h.rows[0]!.id, userId, memberId, ownerName, goals); await c.query("commit"); return h.rows[0]!.id; } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
   };
   /** Registration is by invitation: a household invite from an admin opens a new household; a join invite from an owner adds the person to theirs. The very first account needs no invite. */
   app.post("/auth/register", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (req, reply) => {
@@ -74,7 +74,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const r = await db.query<{ id: string }>("insert into users(email,password_hash,display_name) values($1,$2,$3) returning id", [email, await hashPassword(p.data.password), name]); const userId = r.rows[0]!.id;
     let householdId: string | null = null, level: Level = "owner";
     if (kind === "join" && join) { await db.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,$3,$4)", [join.household_id, userId, join.level, join.member_id]); await db.query("update invites set used_by=$1 where code=$2", [userId, code]); householdId = join.household_id; level = join.level; }
-    else { const memberId = memberIdFor(name.split(/\s+/)[0]!, []); householdId = await createHousehold(userId, p.data.householdName?.trim() || `${name.split(/\s+/)[0]}'s family`, memberId, name); if (kind === "household") await db.query("update household_invites set used_by=$1, used_at=now() where code=$2", [userId, code]); }
+    else { const memberId = memberIdFor(name.split(/\s+/)[0]!, []); householdId = await createHousehold(userId, p.data.householdName?.trim() || `${name.split(/\s+/)[0]}'s family`, memberId, name, p.data.goals ?? []); if (kind === "household") await db.query("update household_invites set used_by=$1, used_at=now() where code=$2", [userId, code]); }
     await setSession(reply, userId, req.headers["user-agent"]); req.userId = userId; req.householdId = householdId ?? undefined; await audit(req, "register", { doc_id: kind }); return { id: userId, householdId, level, kind };
   });
   app.post("/auth/login", { config: { rateLimit: { max: 20, timeWindow: "15 minutes" } } }, async (req, reply) => {
@@ -97,6 +97,11 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     req.userId = r.rows[0]!.user_id; await audit(req, "password.reset"); return { ok: true };
   });
   registerPasskeyRoutes(app, cfg, db, { setSession, audit: async (r, a) => { await audit(r, a); } });
+  app.get("/invites/kind/:code", { config: { rateLimit: { max: 30, timeWindow: "15 minutes" } } }, async (req: any) => {
+    const code = String(req.params.code); const hi = await db.query<{ note: string | null }>("select note from household_invites where code=$1 and used_by is null and expires_at>now()", [code]); if (hi.rowCount) return { kind: "household", note: hi.rows[0]!.note };
+    const inv = await db.query<{ level: string; name: string }>("select i.level,h.name from invites i join households h on h.id=i.household_id where i.code=$1 and i.used_by is null and i.expires_at>now()", [code]); if (inv.rowCount) return { kind: "join", level: inv.rows[0]!.level, household: inv.rows[0]!.name };
+    return { kind: "invalid" };
+  });
   app.post("/auth/logout", async (req, reply) => { const sid = req.cookies[COOKIE]; if (sid) await db.query("delete from sessions where id=$1", [sid]); reply.clearCookie(COOKIE, { path: "/" }); return { ok: true }; });
   app.get("/auth/me", async (req, reply) => {
     if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });

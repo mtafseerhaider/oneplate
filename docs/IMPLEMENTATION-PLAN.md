@@ -90,6 +90,13 @@ Done in this commit:
 - Scan quota per household per month, counted and shown; admin page for invites, households and quotas.
 - Tests: core roster and personalisation; API invitation flows, owner-aware policy on another family, quota; browser flow through another family's roster, content, members and plan setup.
 
+## Phase 10: Every family's own goal
+Done in this commit:
+- `core/goals`: six goals (fatloss, fasting, ramadan, thuluth, learning, tarbiyah), each with its tabs, habits, fast and weights flags, lead card and reminder kinds; `goalConfig` takes the union of a household's goals, led by the first; `habitsDone` counts only the configured habits. No goals recorded means the original plan with everything on.
+- Sign-up asks the family leader for the goals when the invite is a household invite (`GET /invites/kind/:code` tells the page which kind it is); registration stores them in `settings.goals`; the admin page lists each household's goals.
+- The app shapes itself: tabs from the config, habit rows and the check-in ring per goal, the fast and Ramadan cards only for fasting goals, the session card only with Train, the dinner and tonight cards only with Plate, a Tarbiyah card on Today for tarbiyah families, card order by the lead goal; Progress without weights is a streak-and-habits summary; Settings carries the goal checkboxes and hides the fields a goal does not use; push preferences list only the reminders the goals send; the scheduler filters reminders by goal. A household without goals is asked once on Today, with "Keep everything" as the way out.
+- Tests: core goal config; API registration with goals, invite kind, reminders filtered by goal; browser flow through a learning-only household and a switch to fasting.
+
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.
 - No change to a domain rule without a test.

@@ -12,6 +12,8 @@ function tbYt(l,sec){return "https://www.youtube.com/watch?v="+l.video+(sec?"&t=
 function tbClock(sec){if(sec==null)return "";const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?h+":":"")+String(m).padStart(h?2:1,"0")+":"+String(s).padStart(2,"0")}
 function tbPick(arr,salt){if(!arr||!arr.length)return null;return arr[((dayOfYear()+(salt||0))%arr.length+arr.length)%arr.length]}
 /* ---------- the tab ---------- */
+function tbTodayCard(t,ro){const L=TARBIYAH[tbIndex(t)];if(!L)return "";const practice=tbPick(L.practices,0),dt=(day(t).tarbiyah)||{},done=tbParents().filter(p=>dt[p.id]).length;
+  return `<section class="card link accent" role="link" tabindex="0" data-a="tab" data-v="tarbiyah"><div class="row between"><p class="eyebrow">${ic("sprout")} ${tr("Tarbiyah")} · ${tr("lecture")} ${L.n} ${I("tarbiyah")}</p>${ic("chev","")}</div><h3>${escC(L.title)}</h3>${practice?`<p class="small"><b>${tr("Today's practice")}:</b> ${escC(practice)}</p>`:""}<p class="small muted">${done}/${tbParents().length} ${tr("parents done today")}</p></section>`}
 function vTarbiyah(){if(S._tl)return tbLectureView(S._tl);
   const t=logDate(),d=day(t),i=tbIndex(t),L=TARBIYAH[i],wk=Math.floor((new Date(t+"T00:00:00")-new Date(tbStart()+"T00:00:00"))/(7*864e5))+1,ro=readOnly,ps=tbParents(),dt=d.tarbiyah||{};
   const practice=tbPick(L.practices,0),nug=tbPick(L.nuggets,1),qSpouse=tbPick(L.questions.spouse,2),qFam=tbPick(L.questions.family,3);const kids=childrenOf().length?childrenOf():[null];const kidActs=kids.map((c,ki)=>({c,act:tbPick(L.activities[core.activitySetFor(c)],4+ki)}));

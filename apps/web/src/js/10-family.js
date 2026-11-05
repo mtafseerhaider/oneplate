@@ -15,6 +15,10 @@ function famRoster(){return core.roster(members(),ownerId())}
 function spouse(){return famRoster().spouse}
 function childrenOf(){return famRoster().children}
 function childNames(){return core.listNames(childrenOf().map(c=>c.name),tr("the children"))}
+/* The household's goals shape the app: tabs, habits, the lead card on Today, reminders. A household from before goals existed keeps everything. */
+function goals(){const g=(S.settings||{}).goals;return Array.isArray(g)&&g.length?g:(legacyFamily()?["fatloss","learning","tarbiyah"]:[])}
+function gc(){return core.goalConfig(goals())}
+function goalsSet(){return Array.isArray((S.settings||{}).goals)&&S.settings.goals.length>0||legacyFamily()}
 /* Content was written for one family; every family reads its own names. */
 function pz(t){return core.personalize(String(t==null?"":t),famRoster())}
 function escC(t){return esc(pz(t))}

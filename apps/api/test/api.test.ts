@@ -122,6 +122,7 @@ describe("OnePlate API", () => {
     const base = { timezone: "Asia/Karachi", settings: { fastHours: 21, quranStart: "2026-11-01" }, fast: {}, days: {}, weighins: {}, qprog: {}, sentKeys: new Set<string>() };
     const at = (iso: string) => new Date(iso); // 19:05 Karachi = 14:05 UTC
     expect(dueReminders(at("2026-11-04T14:05:00Z"), base).map(r => r.kind)).toEqual(["starter"]);
+    expect(dueReminders(at("2026-11-04T14:05:00Z"), { ...base, settings: { ...base.settings, goals: ["learning"] } })).toEqual([]); expect(dueReminders(at("2026-11-04T15:35:00Z"), { ...base, settings: { ...base.settings, goals: ["learning"] } }).map(r => r.kind)).toEqual(["circle"]);
     expect(dueReminders(at("2026-11-04T15:35:00Z"), base).map(r => r.kind)).toEqual(["circle"]);
     expect(dueReminders(at("2026-11-04T16:40:00Z"), base).map(r => r.kind)).toEqual(["quran"]);
     expect(dueReminders(at("2026-11-06T02:10:00Z"), base).map(r => r.kind)).toEqual(["weighin"]); // Friday 07:10
@@ -169,10 +170,11 @@ describe("OnePlate API", () => {
     const mk = await app.inject({ method: "POST", url: "/admin/household-invites", headers: { cookie: owner }, payload: { note: "Ali and Sara", days: 7 } }); expect(mk.statusCode).toBe(200); const code = mk.json().code; expect(mk.json().url).toContain("account.html?invite=" + code);
     const notAdmin = await app.inject({ method: "POST", url: "/admin/household-invites", headers: { cookie: wife }, payload: {} }); expect(notAdmin.statusCode).toBe(404);
     const bad = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali@example.com", password: "a good password", displayName: "Ali Khan", code: "nope-nope" } }); expect(bad.statusCode).toBe(404);
-    const ali = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali@example.com", password: "a good password", displayName: "Ali Khan", code, householdName: "The Khans" } }); expect(ali.statusCode).toBe(200); expect(ali.json().kind).toBe("household"); const aliC = cookieOf(ali), aliH = ali.json().householdId;
+    const kind = await app.inject({ method: "GET", url: `/invites/kind/${code}` }); expect(kind.json().kind).toBe("household"); expect((await app.inject({ method: "GET", url: "/invites/kind/nope" })).json().kind).toBe("invalid");
+    const ali = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali@example.com", password: "a good password", displayName: "Ali Khan", code, householdName: "The Khans", goals: ["tarbiyah", "learning", "bogus"] } }); expect(ali.statusCode).toBe(200); expect(ali.json().kind).toBe("household"); const aliC = cookieOf(ali), aliH = ali.json().householdId;
     const again = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali2@example.com", password: "a good password", displayName: "Ali Two", code } }); expect(again.statusCode).toBe(404); // one use
     const me = await app.inject({ method: "GET", url: "/auth/me", headers: { cookie: aliC } }); expect(me.json().households[0].name).toBe("The Khans"); expect(me.json().households[0].owner_member_id).toBe("ali"); expect(me.json().households[0].scan_quota).toBe(60);
-    const st = await app.inject({ method: "GET", url: `/households/${aliH}/docs/settings/main`, headers: { cookie: aliC } }); expect(st.json().body.ownerMember).toBe("ali"); expect(st.json().body.startWeight).toBeNull();
+    const st = await app.inject({ method: "GET", url: `/households/${aliH}/docs/settings/main`, headers: { cookie: aliC } }); expect(st.json().body.ownerMember).toBe("ali"); expect(st.json().body.startWeight).toBeNull(); expect(st.json().body.goals).toEqual(["tarbiyah", "learning"]);
     const fam = await app.inject({ method: "GET", url: `/households/${aliH}/docs/family/ali`, headers: { cookie: aliC } }); expect(fam.json().body.name).toBe("Ali Khan");
     // Sara joins Ali's household and the policy knows Ali, not Tafseer, is the owner member
     const inv = await app.inject({ method: "POST", url: `/households/${aliH}/invites`, headers: { cookie: aliC }, payload: { level: "contributor", memberId: "sara" } });

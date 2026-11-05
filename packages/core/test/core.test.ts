@@ -106,3 +106,14 @@ describe("household", () => {
     expect(memberIdFor("Sara Khan", ["sara"])).toBe("sarakhan"); expect(memberIdFor("Sara", ["sara", "sara2"])).toBe("sara3"); expect(memberIdFor("!!", [])).toBe("member");
   });
 });
+import { goalConfig, habitsDone, GOALS } from "../src/index.js";
+describe("goals", () => {
+  it("shapes the app from the chosen goals", () => {
+    expect(GOALS.length).toBe(6);
+    const fat = goalConfig(["fatloss"]); expect(fat.tabs).toEqual(["today", "plate", "family", "train", "progress", "learn"]); expect(fat.habits.length).toBe(7); expect(fat.weights).toBe(true); expect(fat.lead).toBe("fast");
+    const learn = goalConfig(["learning"]); expect(learn.tabs).toEqual(["today", "family", "progress", "learn"]); expect(learn.habits).toEqual([]); expect(learn.fast).toBe(false); expect(learn.reminders).toEqual(["circle", "quran"]);
+    const both = goalConfig(["tarbiyah", "fasting"]); expect(both.tabs).toEqual(["today", "plate", "tarbiyah", "family", "progress", "learn"]); expect(both.lead).toBe("tarbiyah"); expect(both.fast).toBe(true); expect(both.weights).toBe(false); expect(both.starterLabel).toBe("Break the fast well"); expect(both.reminders).toEqual(["fastEnd", "starter", "circle", "quran"]);
+    const legacy = goalConfig(undefined); expect(legacy.goals).toEqual(["fatloss", "learning", "tarbiyah"]); expect(legacy.tabs.length).toBe(7); expect(goalConfig(["bogus"]).goals).toEqual(legacy.goals);
+    expect(habitsDone({ water: 4, palms: 2, walk: true }, ["water", "palms", "walk", "closed"])).toEqual({ done: 2, total: 4 }); expect(habitsDone({}, [])).toEqual({ done: 0, total: 0 });
+  });
+});

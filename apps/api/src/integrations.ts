@@ -6,7 +6,7 @@ import webpush from "web-push";
 import type { Config } from "./config.js";
 import type { Db } from "./db/pool.js";
 import { ChangeBus } from "./events.js";
-import { buildCourse, qIndex, roster, listNames, type Member } from "@oneplate/core";
+import { buildCourse, qIndex, listNames, goalConfig, type Member } from "@oneplate/core";
 import { SURAH_INDEX, QPLAN } from "@oneplate/content";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -49,7 +49,7 @@ export interface HouseholdState { timezone: string; settings: any; fast: any; da
 export interface Reminder { key: string; title: string; body: string; kind: "fastEnd" | "starter" | "circle" | "quran" | "weighin"; ownerOnly: boolean }
 export function localParts(now: Date, tz: string) { const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hour12: false }); const p: any = {}; for (const x of f.formatToParts(now)) p[x.type] = x.value; return { date: `${p.year}-${p.month}-${p.day}`, hm: Number(p.hour === "24" ? 0 : p.hour) * 60 + Number(p.minute), weekday: p.weekday as string }; }
 export function dueReminders(now: Date, st: HouseholdState): Reminder[] {
-  const out: Reminder[] = []; const { date, hm, weekday } = localParts(now, st.timezone || "Asia/Karachi"); const day = st.days[date] || {};
+  const out: Reminder[] = []; const { date, hm, weekday } = localParts(now, st.timezone || "Asia/Karachi"); const day = st.days[date] || {}; const allowed = new Set(goalConfig(st.settings?.goals).reminders);
   const win = (start: number, r: Reminder) => { if (hm >= start && hm < start + 30 && !st.sentKeys.has(r.key)) out.push(r); };
   if (st.fast?.startedAt) { const goal = Number(st.settings?.fastHours || 21); const end = new Date(st.fast.startedAt).getTime() + goal * 36e5; const key = `fastend:${st.fast.startedAt}`; if (now.getTime() >= end && now.getTime() < end + 30 * 6e4 && !st.sentKeys.has(key)) out.push({ key, kind: "fastEnd", ownerOnly: true, title: `${goal} h fast complete`, body: "Alhamdulillah. Protein starter first, then the one plate at home. Spoon down between bites." }); }
   if (!day.starter && (st.fast?.startedAt || !day.closed)) win(19 * 60, { key: `starter:${date}`, kind: "starter", ownerOnly: true, title: "Protein starter", body: "Two eggs or a bowl of yogurt now; the plate when you are home." });
@@ -58,7 +58,7 @@ export function dueReminders(now: Date, st: HouseholdState): Reminder[] {
   const course = courseCache(); const qs = st.settings?.quranStart || st.settings?.startDate || date; const idx = qIndex(qs, date, course.length); const r = course[idx]!;
   if (!(st.qprog?.done || {})[r.key]) win(21 * 60 + 30, { key: `quran:${date}`, kind: "quran", ownerOnly: false, title: `Today's reading · ${r.n}`, body: r.cur ? "A close reading with its al-Mizan note. Ten minutes before bed." : `${r.portion}. The surah's summary and al-Mizan's purpose note are on the Learn tab.` });
   if (weekday === "Fri" && !Object.values(st.weighins).some((w: any) => w?.date === date && !w?.m)) win(7 * 60, { key: `weighin:${date}`, kind: "weighin", ownerOnly: true, title: "Weigh-in morning", body: "After the bathroom, before water. Same scale, same place. Log it on Progress." });
-  return out;
+  return out.filter(r => allowed.has(r.kind));
 }
 let _course: ReturnType<typeof buildCourse> | null = null; function courseCache() { return _course ?? (_course = buildCourse(SURAH_INDEX, QPLAN, 365)); }
 

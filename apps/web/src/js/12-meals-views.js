@@ -27,7 +27,7 @@ function mealEditor(d){return `
 
 function vToday(){
   const t=logDate(),isToday=t===todayStr(),d=day(t),wd=new Date(t+"T12:00:00").getDay(),plan=planFor(wd),w=weekNo(),hint=nowHint(),ro=readOnly;
-  const on=!!S.fast.startedAt,goal=S.settings.fastHours||21,dn=doneCount(d),st=streak();
+  const G=gc(),H=G.habits,on=!!S.fast.startedAt,goal=S.settings.fastHours||21,hd=core.habitsDone(d,H),dn=hd.done,st=streak();
   const h=new Date().getHours()+new Date().getMinutes()/60;
   const roMe=readOnly||!isOwner;
   const tonight=tonightMeal();
@@ -35,17 +35,9 @@ function vToday(){
   let kv="";
   if(on){const s=new Date(S.fast.startedAt),e=new Date(s.getTime()+goal*36e5);kv=`<div class="kv"><span>Started</span><b>${s.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(s)}</b><span>Goal at</span><b>${e.toLocaleDateString(undefined,{weekday:"short"})} ${fmtClock(e)}</b></div>`}
   else kv=`<div class="kv"><span>Goal</span><b id="kvGoal">${ram&&ft?((ft.maghrib-ft.fajr)/36e5).toFixed(1):goal} h</b><span>Last fast</span><b>${S.fast.lastHours?S.fast.lastHours.toFixed(1)+" h":"—"}</b></div>`;
-  return `
-  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?tr(greeting()):tr("Catching up")}${whoAmI()?`, ${esc(whoAmI())}`:""}</h1>${whoAmI()?`<p class="small muted" style="margin:2px 0 0">${tr("Signed in as")} ${esc(whoAmI())}${typeof window.oneplate==="object"?" · "+esc(tr(window.oneplate.level()==="owner"?"owner":window.oneplate.level()==="contributor"?"family editor":"viewer")):isOwner?" · "+tr("owner"):readOnly?"":" · "+tr("family editor")}</p>`:""}</div>
-   <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
-  ${ro?`<div class="note">You are viewing ${esc((member(ownerId())||{}).name||"this family")}'s OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab, your own journal on the <b>Learn</b> tab, and edit meals on the <b>Plate</b> tab.</div>`:""}
-  ${logBar(t)}
-  <section class="card strip">
-    <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-dn/7)).toFixed(1)}"/></svg><b>${dn}/7</b></div>
-    <div class="txt"><b>${dn===7?"Perfect day":dn>=4?"Good day so far":"Today's habits"}</b><small>${dn} of 7 done · water, protein, starter, session, walk, steps, kitchen closed</small></div>
-    <div class="streak">${ic("flame")}${st}<small style="font-weight:500">day${st===1?"":"s"}</small> ${I("streak")}</div>
-  </section>
-  <section class="card">
+  const T=G.tabs;
+  const C={};
+  C.fast=G.fast?`  <section class="card">
     <div class="row between"><p class="eyebrow">${ic("clock")} ${tr("Fast")} ${I("fast")}</p><span class="status ${on?"on":""}"><i></i>${tr(on?"Fasting":"Eating window")}</span></div>
     <div class="hero">
       <div class="ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent-2)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient></defs><circle class="track" cx="60" cy="60" r="52"/><circle class="bar" id="ringBar" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/></svg>
@@ -61,8 +53,8 @@ function vToday(){
       <button class="btn primary" type="submit">Save times</button><button class="btn" type="button" data-a="ftcancel">Cancel</button>
       <p class="small muted" style="flex-basis:100%">Enter both times to log a finished fast. Enter only the start to correct the running one.</p>
     </form>`:""}
-  </section>
-  ${ram&&ft?`<section class="card" style="border-color:var(--green)">
+  </section>`:"";
+  C.ramadan=G.fast?`  ${ram&&ft?`<section class="card" style="border-color:var(--green)">
     <div class="row between"><p class="eyebrow">${ic("moon")} Ramadan · ${esc(ft.city)} ${I("ramadan")}</p><span class="pill green">${hj.day} Ramadan</span></div>
     <div class="bento">
       <div class="tile"><b>${fmtClock(ft.fajr)}</b><span>suhoor ends (Fajr) ${I("suhoor")}</span></div>
@@ -71,41 +63,54 @@ function vToday(){
     <p class="small" id="rCount"></p>
     ${roMe?"":on?"":`<button class="btn wide" data-a="rfajr">${ic("moon")} I'm fasting since Fajr</button>`}
     <p class="small muted">Imsak ${fmtClock(ft.imsak)} (Fajr − 10 min, a reminder only). Karachi calculation method, Fajr 18°. Local moon sighting may shift the date: adjust the Hijri offset in Settings. The app suggests times; it never rules.</p>
-  </section>`:""}
-  ${isToday?`<section class="card accent">
+  </section>`:""}`:"";
+  C.now=`  ${isToday?`<section class="card accent">
     <p class="eyebrow">${ic(hintIcon(h))} ${tr("Right now")}</p>
     <h2>${esc(hint[0])}</h2><p class="small">${esc(hint[1])}</p>
-  </section>`:""}
-  <section class="card">
+  </section>`:""}`;
+  C.session=T.includes("train")?`  <section class="card">
     <div class="row between"><p class="eyebrow">${ic(KIND_ICON[plan.k]||"bike")} ${tr("Today's session")} ${I(plan.k==="strength"?"strength":plan.k==="cycle"?"cycle":"recovery")}</p><span class="pill ${plan.k==="rest"?"green":plan.k==="cycle"?"blue":"amber"}">${esc(plan.t)}</span></div>
     <p class="small">${esc(plan.d)}</p>
-  </section>
-  <section class="card">
-    <div class="row between"><p class="eyebrow">${tr("Check-ins")} · ${dn} / 7 ${I("backdate")}</p>${roMe?"":`<div class="row" style="gap:8px">${logPicker(t)}<button class="btn ghost" data-a="habits_all">${ic("check")} ${tr("All done")}</button></div>`}</div>
+  </section>`:"";
+  C.habits=H.length?`  <section class="card">
+    <div class="row between"><p class="eyebrow">${tr("Check-ins")} · ${dn} / ${hd.total} ${I("backdate")}</p>${roMe?"":`<div class="row" style="gap:8px">${logPicker(t)}<button class="btn ghost" data-a="habits_all">${ic("check")} ${tr("All done")}</button></div>`}</div>
     <div class="checks">
-      <div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>${tr("Water")} ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>
-      <div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>${tr("Protein palms")} ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>
-      ${swRow("starter",tr("Protein starter at home"),"≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,roMe,"home","starter")}
-      ${swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,roMe,KIND_ICON[plan.k]||"bike","cycle")}
-      ${swRow("walk",tr("Walk after dinner"),"10–15 min within 30 min of the last bite",d.walk,roMe,"walk","walk")}
-      ${swRow("steps",tr("8,000 steps"),"Or your current phase target",d.steps,roMe,"foot","steps")}
+      ${H.includes("water")?`<div class="crow"><span class="lead" style="color:var(--blue)">${ic("drop")}</span><div class="t"><b>${tr("Water")} ${I("water")}</b><small>700 ml bottles · ${((d.water||0)*0.7).toFixed(1)} L today · aim 4–5</small>${dots("water",d.water||0,6,roMe,"")}</div></div>`:""}
+      ${H.includes("palms")?`<div class="crow"><span class="lead" style="color:var(--accent-text)">${ic("egg")}</span><div class="t"><b>${tr("Protein palms")} ${I("palms")}</b><small>4 minimum · 5 on training days</small>${dots("palms",d.palms||0,6,roMe,"palms")}</div></div>`:""}
+      ${H.includes("starter")?swRow("starter",tr(G.starterLabel),G.starterLabel==="Break the fast well"?"Water, dates or fruit, then protein; the plate twenty minutes later":"≈7:00 PM · yogurt + 2 eggs, or whey",d.starter,roMe,"home","starter"):""}
+      ${H.includes("train")?swRow("train",plan.t+" done",plan.k==="rest"?"Recovery day: a long walk counts":"",d.train,roMe,KIND_ICON[plan.k]||"bike","cycle"):""}
+      ${H.includes("walk")?swRow("walk",tr("Walk after dinner"),"10–15 min within 30 min of the last bite",d.walk,roMe,"walk","walk"):""}
+      ${H.includes("steps")?swRow("steps",tr("8,000 steps"),"Or your current phase target",d.steps,roMe,"foot","steps"):""}
       ${d.health?`<p class="small muted" style="margin:6px 0 0">${ic("trend")} From Apple Health${d.health.steps!==undefined?" · "+Number(d.health.steps).toLocaleString()+" steps":""}${d.health.sleepMin?" · "+(d.health.sleepMin/60).toFixed(1)+" h sleep":""}${d.health.cycleMin?" · "+d.health.cycleMin+" min cycling":""}${d.health.activeKcal?" · "+d.health.activeKcal+" kcal active":""}${d.health.at?" · "+esc(String(d.health.at).slice(11,16)):""}</p>`:""}
-      ${swRow("closed",tr("Kitchen closed by 9:30 PM"),"Then start the fast",d.closed,roMe,"moon","closed")}
+      ${H.includes("closed")?swRow("closed",tr("Kitchen closed by 9:30 PM"),G.fast?"Then start the fast":"Nothing after it but water",d.closed,roMe,"moon","closed"):""}
     </div>
-  </section>
-  ${quranCard(d,roMe,true)}
-  ${wellbeingCard(d,roMe)}
-  <section class="card">
+  </section>`:"";
+  C.quran=T.includes("learn")?quranCard(d,roMe,true):"";
+  C.wellbeing=wellbeingCard(d,roMe);
+  C.dinner=T.includes("plate")?`  <section class="card">
     <div class="row between"><p class="eyebrow">${ic("clock")} ${tr("Mindful dinner · 20 minutes")} ${I("thuluth")}</p>${S._meal?`<span class="pill green" id="mealT">00:00</span>`:""}</div>
     <p class="small" id="mealMsg">${S._meal?"":"Water 20–30 min before. Bismillah. Protein first, roti or rice last, spoon down between bites. Stop at about 80 % full."}</p>
     ${roMe?"":S._meal?`<button class="btn" data-a="mealstop">${tr("Finished eating")}</button>`:`<button class="btn wide" data-a="mealstart">${ic("plate")} ${tr("Start the 20-minute meal timer")}</button>`}
-  </section>
-  ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
+  </section>`:"";
+  C.tonight=T.includes("plate")?`  ${tonight?`<section class="card link" role="link" tabindex="0" data-a="tab" data-v="plate">
     <div class="row between"><p class="eyebrow">${ic("plate")} ${tr("Tonight's plate")}${(d.meal&&d.meal===tonight.id)?" · chosen":" · suggested"}</p>${ic("chev","")}</div>
     <h3>${esc(tonight.n)}</h3>
     <p class="small muted">${esc(handLine(tonight))} · ${mealCalc(tonight).kcal} kcal</p>
-    <p class="small muted"><b>Cook for the family:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>
-  </section>`:""}`;
+    <p class="small muted"><b>Cook for the family:</b> ${esc(cookQuantities(tonight).join(" · "))}</p>  </section>`:""}`:"";
+  C.tarbiyah=T.includes("tarbiyah")?tbTodayCard(t,roMe):"";
+  const cardsOrder={fast:["fast","ramadan","now","session","habits","quran","wellbeing","dinner","tonight","tarbiyah"],ramadan:["ramadan","fast","now","habits","quran","wellbeing","dinner","tonight","tarbiyah"],plate:["now","tonight","dinner","habits","quran","wellbeing","tarbiyah","fast","ramadan"],learn:["now","quran","wellbeing","tarbiyah","habits","fast","ramadan","session","dinner","tonight"],tarbiyah:["now","tarbiyah","quran","wellbeing","habits","fast","ramadan","session","dinner","tonight"]}[G.lead];
+  return `
+  <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?tr(greeting()):tr("Catching up")}${whoAmI()?`, ${esc(whoAmI())}`:""}</h1>${whoAmI()?`<p class="small muted" style="margin:2px 0 0">${tr("Signed in as")} ${esc(whoAmI())}${typeof window.oneplate==="object"?" · "+esc(tr(window.oneplate.level()==="owner"?"owner":window.oneplate.level()==="contributor"?"family editor":"viewer")):isOwner?" · "+tr("owner"):readOnly?"":" · "+tr("family editor")}</p>`:""}</div>
+   <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
+  ${ro?`<div class="note">You are viewing ${esc((member(ownerId())||{}).name||"this family")}'s OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is ${esc((member(ownerId())||{}).name||"the owner")}'s day. You can log for the family on the <b>Family</b> tab${T.includes("learn")?", your own journal on the <b>Learn</b> tab":""}${T.includes("plate")?", and edit meals on the <b>Plate</b> tab":""}.</div>`:""}
+  ${logBar(t)}
+  ${goalsSet()||ro?"":goalSetupCard()}
+  <section class="card strip">
+    <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-(hd.total?dn/hd.total:0))).toFixed(1)}"/></svg><b>${hd.total?`${dn}/${hd.total}`:ic("sun")}</b></div>
+    <div class="txt"><b>${hd.total&&dn===hd.total?"Perfect day":dn>=hd.total/2&&dn>0?"Good day so far":"Today's habits"}</b><small>${hd.total?`${dn} of ${hd.total} done · ${H.map(h=>({water:"water",palms:"protein",starter:"starter",train:"session",walk:"walk",steps:"steps",closed:"kitchen closed"})[h]).join(", ")}`:esc(G.title)}</small></div>
+    <div class="streak">${ic("flame")}${st}<small style="font-weight:500">day${st===1?"":"s"}</small> ${I("streak")}</div>
+  </section>
+  ${cardsOrder.map(k=>C[k]||"").join("")}`;
 }
 function arc(cx,cy,r,a0,a1){const p=a=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${cx} ${cy}L${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}Z`}
 function plateSvg(){return `<svg viewBox="0 0 160 160" role="img" aria-label="Plate: half vegetables, a quarter protein, a quarter carbs, a thumb of fat">
@@ -222,6 +227,7 @@ function vProgress(){
   const st=S.settings,ws=weighList(),ro=readOnly||!isOwner;
   const last=ws[ws.length-1],first=ws[0],prev=ws[ws.length-2];
   const cur=currentWeight();
+  if(!gc().weights)return `<div class="hdr"><div><p class="eyebrow">${esc(gc().title)}</p><h1>${tr("Progress")}</h1></div></div>${habitSummaryCard()}${accountCard()}${ro?"":settingsSection(st)}`;
   if(!planReady())return `<div class="hdr"><div><p class="eyebrow">${tr("Progress")}</p><h1>${tr("Progress")}</h1></div></div>${planSetupCard(ro)}${accountCard()}${ro?"":settingsSection(st)}`;
   const lost=(st.startWeight-cur),togo=cur-st.targetWeight,total=Math.max(0.1,st.startWeight-st.targetWeight),pct=Math.max(0,Math.min(100,lost/total*100));
   let rate=null,eta="—";
@@ -269,6 +275,11 @@ function vProgress(){
   ${accountCard()}
   ${ro?"":settingsSection(st)}`;
 }
+function habitSummaryCard(){const G=gc(),H=G.habits,st=streak(),days=[];for(let i=6;i>=0;i--){const dt=new Date();dt.setDate(dt.getDate()-i);const k=dt.toISOString().slice(0,10);days.push([k,S.days[k]||{}])}
+  const perfect=H.length?days.filter(([,d])=>core.habitsDone(d,H).done===H.length).length:0,fasts=days.filter(([,d])=>d.fastHours>0).length,circles=days.filter(([,d])=>d.circle).length,quran=days.filter(([,d])=>d.quran||d.learn).length;
+  const tiles=[[String(st),tr("day streak")],...(H.length?[[`${perfect}/7`,tr("perfect days this week")]]:[]),...(G.fast?[[`${fasts}/7`,tr("fasts logged")]]:[]),...(G.tabs.includes("learn")?[[`${quran}/7`,tr("learning days")]]:[]),[`${circles}/7`,tr("family circles")]];
+  const tb=G.tabs.includes("tarbiyah")&&typeof tbDoneCount==="function"?tbParents().map(p=>`${esc(p.name)} ${tbDoneCount(p.id)}/${TARBIYAH.length}`).join(" · "):"";
+  return `<section class="card"><p class="eyebrow">${ic("trend")} ${tr("This week")} ${I("streak")}</p><div class="bento">${tiles.map(([b,l])=>`<div class="tile"><b>${b}</b><span>${l}</span></div>`).join("")}</div>${tb?`<p class="small muted" style="margin-top:8px">${tr("Tarbiyah lectures done")}: ${tb}</p>`:""}<p class="small muted">${tr("No scales here: this family's goal is")} ${esc(G.title)}. ${tr("Streaks count a day as kept when every configured habit is done, or, with no habits, when something was logged.")}</p></section>`}
 function chart(ws){
   const st=S.settings,W=360,H=190,L=34,R=10,T=12,B=26;
   const start=new Date(st.startDate+"T00:00:00");
@@ -364,7 +375,7 @@ function notifCard(){const ps=S._push;if(!window.oneplate.pushSupported||!window
   const prefs=ps.prefs||{};
   return `<p class="eyebrow" style="margin-top:10px">Notifications ${I("push")}</p>
   ${ps.device?`<p class="small">On for this device. ${ps.permission==="granted"?"":"Permission: "+esc(ps.permission)}</p>`:`<p class="small muted">${ps.permission==="denied"?"Notifications are blocked for this site in the browser settings.":"Off on this device."}</p>`}
-  <div class="form" style="flex-direction:column;align-items:stretch;gap:4px">${PUSH_KINDS.filter(k=>isOwner||!k[2]).map(([k,l])=>`<label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-pk="${k}" ${prefs[k]===false?"":"checked"} style="width:auto"> ${l}</label>`).join("")}</div>
+  <div class="form" style="flex-direction:column;align-items:stretch;gap:4px">${PUSH_KINDS.filter(k=>gc().reminders.includes(k[0])).filter(k=>isOwner||!k[2]).map(([k,l])=>`<label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-pk="${k}" ${prefs[k]===false?"":"checked"} style="width:auto"> ${l}</label>`).join("")}</div>
   <div class="row"><button class="btn ${ps.device?"":"primary"} sm" data-a="push_on">${ic("check")} ${ps.device?"Save choices":"Turn on for this device"}</button>${ps.device?`<button class="btn ghost sm" data-a="push_test">Send a test</button><button class="btn ghost sm" data-a="push_off">Turn off</button>`:""}</div>
   <p class="small muted">Times follow the household's time zone (${esc((S.settings||{}).city||"karachi")}). Each reminder is sent once and only when the thing is not already done.</p>`}
 function healthCard(){const t=S._ingest;const mine=members().filter(m=>m.role!=="child"&&(isOwner||m.id!==ownerId()));
@@ -386,21 +397,26 @@ function healthCard(){const t=S._ingest;const mine=members().filter(m=>m.role!==
 
 function settingsSection(st){return `<details><summary><span>Settings</span>${ic("chev","chev")}</summary><div class="body">
     <form class="form" id="sform" autocomplete="off">
-      <label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight}"></label>
-      <label class="f">Target<input type="number" id="s_tw" step="0.1" value="${st.targetWeight}"></label>
+      <div style="flex-basis:100%"><p class="small" style="margin:0 0 4px"><b>${tr("Goals")}</b> ${I("goals")}</p>${goalPicker(gc().goals)}</div>
+      ${gc().weights?`<label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight??""}"></label>
+      <label class="f">Target<input type="number" id="s_tw" step="0.1" value="${st.targetWeight??""}"></label>`:""}
       <label class="f">Start date<input type="date" id="s_sd" value="${st.startDate}"></label>
-      <label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>
-      <label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>
-      <label class="f">Quran course start date<input type="date" id="s_qs" value="${st.quranStart||st.startDate}"></label>
-      <label class="f">Tarbiyah course start date<input type="date" id="s_tbs" value="${st.tarbiyahStart||st.startDate}"></label>
+      ${gc().fast?`<label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>`:""}
+      ${gc().tabs.includes("train")?`<label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>`:""}
+      ${gc().tabs.includes("learn")?`<label class="f">Quran course start date<input type="date" id="s_qs" value="${st.quranStart||st.startDate}"></label>`:""}
+      ${gc().tabs.includes("tarbiyah")?`<label class="f">Tarbiyah course start date<input type="date" id="s_tbs" value="${st.tarbiyahStart||st.startDate}"></label>`:""}
       <label class="f">${tr("Appearance")} ${I("appearance")}<select id="s_theme">${THEMES_UI.map(([v,l])=>`<option value="${v}" ${THEME===v?"selected":""}>${tr(l)}${v==="auto"?" · "+tr("follows the device"):""}</option>`).join("")}</select></label>
-      <label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
+      ${gc().fast?`<label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
       <label class="f">Ramadan mode<select id="s_ram">${[["auto","Auto (by Hijri date)"],["on","On"],["off","Off"]].map(o=>`<option value="${o[0]}" ${(st.ramadan||"auto")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
       <label class="f">Hijri offset (moon sighting)<select id="s_hoff">${[-2,-1,0,1,2].map(v=>`<option value="${v}" ${Number(st.hijriOffset||0)===v?"selected":""}>${v>0?"+"+v:v} day${Math.abs(v)===1?"":"s"}</option>`).join("")}</select></label>
-      <label class="f">Sunnah fast days<select id="s_trad">${[["sunni","Sunni (Mon/Thu, Ayyam al-Bid, Arafah, Ashura)"],["shia","Shia (Ayyam al-Bid, Arafah)"]].map(o=>`<option value="${o[0]}" ${(st.tradition||"sunni")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
+      <label class="f">Sunnah fast days<select id="s_trad">${[["sunni","Sunni (Mon/Thu, Ayyam al-Bid, Arafah, Ashura)"],["shia","Shia (Ayyam al-Bid, Arafah)"]].map(o=>`<option value="${o[0]}" ${(st.tradition||"sunni")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>`:""}
       <button class="btn" type="submit">Save settings</button>
     </form>
   </div></details>`}
+function goalPicker(sel){return `<div class="form" style="flex-direction:column;align-items:stretch;gap:6px">${core.GOALS.map(g=>`<label class="f" style="flex-direction:row;align-items:flex-start;gap:10px"><input type="checkbox" data-goal="${g.id}" ${sel.includes(g.id)?"checked":""} style="width:auto;margin-top:3px"><span><b>${esc(tr(g.title))}</b><br><span class="small muted">${esc(g.blurb)}</span></span></label>`).join("")}</div>`}
+function goalSetupCard(){return `<section class="card accent" id="goalsetup"><p class="eyebrow">${ic("sun")} ${tr("What is this family here for?")} ${I("goals")}</p>
+  <p class="small">${tr("Pick one or more. The app shows only the tabs, habits and reminders that serve them; the first one you pick leads the day. You can change this any time in Settings.")}</p>
+  <form id="goalform" autocomplete="off">${goalPicker([])}<div class="row" style="margin-top:8px"><button class="btn primary" type="submit">${ic("check")} ${tr("Set the goal")}</button><button class="btn ghost" type="button" data-a="goals_all">${tr("Keep everything")}</button></div></form></section>`}
 function planSetupCard(ro){const o=member(ownerId())||{};return `<section class="card accent"><p class="eyebrow">${ic("trend")} ${tr("Set up the plan")} ${I("plansetup")}</p>
   <h2>${esc(o.name||tr("Your"))}${o.name?"'s":""} ${tr("plan")}</h2>
   <p class="small">${tr("OnePlate needs two numbers to run the plan: the weight you start from and the weight you are aiming for. Everything else, the fast length, the training unlock, the checkpoints and the projection, is built from them. Children are never part of this; their tab is on Family.")}</p>

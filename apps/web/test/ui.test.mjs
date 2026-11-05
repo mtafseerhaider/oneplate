@@ -127,6 +127,19 @@ test("another family: roster from its own documents, personalised content, membe
   await page.evaluate(() => { tab = "today"; render(); }); assert.match(await page.$eval(".hdr h1", e => e.textContent), /, Ali$/);
   await page.evaluate(s => { const o = JSON.parse(s); S.family = o.family; S.settings = o.settings; S._lm = null; tab = "today"; render(); }, snap); assert.deepEqual(await page.evaluate(() => members().map(m => m.id)), ["tafseer", "uzma", "abbas", "eliyya"]);
 });
+test("goals: a learning-only household sees four tabs, no fast, no habit rows; a fasting family gets the fast first; the owner picks goals once", async () => {
+  const snap = await page.evaluate(() => JSON.stringify({ family: S.family, settings: S.settings }));
+  await page.evaluate(() => { S.family = { ali: { id: "ali", name: "Ali", rel: "me", role: "adult", sex: "male", goal: "fat_loss" } }; S.settings = Object.assign({}, S.settings, { ownerMember: "ali", startWeight: null, targetWeight: null, goals: undefined }); isOwner = true; readOnly = false; S._lm = null; tab = "today"; render(); });
+  assert.ok(await page.$("#goalform"), "a new household is asked what it is here for"); assert.equal(await page.$$eval("#tabs button", b => b.length), 7);
+  await page.check('#goalform [data-goal="learning"]'); await page.click("#goalform button[type=submit]"); await page.waitForTimeout(100);
+  assert.deepEqual(await page.evaluate(() => S.settings.goals), ["learning"]); assert.deepEqual(await page.$$eval("#tabs button", b => b.map(x => x.dataset.v)), ["today", "family", "progress", "learn"]);
+  const txt = await page.$eval("#view", e => e.textContent); assert.equal(await page.$("#goalform"), null); assert.equal(await page.$("#ringBar"), null, "no fast ring"); assert.equal(await page.$('.sw-row[data-k="walk"]'), null, "no habit rows"); assert.doesNotMatch(txt, /Mindful dinner|Today's session/); assert.match(txt, /Quran|Family circle|Wellbeing|Tonight's reading/i);
+  await page.evaluate(() => { tab = "progress"; render(); }); const pr = await page.$eval("#view", e => e.textContent); assert.equal(await page.$("#setupform"), null, "no weight setup"); assert.match(pr, /day streak/); assert.match(pr, /Daily learning/); assert.ok(await page.$('#sform [data-goal="fasting"]'), "goals editable in Settings"); assert.equal(await page.$("#s_sw"), null);
+  await page.evaluate(() => { document.querySelector("#sform").closest("details").open = true; }); await page.check('#sform [data-goal="fasting"]'); await page.uncheck('#sform [data-goal="learning"]'); await page.click("#sform button[type=submit]"); await page.waitForTimeout(100);
+  assert.deepEqual(await page.evaluate(() => S.settings.goals), ["fasting"]); await page.evaluate(() => { tab = "today"; render(); });
+  assert.ok(await page.$("#ringBar"), "fasting family has the fast ring"); assert.equal(await page.$eval("#view .card:nth-of-type(2) .eyebrow", e => e.textContent.trim().replace(/\s+/g, " ")).then(x => /Fast/.test(x)), true, "the fast card leads the day"); assert.ok(await page.$('.sw-row[data-k="starter"]')); assert.match(await page.$eval("#view", e => e.textContent), /Break the fast well/); assert.equal(await page.$('.sw-row[data-k="train"]'), null);
+  await page.evaluate(s => { const o = JSON.parse(s); S.family = o.family; S.settings = o.settings; S._lm = null; tab = "today"; render(); }, snap); assert.equal(await page.$$eval("#tabs button", b => b.length), 7);
+});
 test("appearance cycles auto, light, dark and is remembered per device", async () => {
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
   await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
