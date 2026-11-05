@@ -19,8 +19,9 @@ import { registerPasskeyRoutes } from "./auth/passkeys.js";
 import { registerOpsRoutes, createErrorReporter } from "./ops.js";
 import { registerIntegrationRoutes } from "./integrations.js";
 import { registerScanRoutes, type Scanner } from "./scan.js";
+import { memberIdFor } from "@oneplate/core";
 
-declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string } }
+declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string; ownerMemberId?: string } }
 
 export interface AppDeps { bus?: ChangeBus; mailer?: Mailer; scanner?: Scanner | null }
 export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise<FastifyInstance> {
@@ -48,12 +49,33 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const r = await db.query<{ user_id: string }>("select user_id from sessions where id=$1 and expires_at>now()", [sid]); if (r.rowCount) req.userId = r.rows[0]!.user_id;
   });
   const setSession = async (reply: any, userId: string, ua?: string) => { const id = newSessionId(); const exp = new Date(Date.now() + cfg.SESSION_DAYS * 864e5); await db.query("insert into sessions(id,user_id,expires_at,user_agent) values($1,$2,$3,$4)", [id, userId, exp, ua ?? null]); reply.setCookie(COOKIE, id, { httpOnly: true, sameSite: "lax", secure: cfg.COOKIE_SECURE, path: "/", expires: exp }); };
-  const Creds = z.object({ email: z.string().email().max(200), password: z.string().min(8).max(200), displayName: z.string().min(1).max(60).optional() });
+  const Creds = z.object({ email: z.string().email().max(200), password: z.string().min(8).max(200), displayName: z.string().min(1).max(60).optional(), code: z.string().max(80).optional(), householdName: z.string().max(80).optional() });
+  /** The owner's family record and the household's settings, so a new household opens with its owner on the Family tab. */
+  const seedHousehold = async (c: any, hid: string, userId: string, memberId: string, name: string) => {
+    await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,'family',$2,$3,1,$4) on conflict do nothing", [hid, memberId, JSON.stringify({ id: memberId, name, rel: "me", role: "adult", sex: "male", goal: "fat_loss" }), userId]);
+    await c.query("insert into documents(household_id,collection,doc_id,body,version,updated_by) values($1,'settings','main',$2,1,$3) on conflict do nothing", [hid, JSON.stringify({ ownerMember: memberId, startWeight: null, targetWeight: null, startDate: new Date().toISOString().slice(0, 10), fastHours: 21, unlockKg: 5, city: "karachi", hijriOffset: 0, ramadan: "auto", tradition: "sunni" }), userId]);
+  };
+  const createHousehold = async (userId: string, name: string, memberId: string, ownerName: string): Promise<string> => {
+    const c = await db.connect(); try { await c.query("begin"); const h = await c.query<{ id: string }>("insert into households(name,owner_user_id,scan_quota) values($1,$2,$3) returning id", [name, userId, cfg.SCAN_QUOTA_DEFAULT]); await c.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,'owner',$3)", [h.rows[0]!.id, userId, memberId]); await seedHousehold(c, h.rows[0]!.id, userId, memberId, ownerName); await c.query("commit"); return h.rows[0]!.id; } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
+  };
+  /** Registration is by invitation: a household invite from an admin opens a new household; a join invite from an owner adds the person to theirs. The very first account needs no invite. */
   app.post("/auth/register", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (req, reply) => {
     const p = Creds.safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: p.error.issues[0]?.message } });
-    const exists = await db.query("select 1 from users where email=$1", [p.data.email.toLowerCase()]); if (exists.rowCount) return reply.code(409).send({ error: { code: "EXISTS", message: "email already registered" } });
-    const r = await db.query<{ id: string }>("insert into users(email,password_hash,display_name) values($1,$2,$3) returning id", [p.data.email.toLowerCase(), await hashPassword(p.data.password), p.data.displayName ?? p.data.email.split("@")[0]]);
-    await setSession(reply, r.rows[0]!.id, req.headers["user-agent"]); req.userId = r.rows[0]!.id; await audit(req, "register"); return { id: r.rows[0]!.id };
+    const email = p.data.email.toLowerCase(), name = p.data.displayName ?? email.split("@")[0]!;
+    const exists = await db.query("select 1 from users where email=$1", [email]); if (exists.rowCount) return reply.code(409).send({ error: { code: "EXISTS", message: "email already registered" } });
+    const first = (await db.query<{ n: number }>("select count(*)::int as n from users")).rows[0]!.n === 0; const code = (p.data.code ?? "").trim();
+    let kind: "first" | "household" | "join" = "first"; let join: { household_id: string; level: Level; member_id: string | null } | null = null;
+    if (!first) {
+      if (!code) return reply.code(403).send({ error: { code: "INVITE_REQUIRED", message: "OnePlate is by invitation: ask the person who runs it for an invite code" } });
+      const hi = await db.query("select code from household_invites where code=$1 and used_by is null and expires_at>now()", [code]);
+      if (hi.rowCount) kind = "household";
+      else { const inv = await db.query<{ household_id: string; level: Level; member_id: string | null }>("select household_id,level,member_id from invites where code=$1 and used_by is null and expires_at>now()", [code]); if (!inv.rowCount) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "that invite code is not valid or has expired" } }); kind = "join"; join = inv.rows[0]!; }
+    }
+    const r = await db.query<{ id: string }>("insert into users(email,password_hash,display_name) values($1,$2,$3) returning id", [email, await hashPassword(p.data.password), name]); const userId = r.rows[0]!.id;
+    let householdId: string | null = null, level: Level = "owner";
+    if (kind === "join" && join) { await db.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,$3,$4)", [join.household_id, userId, join.level, join.member_id]); await db.query("update invites set used_by=$1 where code=$2", [userId, code]); householdId = join.household_id; level = join.level; }
+    else { const memberId = memberIdFor(name.split(/\s+/)[0]!, []); householdId = await createHousehold(userId, p.data.householdName?.trim() || `${name.split(/\s+/)[0]}'s family`, memberId, name); if (kind === "household") await db.query("update household_invites set used_by=$1, used_at=now() where code=$2", [userId, code]); }
+    await setSession(reply, userId, req.headers["user-agent"]); req.userId = userId; req.householdId = householdId ?? undefined; await audit(req, "register", { doc_id: kind }); return { id: userId, householdId, level, kind };
   });
   app.post("/auth/login", { config: { rateLimit: { max: 20, timeWindow: "15 minutes" } } }, async (req, reply) => {
     const p = Creds.safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "email and password required" } });
@@ -79,17 +101,18 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   app.get("/auth/me", async (req, reply) => {
     if (!req.userId) return reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } });
     const u = await db.query("select id,email,display_name from users where id=$1", [req.userId]);
-    const hh = await db.query("select h.id,h.name,m.level,m.member_id from memberships m join households h on h.id=m.household_id where m.user_id=$1 order by h.created_at", [req.userId]);
+    const hh = await db.query("select h.id,h.name,m.level,m.member_id,(select o.member_id from memberships o where o.household_id=h.id and o.level='owner' limit 1) as owner_member_id,h.scan_quota from memberships m join households h on h.id=m.household_id where m.user_id=$1 order by h.created_at", [req.userId]);
     const admins = cfg.ADMIN_EMAILS.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
     return { user: u.rows[0], households: hh.rows, admin: admins.includes(String((u.rows[0] as any)?.email ?? "").toLowerCase()) };
   });
 
   const requireUser = async (req: any, reply: any) => { if (!req.userId) { reply.code(401).send({ error: { code: "UNAUTHENTICATED", message: "sign in" } }); return reply; } };
   // ---- households ----
-  app.post("/households", { preHandler: requireUser }, async (req, reply) => {
-    const p = z.object({ name: z.string().min(1).max(80), memberId: z.string().min(1).max(40).default("tafseer") }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "name required" } });
-    const owned = await db.query("select count(*)::int as n from households where owner_user_id=$1", [req.userId]); if (owned.rows[0]!.n >= cfg.MAX_HOUSEHOLDS_PER_USER) return reply.code(429).send({ error: { code: "LIMIT", message: `at most ${cfg.MAX_HOUSEHOLDS_PER_USER} households per account` } });
-    const c = await db.connect(); let id: string; try { await c.query("begin"); const h = await c.query<{ id: string }>("insert into households(name,owner_user_id) values($1,$2) returning id", [p.data.name, req.userId]); await c.query("insert into memberships(household_id,user_id,level,member_id) values($1,$2,'owner',$3)", [h.rows[0]!.id, req.userId, p.data.memberId]); await c.query("commit"); id = h.rows[0]!.id; } catch (e) { await c.query("rollback"); throw e; } finally { c.release(); }
+  app.post("/households", { preHandler: requireUser }, async (req: any, reply) => {
+    const p = z.object({ name: z.string().min(1).max(80), memberId: z.string().min(1).max(40).optional() }).safeParse(req.body); if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "name required" } });
+    const owned = await db.query("select count(*)::int as n from households where owner_user_id=$1", [req.userId]); if (owned.rows[0]!.n >= cfg.MAX_HOUSEHOLDS_PER_USER) return reply.code(429).send({ error: { code: "LIMIT", message: `at most ${cfg.MAX_HOUSEHOLDS_PER_USER} household(s) per account` } });
+    const u = await db.query<{ display_name: string }>("select display_name from users where id=$1", [req.userId]); const ownerName = u.rows[0]?.display_name || "Owner";
+    const id = await createHousehold(req.userId, p.data.name, p.data.memberId || memberIdFor(ownerName.split(/\s+/)[0]!, []), ownerName);
     req.householdId = id; await audit(req, "household.create"); return { id };
   });
   const withHousehold = async (req: any, reply: any) => {
@@ -97,6 +120,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const hid = req.params.hid; const m = await db.query<{ level: Level; member_id: string | null }>("select level,member_id from memberships where household_id=$1 and user_id=$2", [hid, req.userId]);
     if (!m.rowCount) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "no such household" } });
     req.householdId = hid; req.actor = { userId: req.userId, level: m.rows[0]!.level, memberId: m.rows[0]!.member_id };
+    const o = await db.query<{ member_id: string | null }>("select member_id from memberships where household_id=$1 and level='owner' limit 1", [hid]); req.ownerMemberId = o.rows[0]?.member_id || "owner";
   };
   app.post("/households/:hid/invites", { preHandler: withHousehold }, async (req: any, reply) => {
     if (req.actor.level !== "owner") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "owner only" } });
@@ -123,7 +147,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     const fam = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection='family' and doc_id=$2", [req.householdId, p.data.memberId]);
     const dob = fam.rows[0]?.body?.dob; if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(String(dob))) return reply.code(422).send({ error: { code: "NO_DOB", message: "add this member's date of birth on the Family tab first" } });
     if (fam.rows[0]!.body.role === "child") return reply.code(422).send({ error: { code: "CHILD_RULE", message: "links are for adults; children are logged for by their parents" } });
-    const level: Level = p.data.memberId === req.actor.memberId ? "owner" : "contributor";
+    const level: Level = p.data.memberId === req.ownerMemberId ? "owner" : "contributor";
     const token = randomBytes(24).toString("base64url"), id = randomBytes(5).toString("base64url");
     await db.query("insert into member_links(id,token_hash,household_id,member_id,level,created_by) values($1,$2,$3,$4,$5,$6)", [id, createHash("sha256").update(token).digest("hex"), req.householdId, p.data.memberId, level, req.userId]);
     await audit(req, "member_link.create", { doc_id: p.data.memberId }); return { id, memberId: p.data.memberId, level, url: linkUrl(token) };
@@ -169,7 +193,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
     if (collection === "family") { const err = validateFamilyDoc(p.data.body); if (err) return reply.code(422).send({ error: { code: "CHILD_RULE", message: err } }); }
     const c = await db.connect(); let written = 0; try {
       await c.query("begin"); const ex = await c.query<{ body: any; version: number }>("select body,version from documents where household_id=$1 and collection=$2 and doc_id=$3 for update", [req.householdId, collection, docId]); const existing = ex.rows[0];
-      if (!canWrite(req.actor, collection, docId, p.data.body, existing?.body)) { await c.query("rollback"); return reply.code(403).send({ error: { code: "FORBIDDEN", message: "your access level cannot change this" } }); }
+      if (!canWrite(req.actor, collection, docId, p.data.body, existing?.body, req.ownerMemberId)) { await c.query("rollback"); return reply.code(403).send({ error: { code: "FORBIDDEN", message: "your access level cannot change this" } }); }
       if (existing && p.data.ifVersion !== undefined && p.data.ifVersion !== existing.version) { await c.query("rollback"); return reply.code(409).send({ error: { code: "CONFLICT", message: "document changed", currentVersion: existing.version, body: existing.body } }); }
       if (!existing) { const n = await c.query("select count(*)::int as n from documents where household_id=$1", [req.householdId]); if (n.rows[0]!.n >= cfg.MAX_DOCS_PER_HOUSEHOLD) { await c.query("rollback"); return reply.code(429).send({ error: { code: "QUOTA", message: "this household has reached its document limit; delete old entries or export" } }); } }
       const v = existing ? existing.version + 1 : 1;
@@ -180,7 +204,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   });
   app.delete("/households/:hid/docs/:collection/:docId", { preHandler: withHousehold }, async (req: any, reply) => {
     const { collection, docId } = req.params; const ex = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection=$2 and doc_id=$3", [req.householdId, collection, docId]);
-    if (!ex.rowCount) return { ok: true }; if (!canWrite(req.actor, collection, docId, {}, ex.rows[0]!.body)) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "your access level cannot delete this" } });
+    if (!ex.rowCount) return { ok: true }; if (!canWrite(req.actor, collection, docId, {}, ex.rows[0]!.body, req.ownerMemberId)) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "your access level cannot delete this" } });
     await db.query("delete from documents where household_id=$1 and collection=$2 and doc_id=$3", [req.householdId, collection, docId]); await ChangeBus.publish(db, { hid: req.householdId, collection, doc_id: docId, version: 0, deleted: true }); await audit(req, "doc.delete", { collection, doc_id: docId }); return { ok: true };
   });
   app.get("/households/:hid/changes", { preHandler: withHousehold }, async (req: any) => { const since = new Date(String(req.query.since ?? 0)); const r = await db.query("select collection,doc_id,body,version,updated_at from documents where household_id=$1 and updated_at>$2 order by updated_at limit 1000", [req.householdId, isNaN(since.getTime()) ? new Date(0) : since]); return { docs: r.rows, serverTime: new Date().toISOString() }; });

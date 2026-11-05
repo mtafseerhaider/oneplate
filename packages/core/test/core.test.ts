@@ -82,3 +82,27 @@ describe("scan", () => {
     expect(foodOf(items[0]!).n).toBe("Saag"); expect(memberP({ items }, fam[2]!, today)[0]).toBe("1 fist saag"); expect(cookQ({ items }, fam, today)[0]).toBe("6 fists saag"); expect(plateShape(items).thirds).toBe("ok");
   });
 });
+import { roster, personalize, memberIdFor, activitySetFor, sortMembers } from "../src/index.js";
+describe("household", () => {
+  const other: Member[] = [
+    { id: "ali", name: "Ali", rel: "me", role: "adult", sex: "male", goal: "fat_loss", dob: "1990-05-05" },
+    { id: "sara", name: "Sara", rel: "wife", role: "adult", sex: "female", goal: "maintain", dob: "1992-01-01" },
+    { id: "hamza", name: "Hamza", rel: "son", role: "child", sex: "male", goal: "growth", dob: "2016-03-01" },
+    { id: "noor", name: "Noor", rel: "daughter", role: "child", sex: "female", goal: "growth", dob: "2020-07-07" },
+    { id: "zain", name: "Zain", rel: "son", role: "child", sex: "male", goal: "growth", dob: "2024-01-01" }];
+  it("builds the roster and keeps the original family unchanged", () => {
+    const r = roster(fam, "tafseer", today); expect(r.owner!.id).toBe("tafseer"); expect(r.spouse!.id).toBe("uzma"); expect(r.children.map(c => c.id)).toEqual(["abbas", "eliyya"]);
+    const t = "Abbas (7) and Eliyya (4): ask Abbas and Eliyya; Uzma cooks; Tafseer logs. Ibn 'Abbas said so."; expect(personalize(t, r, today)).toBe(t);
+    expect(sortMembers(fam.slice().reverse(), "tafseer").map(m => m.id)).toEqual(["tafseer", "uzma", "abbas", "eliyya"]);
+  });
+  it("personalises names, ages and phrases for another family", () => {
+    const r = roster(other, "ali", today);
+    expect(personalize("Abbas (7) and Eliyya (4)", r, today)).toBe("Hamza (10) and Noor (6)");
+    expect(personalize("Ask Abbas and Eliyya what they think; Uzma and Tafseer listen.", r, today)).toBe("Ask Hamza, Noor and Zain what they think; Sara and Ali listen.");
+    expect(personalize("For Abbas at seven this is play; for Eliyya at four it is watching. A seven-year-old can hold it.", r, today)).toBe("For Hamza at 10 this is play; for Noor at 6 it is watching. A ten-year-old can hold it.");
+    expect(personalize("The Prophet prayed for Ibn 'Abbas; the Abbasid caliphs came later.", r, today)).toBe("The Prophet prayed for Ibn 'Abbas; the Abbasid caliphs came later.");
+    const solo = roster([other[0]!], "ali", today); expect(personalize("Uzma, Abbas and Eliyya", solo, today)).toBe("your spouse, the children"); expect(personalize("Abbas (7)", solo, today)).toBe("your child");
+    expect(activitySetFor(other[2]!, today)).toBe("abbas"); expect(activitySetFor(other[3]!, today)).toBe("abbas"); expect(activitySetFor(other[4]!, today)).toBe("eliyya"); expect(activitySetFor(null, today)).toBe("abbas");
+    expect(memberIdFor("Sara Khan", ["sara"])).toBe("sarakhan"); expect(memberIdFor("Sara", ["sara", "sara2"])).toBe("sara3"); expect(memberIdFor("!!", [])).toBe("member");
+  });
+});

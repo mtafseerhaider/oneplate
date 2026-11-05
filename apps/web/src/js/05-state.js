@@ -1,6 +1,6 @@
 /* ---------- state ---------- */
 const LS="oneplate.v1";
-let S={settings:{startWeight:84,targetWeight:70,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{},qprog:{done:{},flag:{}},reviews:{},tbprog:{lectures:{},notes:{}}};
+let S={settings:{startWeight:null,targetWeight:null,startDate:todayStr(),fastHours:21,unlockKg:5,city:"karachi",hijriOffset:0,ramadan:"auto",tradition:"sunni"},fast:{startedAt:null,lastHours:null,lastEndedAt:null},days:{},weighins:{},meals:{},family:{},qnotes:{},qprog:{done:{},flag:{}},reviews:{},tbprog:{lectures:{},notes:{}}};
 let canReview=false;
 let db=null,syncState="wait",readOnly=false,isOwner=true,tab=(location.hash||"#today").slice(1);
 if(tab==="guide")tab="learn";if(!["today","plate","tarbiyah","family","train","progress","learn"].includes(tab))tab="today";

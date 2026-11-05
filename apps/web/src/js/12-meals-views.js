@@ -38,7 +38,7 @@ function vToday(){
   return `
   <div class="hdr"><div><p class="eyebrow">${DAYS[wd]} · ${new Date(t+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"long"})} · ${hijriLabel(hj)} ${I("hijri")}</p><h1>${isToday?tr(greeting()):tr("Catching up")}${whoAmI()?`, ${esc(whoAmI())}`:""}</h1>${whoAmI()?`<p class="small muted" style="margin:2px 0 0">${tr("Signed in as")} ${esc(whoAmI())}${typeof window.oneplate==="object"?" · "+esc(tr(window.oneplate.level()==="owner"?"owner":window.oneplate.level()==="contributor"?"family editor":"viewer")):isOwner?" · "+tr("owner"):readOnly?"":" · "+tr("family editor")}</p>`:""}</div>
    <div class="row" style="gap:6px">${sf?`<span class="pill green">${ic("moon")} ${esc(sf.t)} ${I("sunnahfast")}</span>`:""}<span class="pill soft">Week ${w} · ${phase(w).n} ${I("phase")}</span></div></div>
-  ${ro?`<div class="note">You are viewing Tafseer's OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab, your own journal on the <b>Learn</b> tab, and edit meals on the <b>Plate</b> tab.</div>`:""}
+  ${ro?`<div class="note">You are viewing ${esc((member(ownerId())||{}).name||"this family")}'s OnePlate. Everything here is live. Tap any <b>i</b> for a plain explanation.</div>`:!isOwner?`<div class="note">This is Tafseer's day. You can log for Uzma, Abbas and Eliyya on the <b>Family</b> tab, your own journal on the <b>Learn</b> tab, and edit meals on the <b>Plate</b> tab.</div>`:""}
   ${logBar(t)}
   <section class="card strip">
     <div class="mini"><svg viewBox="0 0 48 48"><circle class="t" cx="24" cy="24" r="20"/><circle class="b" cx="24" cy="24" r="20" stroke-dasharray="125.7" stroke-dashoffset="${(125.7*(1-dn/7)).toFixed(1)}"/></svg><b>${dn}/7</b></div>
@@ -167,7 +167,7 @@ function vTrain(){
   const w=weekNo(),ph=phase(w),wd=new Date().getDay(),on=strengthOn();
   const steps=w<=2?"6,000":w<=6?"7,500":"8,000+";
   const need=S.settings.unlockKg||5,lost=Math.max(0,lostKg()),pct=Math.min(100,lost/need*100);
-  const unlockAt=(Number(S.settings.startWeight)-need).toFixed(1);
+  const unlockAt=planReady()?(Number(S.settings.startWeight)-need).toFixed(1):"—";
   const today=planFor(wd);
   return `
   <div class="hdr"><div><p class="eyebrow">Week ${w} · ${esc(ph.n)} phase ${I("phase")}</p><h1>${tr("Training")}</h1></div></div>
@@ -222,12 +222,14 @@ function vProgress(){
   const st=S.settings,ws=weighList(),ro=readOnly||!isOwner;
   const last=ws[ws.length-1],first=ws[0],prev=ws[ws.length-2];
   const cur=currentWeight();
-  const lost=(st.startWeight-cur),togo=cur-st.targetWeight,total=st.startWeight-st.targetWeight,pct=Math.max(0,Math.min(100,lost/total*100));
+  if(!planReady())return `<div class="hdr"><div><p class="eyebrow">${tr("Progress")}</p><h1>${tr("Progress")}</h1></div></div>${planSetupCard(ro)}${ro?"":settingsSection(st)}`;
+  const lost=(st.startWeight-cur),togo=cur-st.targetWeight,total=Math.max(0.1,st.startWeight-st.targetWeight),pct=Math.max(0,Math.min(100,lost/total*100));
   let rate=null,eta="—";
   if(ws.length>=2){const days=(new Date(last.date)-new Date(first.date))/864e5;if(days>=6){rate=(first.weight-last.weight)/(days/7);if(rate>0.05){const wk=togo/rate;const d=new Date(last.date+"T00:00:00");d.setDate(d.getDate()+Math.round(wk*7));eta=d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})}else eta="stalled"}}
   const delta=prev?Number(last.weight)-Number(prev.weight):null;
   const w=weekNo();
-  const cps=[[4,"4 weeks","80–81.5 kg","−2 to −4 cm waist"],[8,"8 weeks","78–79.5 kg","−4 to −7 cm"],[12,"12 weeks","75.5–77.5 kg","−6 to −10 cm"],[26,"24–28 weeks","70 kg","≈ 85–88 cm"]];
+  const sw=Number(st.startWeight),tw=Number(st.targetWeight),endWk=Math.max(8,Math.ceil((sw-tw)/0.5)+2),kg=(wk)=>`${Math.max(tw,sw-0.75*wk).toFixed(1)}–${Math.max(tw,sw-0.5*wk).toFixed(1)} kg`;
+  const cps=[[4,"4 weeks",kg(4),"−2 to −4 cm waist"],[8,"8 weeks",kg(8),"−4 to −7 cm"],[12,"12 weeks",kg(12),"−6 to −10 cm"],[endWk,`${endWk-2}–${endWk+2} weeks`,`${tw} kg`,"≈ −1 cm per kg"]].filter((c,i,a)=>i===a.length-1||c[0]<endWk);
   return `
   <div class="hdr"><div><p class="eyebrow">Week ${w} · ${ws.length} weigh-in${ws.length===1?"":"s"}</p><h1>${tr("Progress")}</h1></div>${rate!=null?`<span class="pill ${rate>=0.4?"green":rate>0.05?"amber":"red"}">${ic("trend")} ${rate.toFixed(2)} kg / week ${I("rate")}</span>`:""}</div>
   <section class="card">
@@ -265,8 +267,8 @@ function vProgress(){
     <li>Below 76 kg maintenance is ≈150 kcal lower: add 2,000 steps or keep the smaller rest-day plate.</li>
     <li>Still stuck after 6 weeks: TSH, HbA1c, vitamin D, medication review.</li></ul></div></details>
   ${(typeof window.oneplate==="object"&&!readOnly)?`<section class="card"><p class="eyebrow">${ic("family")} Account · this household ${I("account")}</p>
-    <div class="row">${isOwner?`<button class="btn" data-a="acc_invite">Invite Uzma (contributor)</button><button class="btn" data-a="acc_invite_view">Invite a viewer</button><button class="btn" data-a="acc_export">Export all data</button>`:""}<button class="btn ghost" data-a="acc_signout">Sign out</button>${isOwner?`<button class="btn ghost" style="color:var(--red)" data-a="acc_delete">Delete household</button>`:""}</div>
-    ${S._inviteCode?`<div class="note">Invite code <b style="font-family:var(--mono);font-size:16px">${esc(S._inviteCode)}</b> · valid 7 days. Uzma creates her account at <b>${esc(location.origin)}/account.html</b> and enters it.</div>`:""}
+    <div class="row">${isOwner?`${members().filter(m=>m.role!=="child"&&m.id!==ownerId()).map(m=>`<button class="btn" data-a="acc_invite" data-m="${m.id}">Invite ${esc(m.name)}</button>`).join("")}<button class="btn" data-a="acc_invite_view">Invite a viewer</button><button class="btn" data-a="acc_export">Export all data</button>`:""}<button class="btn ghost" data-a="acc_signout">Sign out</button>${window.oneplate.isAdmin&&window.oneplate.isAdmin()?`<a class="btn ghost" href="./admin.html">${ic("family")} Admin</a>`:""}${isOwner?`<button class="btn ghost" style="color:var(--red)" data-a="acc_delete">Delete household</button>`:""}</div>
+    ${S._inviteCode?`<div class="note">Invite code <b style="font-family:var(--mono);font-size:16px">${esc(S._inviteCode)}</b> · valid 7 days. They create their account at <b>${esc(location.origin)}/account.html?invite=${esc(S._inviteCode)}</b> and it signs them into this household.</div>`:""}
     <div class="row"><button class="btn" data-a="acc_passkey">${ic("check")} Add a passkey to this device</button>${window.oneplate.canInstall&&window.oneplate.canInstall()?`<button class="btn" data-a="acc_install">${ic("plate")} Install as an app</button>`:""}</div>
     <p class="small muted">Live updates: ${window.oneplate.live()?"connected":"polling"}. A passkey lets you sign in with Face ID or fingerprint instead of a password.</p>
     ${isOwner?`<p class="eyebrow" style="margin-top:10px">Family links ${I("familylink")}</p>
@@ -277,23 +279,7 @@ function vProgress(){
     ${notifCard()}
     ${healthCard()}
     <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Install on a phone or computer</span>${ic("chev","chev")}</summary><div class="body"><ul class="small"><li><b>Android (Chrome):</b> menu ⋮ → Install app, or the Install button above.</li><li><b>iPhone and iPad (Safari):</b> Share → Add to Home Screen.</li><li><b>macOS (Safari 17+):</b> File → Add to Dock. <b>Chrome / Edge:</b> address-bar install icon.</li><li><b>Windows:</b> Chrome or Edge address-bar install icon.</li></ul><p class="small muted">The installed app opens full screen, works offline for the shell, and keeps you signed in.</p></div></details></section>`:""}
-  ${ro?"":`<details><summary><span>Settings</span>${ic("chev","chev")}</summary><div class="body">
-    <form class="form" id="sform" autocomplete="off">
-      <label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight}"></label>
-      <label class="f">Target<input type="number" id="s_tw" step="0.1" value="${st.targetWeight}"></label>
-      <label class="f">Start date<input type="date" id="s_sd" value="${st.startDate}"></label>
-      <label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>
-      <label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>
-      <label class="f">Quran course start date<input type="date" id="s_qs" value="${st.quranStart||st.startDate}"></label>
-      <label class="f">Tarbiyah course start date<input type="date" id="s_tbs" value="${st.tarbiyahStart||st.startDate}"></label>
-      <label class="f">${tr("Appearance")} ${I("appearance")}<select id="s_theme">${THEMES_UI.map(([v,l])=>`<option value="${v}" ${THEME===v?"selected":""}>${tr(l)}${v==="auto"?" · "+tr("follows the device"):""}</option>`).join("")}</select></label>
-      <label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
-      <label class="f">Ramadan mode<select id="s_ram">${[["auto","Auto (by Hijri date)"],["on","On"],["off","Off"]].map(o=>`<option value="${o[0]}" ${(st.ramadan||"auto")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
-      <label class="f">Hijri offset (moon sighting)<select id="s_hoff">${[-2,-1,0,1,2].map(v=>`<option value="${v}" ${Number(st.hijriOffset||0)===v?"selected":""}>${v>0?"+"+v:v} day${Math.abs(v)===1?"":"s"}</option>`).join("")}</select></label>
-      <label class="f">Sunnah fast days<select id="s_trad">${[["sunni","Sunni (Mon/Thu, Ayyam al-Bid, Arafah, Ashura)"],["shia","Shia (Ayyam al-Bid, Arafah)"]].map(o=>`<option value="${o[0]}" ${(st.tradition||"sunni")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
-      <button class="btn" type="submit">Save settings</button>
-    </form>
-  </div></details>`}`;
+  ${ro?"":settingsSection(st)}`;
 }
 function chart(ws){
   const st=S.settings,W=360,H=190,L=34,R=10,T=12,B=26;
@@ -387,13 +373,13 @@ function vReference(){
 const PUSH_KINDS=[["fastEnd","Fast complete",true],["starter","Protein starter · 7 pm",true],["weighin","Weigh-in Friday morning",true],["circle","Family circle · 8:30 pm",false],["quran","Quran reading · 9:30 pm",false]];
 function notifCard(){const ps=S._push;if(!window.oneplate.pushSupported||!window.oneplate.pushSupported())return `<p class="eyebrow" style="margin-top:10px">Notifications ${I("push")}</p><p class="small muted">This browser cannot show app notifications. On iPhone, install OnePlate to the Home Screen first (Share → Add to Home Screen) and open it from there.</p>`;
   if(!ps)return `<p class="eyebrow" style="margin-top:10px">Notifications ${I("push")}</p><div class="row"><button class="btn sm" data-a="push_status">Check this device</button></div>`;
-  const prefs=ps.prefs||{};const me=(S.family[learnMember&&isOwner?"tafseer":"uzma"]||{});
+  const prefs=ps.prefs||{};
   return `<p class="eyebrow" style="margin-top:10px">Notifications ${I("push")}</p>
   ${ps.device?`<p class="small">On for this device. ${ps.permission==="granted"?"":"Permission: "+esc(ps.permission)}</p>`:`<p class="small muted">${ps.permission==="denied"?"Notifications are blocked for this site in the browser settings.":"Off on this device."}</p>`}
   <div class="form" style="flex-direction:column;align-items:stretch;gap:4px">${PUSH_KINDS.filter(k=>isOwner||!k[2]).map(([k,l])=>`<label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-pk="${k}" ${prefs[k]===false?"":"checked"} style="width:auto"> ${l}</label>`).join("")}</div>
   <div class="row"><button class="btn ${ps.device?"":"primary"} sm" data-a="push_on">${ic("check")} ${ps.device?"Save choices":"Turn on for this device"}</button>${ps.device?`<button class="btn ghost sm" data-a="push_test">Send a test</button><button class="btn ghost sm" data-a="push_off">Turn off</button>`:""}</div>
   <p class="small muted">Times follow the household's time zone (${esc((S.settings||{}).city||"karachi")}). Each reminder is sent once and only when the thing is not already done.</p>`}
-function healthCard(){const t=S._ingest;const mine=members().filter(m=>m.role!=="child"&&(isOwner||m.id!=="tafseer"));
+function healthCard(){const t=S._ingest;const mine=members().filter(m=>m.role!=="child"&&(isOwner||m.id!==ownerId()));
   return `<p class="eyebrow" style="margin-top:10px">Apple Health ${I("health")}</p>
   <p class="small muted">A web app cannot read Health itself. An iPhone Shortcut can, and can send the numbers here every night: weight, steps, sleep, cycling minutes and active energy then fill Today and Progress by themselves. Each person gets their own address; keep it private.</p>
   <div class="row">${mine.map(m=>`<button class="btn sm" data-a="ingest_new" data-m="${m.id}">${ic("trend")} Address for ${esc(m.name)}</button>`).join("")}<button class="btn ghost sm" data-a="ingest_list">Existing</button></div>
@@ -409,3 +395,30 @@ function healthCard(){const t=S._ingest;const mine=members().filter(m=>m.role!==
     <li>Add <b>Get Contents of URL</b>. URL: the address above. Method <b>POST</b>, Request Body <b>JSON</b>, and add fields <b>weight</b>, <b>steps</b>, <b>sleepMin</b>, <b>cycleMin</b>, <b>activeKcal</b>, each set to the matching variable. Numbers arrive as "72.4 kg" or "9,120"; the server reads them either way.</li>
     <li>Run it once. The address answers with what it stored. Then <b>Automation</b> tab → <b>+</b> → <b>Time of Day</b>, 10:30 pm, Daily, <b>Run Immediately</b>, and turn off <b>Ask Before Running</b>. If iOS still asks the first night, tap Always Allow.</li></ol>
     <p class="small muted">Reverse direction, optional: a second Shortcut with <b>Get Contents of URL</b> (the address plus <b>/latest</b>), <b>Get Dictionary Value</b> → weight, then <b>Log Health Sample</b> → Weight, so OnePlate's weigh-ins appear in Health. Android has no equivalent for a web app; log by hand there.</p></div></details>`}
+
+function settingsSection(st){return `<details><summary><span>Settings</span>${ic("chev","chev")}</summary><div class="body">
+    <form class="form" id="sform" autocomplete="off">
+      <label class="f">Start weight<input type="number" id="s_sw" step="0.1" value="${st.startWeight}"></label>
+      <label class="f">Target<input type="number" id="s_tw" step="0.1" value="${st.targetWeight}"></label>
+      <label class="f">Start date<input type="date" id="s_sd" value="${st.startDate}"></label>
+      <label class="f">Fast goal (h)<input type="number" id="s_fh" min="14" max="24" value="${st.fastHours}"></label>
+      <label class="f">Unlock strength after (kg)<input type="number" id="s_uk" min="1" max="20" step="0.5" value="${st.unlockKg||5}"></label>
+      <label class="f">Quran course start date<input type="date" id="s_qs" value="${st.quranStart||st.startDate}"></label>
+      <label class="f">Tarbiyah course start date<input type="date" id="s_tbs" value="${st.tarbiyahStart||st.startDate}"></label>
+      <label class="f">${tr("Appearance")} ${I("appearance")}<select id="s_theme">${THEMES_UI.map(([v,l])=>`<option value="${v}" ${THEME===v?"selected":""}>${tr(l)}${v==="auto"?" · "+tr("follows the device"):""}</option>`).join("")}</select></label>
+      <label class="f">City (fasting times)<select id="s_city">${Object.keys(CITIES).map(k=>`<option value="${k}" ${st.city===k?"selected":""}>${CITIES[k][0]}</option>`).join("")}</select></label>
+      <label class="f">Ramadan mode<select id="s_ram">${[["auto","Auto (by Hijri date)"],["on","On"],["off","Off"]].map(o=>`<option value="${o[0]}" ${(st.ramadan||"auto")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
+      <label class="f">Hijri offset (moon sighting)<select id="s_hoff">${[-2,-1,0,1,2].map(v=>`<option value="${v}" ${Number(st.hijriOffset||0)===v?"selected":""}>${v>0?"+"+v:v} day${Math.abs(v)===1?"":"s"}</option>`).join("")}</select></label>
+      <label class="f">Sunnah fast days<select id="s_trad">${[["sunni","Sunni (Mon/Thu, Ayyam al-Bid, Arafah, Ashura)"],["shia","Shia (Ayyam al-Bid, Arafah)"]].map(o=>`<option value="${o[0]}" ${(st.tradition||"sunni")===o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></label>
+      <button class="btn" type="submit">Save settings</button>
+    </form>
+  </div></details>`}
+function planSetupCard(ro){const o=member(ownerId())||{};return `<section class="card accent"><p class="eyebrow">${ic("trend")} ${tr("Set up the plan")} ${I("plansetup")}</p>
+  <h2>${esc(o.name||tr("Your"))}${o.name?"'s":""} ${tr("plan")}</h2>
+  <p class="small">${tr("OnePlate needs two numbers to run the plan: the weight you start from and the weight you are aiming for. Everything else, the fast length, the training unlock, the checkpoints and the projection, is built from them. Children are never part of this; their tab is on Family.")}</p>
+  ${ro?`<p class="small muted">${tr("Only the owner can set these.")}</p>`:`<form class="form" id="setupform" autocomplete="off">
+    <label class="f">${tr("Start weight (kg)")}<input type="number" id="su_sw" step="0.1" min="30" max="300" inputmode="decimal" required></label>
+    <label class="f">${tr("Target weight (kg)")}<input type="number" id="su_tw" step="0.1" min="30" max="300" inputmode="decimal" required></label>
+    <label class="f">${tr("Fast goal (h)")}<input type="number" id="su_fh" min="12" max="24" value="${(S.settings||{}).fastHours||16}"></label>
+    <button class="btn primary" type="submit">${ic("check")} ${tr("Start the plan")}</button></form>
+  <p class="small muted">${tr("A sensible first target is 5 to 10 percent of your start weight; you can change both later in Settings below.")}</p>`}</section>`}

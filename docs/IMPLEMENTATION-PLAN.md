@@ -82,6 +82,14 @@ Done in this commit:
 - Narrations carry their gradings; the series corrections sheet is surfaced as "before you repeat anything".
 - Tests: content index coverage, API policy for both parents, browser flow through every section of a lecture and the markdown renderer.
 
+## Phase 9: Any family
+Done in this commit:
+- Households are general: the roster comes from the family documents, with the owner member recorded in settings (and reported by the API); members are added and removed on the Family tab; weigh-in keys, policy, ingest, reminders and member links all use the household's own owner member instead of a fixed id. New households start with the owner on the Family tab and a plan that asks for its two numbers.
+- Registration by invitation: household invites from the admin page open a new family; join invites add a person to an existing one; the first account on a server needs none. `MAX_HOUSEHOLDS_PER_USER` is 1.
+- Content personalisation in core (`personalize`): the original family's names and ages become each household's, with the activity sets matched to the closest child by age; applied to the Learn set, the companions, the Quran card, the glossary, shares and the whole Tarbiyah tab, including the fetched analyses.
+- Scan quota per household per month, counted and shown; admin page for invites, households and quotas.
+- Tests: core roster and personalisation; API invitation flows, owner-aware policy on another family, quota; browser flow through another family's roster, content, members and plan setup.
+
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.
 - No change to a domain rule without a test.

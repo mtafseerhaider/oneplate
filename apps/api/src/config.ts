@@ -16,7 +16,8 @@ const schema = z.object({
   RATE_LIMIT_PER_MINUTE: z.coerce.number().default(300),
   ERROR_WEBHOOK_URL: z.string().optional(),
   AUDIT_RETENTION_DAYS: z.coerce.number().default(365),
-  MAX_HOUSEHOLDS_PER_USER: z.coerce.number().default(3),
+  MAX_HOUSEHOLDS_PER_USER: z.coerce.number().default(1),
+  SCAN_QUOTA_DEFAULT: z.coerce.number().default(60),         // scans per household per month from the server key; admins change it per household
   MAX_DOCS_PER_HOUSEHOLD: z.coerce.number().default(25000),
   PUBLIC_URL: z.string().default("http://localhost:5173"),
   ANTHROPIC_API_KEY: z.string().optional(),               // plate and kitchen scans; without it the scan button explains what is missing

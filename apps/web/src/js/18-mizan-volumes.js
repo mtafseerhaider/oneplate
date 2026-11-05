@@ -18,24 +18,24 @@ function quranCard(d,ro,compact){
   const sub=`Surah ${e.s} · ${esc(su.a)} (${esc(su.t)}) · ${esc(e.portion)} · ${esc(su.p)}`;
   if(compact)return `<section class="card ${done?"":"accent"}">
     <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} ${I("quranplan")}</p>${st==="read"?`<span class="pill green">${ic("check")} read</span>`:st==="revisit"?`<span class="pill amber">${ic("flame")} revisit</span>`:""}</div>
-    <h3>${esc(e.n)}</h3><p class="small muted">${sub}</p>
+    <h3>${escC(e.n)}</h3><p class="small muted">${sub}</p>
     <div class="goalbar"><div class="bar"><i style="width:${pct}%"></i></div><div class="lbls"><span>${cnt} of ${QPLAN.length} readings</span><span>${pct}%</span></div></div>
     ${qStateButtons(i,ro)}
     <div class="row"><a class="btn" href="${qLink(e)}" target="_blank" rel="noopener">Read the verses</a><button class="btn ghost" data-a="tab" data-v="learn">Summary and al-Mizan</button></div>
   </section>`;
   return `<section class="card ${done?"":"accent"}">
     <div class="row between"><p class="eyebrow">${ic("book")} Today's Quran reading · ${idx} of ${QPLAN.length} · round ${qRound()} ${I("quranplan")}</p><span class="pill ${st==="read"?"green":st==="revisit"?"amber":"grey"}">${st==="read"?ic("check")+" read":st==="revisit"?ic("flame")+" revisit":cnt+" of "+QPLAN.length}</span></div>
-    <h2>${esc(e.n)}</h2>
+    <h2>${escC(e.n)}</h2>
     <p class="small muted">${sub}</p>
     <div class="row"><a class="btn primary" href="${qLink(e)}" target="_blank" rel="noopener">${ic("book")} Read ${esc(qRef(e))} on Quran.com</a>${reviewBadge(e.key)}</div>
     ${shareBtns("reading",e,false)}
-    ${e.cur?`<p class="small"><b>Summary.</b> ${esc(e.sum)}</p>
-    <div class="note" style="border-left-color:var(--green)"><b>From al-Mizan ${I("mizan")}</b><br>${esc(e.mz)}</div>`:`<p class="small"><b>The surah.</b> ${esc(e.sum)}</p>
-    <div class="note" style="border-left-color:var(--green)"><b>Al-Mizan on the surah's purpose ${I("mizan")}</b><br>${esc(e.mz)}<br><span class="muted">Read today's ${esc(e.portion)} with this purpose in mind; the volume below has Tabataba'i's verse-by-verse discussion.</span></div>`}
+    ${e.cur?`<p class="small"><b>Summary.</b> ${escC(e.sum)}</p>
+    <div class="note" style="border-left-color:var(--green)"><b>From al-Mizan ${I("mizan")}</b><br>${escC(e.mz)}</div>`:`<p class="small"><b>The surah.</b> ${escC(e.sum)}</p>
+    <div class="note" style="border-left-color:var(--green)"><b>Al-Mizan on the surah's purpose ${I("mizan")}</b><br>${escC(e.mz)}<br><span class="muted">Read today's ${esc(e.portion)} with this purpose in mind; the volume below has Tabataba'i's verse-by-verse discussion.</span></div>`}
     ${reviewPanel(e.key,e.n)}
     <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Where to find it in al-Mizan ${I("mizanvol")}</span>${ic("chev","chev")}</summary><div class="body">${mizanRefBlock(e,i,ro)}</div></details>
-    <p class="small"><b>${e.cur?"Tadabbur.":"Lesson."}</b> ${esc(e.q)}</p>
-    <p class="small muted"><b>For Abbas and Eliyya.</b> ${esc(e.k)}</p>
+    <p class="small"><b>${e.cur?"Tadabbur.":"Lesson."}</b> ${escC(e.q)}</p>
+    <p class="small muted"><b>${tr("For")} ${esc(childNames())}.</b> ${escC(e.k)}</p>
     <p class="eyebrow">Record progress ${I("qprogress")}</p>
     ${qStateButtons(i,ro)}
     <div class="goalbar"><div class="bar"><i style="width:${pct}%"></i></div><div class="lbls"><span>${cnt} of ${QPLAN.length} readings</span><span>${Object.keys((S.qprog||{}).flag||{}).length} to revisit</span><span>${pct}%</span></div></div>

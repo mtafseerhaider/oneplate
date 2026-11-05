@@ -20,8 +20,8 @@ function quranIndex(){const cur=qIndex(),st=core.courseStats(QPLAN),cnt=qCount()
 function dayOfYear(d){d=d||new Date(logDate()+"T12:00:00");const s=new Date(d.getFullYear(),0,1);return Math.floor((d-s)/864e5)}
 function pick(arr,off,back){const i=dayOfYear()-(back||0)+(off||0);return arr[((i%arr.length)+arr.length)%arr.length]}
 function weekTheme(){return THEMES[Math.floor(dayOfYear()/7)%THEMES.length]}
-function learnMember(){const ids=members().map(m=>m.id);if(!S._lm||!ids.includes(S._lm))S._lm=isOwner?"tafseer":(readOnly?"uzma":"uzma");return S._lm}
-function canWriteFor(id){if(readOnly)return false;if(isOwner)return true;return id!=="tafseer"}
+function learnMember(){const ids=members().map(m=>m.id);if(!S._lm||!ids.includes(S._lm)){const sp=spouse();S._lm=isOwner?ownerId():(sp?sp.id:ownerId())}return S._lm}
+function canWriteFor(id){if(readOnly)return false;if(isOwner)return true;return id!==ownerId()}
 
 function lcard(icon,title,body,extra){return `<section class="card"><div class="row between"><p class="eyebrow">${ic(icon)} ${title}</p>${extra||""}</div>${body}</section>`}
 function vLearn(){
@@ -36,16 +36,16 @@ function vLearn(){
   <div class="seg">${members().map(x=>`<button class="${x.id===mId?"on":""}" data-a="lm" data-v="${x.id}">${esc(x.name)}</button>`).join("")}</div>
   <p class="small muted">${kid?`${esc(m.name)}'s layer: every item explained for a child, to read together. Tap a name above to switch.`:`${esc(m.name)}'s daily set. Two layers for every item: the children's version is under their names.`} ${I("twolayer")}</p>
   ${kid?"":quranCard(d,ro)}
-  ${lcard("book",tr("Verse of the day")+" "+I("verse"),`<p class="small muted">Quran ${esc(V.r)} · ${esc(V.c)}</p><h3>${esc(V.m)}</h3><p class="small">${esc(kid?V.k:V.a)}</p><p class="small"><b>Do:</b> ${esc(V.do)}</p>${depthBlock("verse",V,kid)}`)}
-  ${lcard("bolt",tr("Word of the day")+" "+I("word"),`<div class="row between"><h3>${esc(W.t)} <span class="muted" dir="rtl">${esc(W.ar)}</span></h3><span class="kcal">root ${esc(W.rt)}</span></div><p class="small">${esc(kid?W.k:W.m)}</p><p class="small muted">${esc(W.u)}</p>${depthBlock("word",W,kid)}`)}
-  ${lcard("moon","Teaching · the Prophet and the Ahl al-Bayt "+I("teaching"),`<p class="small muted">${esc(T.w)}</p><h3 style="font-weight:500">"${esc(T.q)}"</h3><p class="small">${esc(kid?T.k:T.a)}</p><p class="small muted">${esc(T.src)} · ${esc(T.v)}</p><div class="row">${reviewBadge(contentKey("teaching",T))}</div>${reviewPanel(contentKey("teaching",T),T.q)}${depthBlock("teaching",T,kid)}`)}
-  ${lcard("home",tr("Story of the day")+" "+I("story"),`<h3>${esc(ST.t)}</h3><p class="small muted">Quran ${esc(ST.r)}</p><p class="small">${esc(kid?ST.k:ST.s)}</p><p class="small"><b>Moral:</b> ${esc(ST.m)}</p><p class="small"><b>Together:</b> ${esc(ST.f)}</p><div class="row">${reviewBadge(contentKey("story",ST))}</div>${reviewPanel(contentKey("story",ST),ST.t)}${depthBlock("story",ST,kid)}`)}
-  ${kid?"":lcard("book","Surah of the day "+I("surah"),`<h3>${SU.n}. ${esc(SU.a)} <span class="muted" style="font-weight:400">· ${esc(SU.t)}</span></h3><p class="small muted">${SU.v} verses · ${esc(SU.p)}</p><p class="small">${esc(SU.s)}</p><p class="small"><b>Lesson:</b> ${esc(SU.l)}</p><p class="small muted"><b>For the children:</b> ${esc(SU.k)}</p><div class="note" style="border-left-color:var(--green)"><b>Al-Mizan on its purpose</b><br>${esc(SURAH_INDEX[SU.n-1].mz)}</div><div class="row">${reviewBadge("surah-"+SU.n)}</div>${reviewPanel("surah-"+SU.n,SU.a)}`)}
-  ${lcard("sun",tr("Idea of the day")+" "+I("idea"),`<h3>${esc(ID.t)}</h3><p class="small muted">${esc(ID.w)}</p><p class="small">${esc(kid?ID.k:ID.i)}</p><p class="small"><b>Apply:</b> ${esc(ID.d)}</p>${depthBlock("idea",ID,kid)}`)}
-  ${kid?"":lcard("book","Book of the day "+I("bookday"),`<h3>${esc(B.t)}</h3><p class="small muted">${esc(B.w)} · ${esc(B.y)}</p><p class="small"><b>Why it matters:</b> ${esc(B.why)}</p><p class="small"><b>Core idea:</b> ${esc(B.core)}</p><p class="small"><b>Takeaway:</b> ${esc(B.take)}</p><p class="small muted"><b>Next step:</b> ${esc(B.next)}</p>${depthBlock("book",B,false)}`)}
-  ${lcard("egg",tr("Dua of the day")+" "+I("dua"),`<h3 style="font-weight:500">${esc(DU.t)}</h3><p class="small">${esc(DU.m)}</p><p class="small muted">${esc(DU.r)} · ${esc(DU.w)}</p>${depthBlock("dua",DU,kid)}`)}
-  ${lcard("flame",tr("Poem of the day")+" "+I("poem"),`<p style="white-space:pre-line;font-family:var(--display);font-size:16px;line-height:1.4">${esc(P.l)}</p><p class="small muted">${esc(P.w)} · ${esc(P.s)}</p>${kid?`<p class="small">${esc(P.k)}</p>`:""}${depthBlock("poem",P,kid)}`)}
-  ${lcard("clock",tr("Question of the day")+" "+I("question"),`<h3 style="font-weight:500">${esc(kid?pick(KID_Q):Q)}</h3>${kid?"":`<p class="small muted">From the Quran program's Track 8: reflection should lead to action.</p>`}`,
+  ${lcard("book",tr("Verse of the day")+" "+I("verse"),`<p class="small muted">Quran ${esc(V.r)} · ${esc(V.c)}</p><h3>${escC(V.m)}</h3><p class="small">${esc(kid?V.k:V.a)}</p><p class="small"><b>Do:</b> ${escC(V.do)}</p>${depthBlock("verse",V,kid)}`)}
+  ${lcard("bolt",tr("Word of the day")+" "+I("word"),`<div class="row between"><h3>${esc(W.t)} <span class="muted" dir="rtl">${esc(W.ar)}</span></h3><span class="kcal">root ${esc(W.rt)}</span></div><p class="small">${esc(kid?W.k:W.m)}</p><p class="small muted">${escC(W.u)}</p>${depthBlock("word",W,kid)}`)}
+  ${lcard("moon","Teaching · the Prophet and the Ahl al-Bayt "+I("teaching"),`<p class="small muted">${esc(T.w)}</p><h3 style="font-weight:500">"${escC(T.q)}"</h3><p class="small">${esc(kid?T.k:T.a)}</p><p class="small muted">${esc(T.src)} · ${esc(T.v)}</p><div class="row">${reviewBadge(contentKey("teaching",T))}</div>${reviewPanel(contentKey("teaching",T),T.q)}${depthBlock("teaching",T,kid)}`)}
+  ${lcard("home",tr("Story of the day")+" "+I("story"),`<h3>${esc(ST.t)}</h3><p class="small muted">Quran ${esc(ST.r)}</p><p class="small">${esc(kid?ST.k:ST.s)}</p><p class="small"><b>Moral:</b> ${escC(ST.m)}</p><p class="small"><b>Together:</b> ${escC(ST.f)}</p><div class="row">${reviewBadge(contentKey("story",ST))}</div>${reviewPanel(contentKey("story",ST),ST.t)}${depthBlock("story",ST,kid)}`)}
+  ${kid?"":lcard("book","Surah of the day "+I("surah"),`<h3>${SU.n}. ${esc(SU.a)} <span class="muted" style="font-weight:400">· ${esc(SU.t)}</span></h3><p class="small muted">${SU.v} verses · ${esc(SU.p)}</p><p class="small">${escC(SU.s)}</p><p class="small"><b>Lesson:</b> ${escC(SU.l)}</p><p class="small muted"><b>For the children:</b> ${escC(SU.k)}</p><div class="note" style="border-left-color:var(--green)"><b>Al-Mizan on its purpose</b><br>${escC(SURAH_INDEX[SU.n-1].mz)}</div><div class="row">${reviewBadge("surah-"+SU.n)}</div>${reviewPanel("surah-"+SU.n,SU.a)}`)}
+  ${lcard("sun",tr("Idea of the day")+" "+I("idea"),`<h3>${esc(ID.t)}</h3><p class="small muted">${esc(ID.w)}</p><p class="small">${esc(kid?ID.k:ID.i)}</p><p class="small"><b>Apply:</b> ${escC(ID.d)}</p>${depthBlock("idea",ID,kid)}`)}
+  ${kid?"":lcard("book","Book of the day "+I("bookday"),`<h3>${esc(B.t)}</h3><p class="small muted">${esc(B.w)} · ${esc(B.y)}</p><p class="small"><b>Why it matters:</b> ${escC(B.why)}</p><p class="small"><b>Core idea:</b> ${escC(B.core)}</p><p class="small"><b>Takeaway:</b> ${escC(B.take)}</p><p class="small muted"><b>Next step:</b> ${escC(B.next)}</p>${depthBlock("book",B,false)}`)}
+  ${lcard("egg",tr("Dua of the day")+" "+I("dua"),`<h3 style="font-weight:500">${esc(DU.t)}</h3><p class="small">${escC(DU.m)}</p><p class="small muted">${esc(DU.r)} · ${esc(DU.w)}</p>${depthBlock("dua",DU,kid)}`)}
+  ${lcard("flame",tr("Poem of the day")+" "+I("poem"),`<p style="white-space:pre-line;font-family:var(--display);font-size:16px;line-height:1.4">${escC(P.l)}</p><p class="small muted">${esc(P.w)} · ${esc(P.s)}</p>${kid?`<p class="small">${escC(P.k)}</p>`:""}${depthBlock("poem",P,kid)}`)}
+  ${lcard("clock",tr("Question of the day")+" "+I("question"),`<h3 style="font-weight:500">${escC(kid?pick(KID_Q):Q)}</h3>${kid?"":`<p class="small muted">From the Quran program's Track 8: reflection should lead to action.</p>`}`,
     ro?(done?`<span class="pill green">${ic("check")} done</span>`:""):`<button class="btn ${done?"":"primary"}" data-a="learndone" data-m="${mId}">${done?ic("check")+" Done today":"Mark today's learning done"}</button>`)}
   ${kid?"":`<section class="card"><p class="eyebrow">${ic("book")} Reflection journal · ${esc(m.name)} ${I("journal")}</p>
     ${ro?(Object.keys(jr).length?`<div class="hands">${["learned","surprised","question","action"].map(k=>jr[k]?`<span>${k}</span><div class="small">${esc(jr[k])}</div>`:"").join("")}</div>`:`<p class="small muted">No entry today.</p>`):`<div class="form" style="flex-direction:column;align-items:stretch">
@@ -57,13 +57,13 @@ function vLearn(){
   </section>`}
   <section class="card accent">
     <div class="row between"><p class="eyebrow">${ic("family")} ${tr("Family circle tonight · 5 minutes")} ${I("circle")}</p>${circle?`<span class="pill green">${ic("check")} done</span>`:""}</div>
-    <ol class="small"><li><b>Verse:</b> ${esc(V.k)}</li><li><b>Story:</b> ${esc(ST.t)}. ${esc(ST.m)}</li><li><b>Ask Abbas and Eliyya:</b> ${esc(pick(KID_Q))}</li><li><b>Dua together:</b> ${esc(pick(DUAS.slice(0,10)).t)}</li></ol>
+    <ol class="small"><li><b>Verse:</b> ${escC(V.k)}</li><li><b>Story:</b> ${esc(ST.t)}. ${escC(ST.m)}</li><li><b>${tr("Ask")} ${esc(childNames())}:</b> ${escC(pick(KID_Q))}</li><li><b>Dua together:</b> ${esc(pick(DUAS.slice(0,10)).t)}</li></ol>
     ${readOnly?"":`<button class="btn ${circle?"":"primary"} wide" data-a="circle">${circle?tr("Cancel"):tr("We did the family circle")}</button>`}
   </section>
   ${quranIndex()}
   ${reviewSummary()}
   <details><summary><span>Review: 1, 7 and 30 days ago ${I("spaced")}</span>${ic("chev","chev")}</summary><div class="body">
-    ${rv.map(r=>`<div class="hands"><span>${r.b} day${r.b>1?"s":""}</span><div class="small"><b>${esc(r.w.t)}</b>: ${esc(r.w.m)}<br><span class="muted">Quran ${esc(r.v.r)}: ${esc(r.v.m)}</span></div></div>`).join("")}
+    ${rv.map(r=>`<div class="hands"><span>${r.b} day${r.b>1?"s":""}</span><div class="small"><b>${esc(r.w.t)}</b>: ${escC(r.w.m)}<br><span class="muted">Quran ${esc(r.v.r)}: ${escC(r.v.m)}</span></div></div>`).join("")}
     <p class="small muted">Spaced review intervals from the Quran program's retention track: 1, 7, 30, 90 days, 1 year.</p>
   </div></details>
   <details><summary><span>Surah index</span>${ic("chev","chev")}</summary><div class="body"><div class="scroll"><table class="tbl"><tbody>${SURAHS.map(s=>`<tr><td class="kcal">${s.n}</td><td><b>${esc(s.a)}</b> · ${esc(s.t)}<br><span class="small muted">${esc(s.s)}</span></td></tr>`).join("")}</tbody></table></div></div></details>
@@ -72,7 +72,7 @@ function vLearn(){
   ${vReference()}`;
 }
 function wellbeingCard(d,ro){
-  const V=pick(VERSES);const body=doneCount(d)>=4,mind=!!((d.learn||{}).tafseer),heart=!!(d.mood&&d.grat),soul=!!(d.soul||d.quran||qState(qIndex())==="read"),fam=!!(d.circle||(d.tarbiyah&&Object.values(d.tarbiyah).some(Boolean)));
+  const V=pick(VERSES);const body=doneCount(d)>=4,mind=!!((d.learn||{})[ownerId()]),heart=!!(d.mood&&d.grat),soul=!!(d.soul||d.quran||qState(qIndex())==="read"),fam=!!(d.circle||(d.tarbiyah&&Object.values(d.tarbiyah).some(Boolean)));
   const dim=(ok,label,icon)=>`<span class="pill ${ok?"green":"grey"}">${ic(icon)} ${label}</span>`;
   const MOODS=["Low","Meh","OK","Good","Great"];
   return `<section class="card">

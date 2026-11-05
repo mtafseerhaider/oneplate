@@ -114,6 +114,19 @@ test("tarbiyah: week card, library and a lecture's sections from the fetched fil
   await page.click('[data-a="tb_back"]'); await page.click('[data-a="tb_done"][data-m="tafseer"]'); assert.equal(await page.evaluate(() => !!S.days[logDate()].tarbiyah.tafseer), true);
   await page.evaluate(() => { S._tl = null; tab = "today"; render(); });
 });
+test("another family: roster from its own documents, personalised content, members added, plan set up", async () => {
+  const snap = await page.evaluate(() => JSON.stringify({ family: S.family, settings: S.settings }));
+  await page.evaluate(() => { S.family = { ali: { id: "ali", name: "Ali", rel: "me", role: "adult", sex: "male", goal: "fat_loss" }, sara: { id: "sara", name: "Sara", rel: "wife", role: "adult", sex: "female", goal: "maintain" }, hamza: { id: "hamza", name: "Hamza", rel: "son", role: "child", sex: "male", goal: "growth", dob: "2016-03-01" } }; S.settings = Object.assign({}, S.settings, { ownerMember: "ali", startWeight: null, targetWeight: null }); isOwner = true; readOnly = false; S._lm = null; tab = "learn"; render(); });
+  assert.deepEqual(await page.evaluate(() => members().map(m => m.id)), ["ali", "sara", "hamza"]); assert.equal(await page.evaluate(() => ownerId()), "ali"); assert.equal(await page.evaluate(() => childNames()), "Hamza");
+  assert.equal(await page.evaluate(() => pz("Ask Abbas and Eliyya; Uzma cooks; Tafseer logs.")), "Ask Hamza; Sara cooks; Ali logs."); assert.doesNotMatch(await page.$eval("#view", e => e.textContent), /(?<!Ibn ')Abbas|Eliyya|Uzma|Tafseer/);
+  await page.evaluate(() => { tab = "tarbiyah"; S._tl = null; render(); }); const tb = await page.$eval("#view", e => e.textContent); assert.match(tb, /Raising Hamza/); assert.doesNotMatch(tb, /Abbas|Eliyya/); assert.match(tb, /With Hamza/);
+  await page.evaluate(() => { tab = "progress"; render(); }); assert.ok(await page.$("#setupform")); assert.match(await page.$eval(".card.accent h2", e => e.textContent), /Ali's plan/);
+  await page.fill("#su_sw", "92"); await page.fill("#su_tw", "84"); await page.click("#setupform button[type=submit]"); await page.waitForTimeout(100); assert.equal(await page.evaluate(() => planReady()), true); assert.equal(await page.$("#setupform"), null); assert.match(await page.$eval("#view", e => e.textContent), /92 kg start/);
+  await page.evaluate(() => { tab = "family"; render(); }); await page.click('[data-a="fam_add"]'); await page.fill(".fam-add [data-k=name]", "Noor"); await page.selectOption(".fam-add [data-k=rel]", "daughter"); await page.fill(".fam-add [data-k=dob]", "2020-07-07"); await page.selectOption(".fam-add [data-k=sex]", "female"); await page.click(".fam-add button[type=submit]"); await page.waitForTimeout(100);
+  assert.deepEqual(await page.evaluate(() => members().map(m => m.id)), ["ali", "sara", "hamza", "noor"]); assert.equal(await page.evaluate(() => S.family.noor.role), "child"); assert.equal(await page.evaluate(() => childNames()), "Hamza and Noor");
+  await page.evaluate(() => { tab = "today"; render(); }); assert.match(await page.$eval(".hdr h1", e => e.textContent), /, Ali$/);
+  await page.evaluate(s => { const o = JSON.parse(s); S.family = o.family; S.settings = o.settings; S._lm = null; tab = "today"; render(); }, snap); assert.deepEqual(await page.evaluate(() => members().map(m => m.id)), ["tafseer", "uzma", "abbas", "eliyya"]);
+});
 test("appearance cycles auto, light, dark and is remembered per device", async () => {
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
   await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");

@@ -6,7 +6,7 @@ import webpush from "web-push";
 import type { Config } from "./config.js";
 import type { Db } from "./db/pool.js";
 import { ChangeBus } from "./events.js";
-import { buildCourse, qIndex } from "@oneplate/core";
+import { buildCourse, qIndex, roster, listNames, type Member } from "@oneplate/core";
 import { SURAH_INDEX, QPLAN } from "@oneplate/content";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -45,7 +45,7 @@ export function applyHealthToDay(day: any | null, date: string, health: Record<s
 }
 
 /* ---------- reminder decisions (pure, tested) ---------- */
-export interface HouseholdState { timezone: string; settings: any; fast: any; days: Record<string, any>; weighins: Record<string, any>; qprog: any; sentKeys: Set<string> }
+export interface HouseholdState { timezone: string; settings: any; fast: any; days: Record<string, any>; weighins: Record<string, any>; qprog: any; sentKeys: Set<string>; family?: Member[]; ownerMemberId?: string }
 export interface Reminder { key: string; title: string; body: string; kind: "fastEnd" | "starter" | "circle" | "quran" | "weighin"; ownerOnly: boolean }
 export function localParts(now: Date, tz: string) { const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short", hour12: false }); const p: any = {}; for (const x of f.formatToParts(now)) p[x.type] = x.value; return { date: `${p.year}-${p.month}-${p.day}`, hm: Number(p.hour === "24" ? 0 : p.hour) * 60 + Number(p.minute), weekday: p.weekday as string }; }
 export function dueReminders(now: Date, st: HouseholdState): Reminder[] {
@@ -53,7 +53,8 @@ export function dueReminders(now: Date, st: HouseholdState): Reminder[] {
   const win = (start: number, r: Reminder) => { if (hm >= start && hm < start + 30 && !st.sentKeys.has(r.key)) out.push(r); };
   if (st.fast?.startedAt) { const goal = Number(st.settings?.fastHours || 21); const end = new Date(st.fast.startedAt).getTime() + goal * 36e5; const key = `fastend:${st.fast.startedAt}`; if (now.getTime() >= end && now.getTime() < end + 30 * 6e4 && !st.sentKeys.has(key)) out.push({ key, kind: "fastEnd", ownerOnly: true, title: `${goal} h fast complete`, body: "Alhamdulillah. Protein starter first, then the one plate at home. Spoon down between bites." }); }
   if (!day.starter && (st.fast?.startedAt || !day.closed)) win(19 * 60, { key: `starter:${date}`, kind: "starter", ownerOnly: true, title: "Protein starter", body: "Two eggs or a bowl of yogurt now; the plate when you are home." });
-  if (!day.circle) win(20 * 60 + 30, { key: `circle:${date}`, kind: "circle", ownerOnly: false, title: "Family circle · 5 minutes", body: "Tonight's verse, story and question for Abbas and Eliyya are on the Learn tab." });
+  const kids = listNames((st.family ?? []).filter(m => m.role === "child").map(m => m.name), "the children");
+  if (!day.circle) win(20 * 60 + 30, { key: `circle:${date}`, kind: "circle", ownerOnly: false, title: "Family circle · 5 minutes", body: `Tonight's verse, story and question for ${kids} are on the Learn tab.` });
   const course = courseCache(); const qs = st.settings?.quranStart || st.settings?.startDate || date; const idx = qIndex(qs, date, course.length); const r = course[idx]!;
   if (!(st.qprog?.done || {})[r.key]) win(21 * 60 + 30, { key: `quran:${date}`, kind: "quran", ownerOnly: false, title: `Today's reading · ${r.n}`, body: r.cur ? "A close reading with its al-Mizan note. Ten minutes before bed." : `${r.portion}. The surah's summary and al-Mizan's purpose note are on the Learn tab.` });
   if (weekday === "Fri" && !Object.values(st.weighins).some((w: any) => w?.date === date && !w?.m)) win(7 * 60, { key: `weighin:${date}`, kind: "weighin", ownerOnly: true, title: "Weigh-in morning", body: "After the bathroom, before water. Same scale, same place. Log it on Progress." });
@@ -90,12 +91,13 @@ export function registerIntegrationRoutes(app: FastifyInstance, cfg: Config, db:
     const hh = await db.query<{ timezone: string }>("select timezone from households where id=$1", [t.household_id]); const today = localParts(new Date(), hh.rows[0]?.timezone || "Asia/Karachi").date;
     const n = normalizeHealth((req.body ?? {}) as HealthPayload, today); const written: string[] = [];
     if (Object.keys(n.health).length) { await upsertDoc(db, t.household_id, "days", n.date, d => applyHealthToDay(d, n.date, n.health), null); written.push("day"); }
-    if (n.weight !== undefined) { const key = t.member_id === "tafseer" ? n.date : `${t.member_id}-${n.date}`; const ok = await upsertDoc(db, t.household_id, "weighins", key, ex => { if (ex && ex.src !== "health") return null; const r: any = { date: n.date, weight: n.weight, src: "health" }; if (t.member_id !== "tafseer") r.m = t.member_id; if (n.waist !== undefined) r.waist = n.waist; else if (ex?.waist) r.waist = ex.waist; return r; }, null); if (ok) written.push("weighin"); }
+    if (n.weight !== undefined) { const owner = (await db.query<{ member_id: string }>("select member_id from memberships where household_id=$1 and level='owner' limit 1", [t.household_id])).rows[0]?.member_id || "owner"; const key = t.member_id === owner ? n.date : `${t.member_id}-${n.date}`; const ok = await upsertDoc(db, t.household_id, "weighins", key, ex => { if (ex && ex.src !== "health") return null; const r: any = { date: n.date, weight: n.weight, src: "health" }; if (t.member_id !== owner) r.m = t.member_id; if (n.waist !== undefined) r.waist = n.waist; else if (ex?.waist) r.waist = ex.waist; return r; }, null); if (ok) written.push("weighin"); }
     await db.query("update ingest_tokens set uses=uses+1, last_used_at=now() where id=$1", [t.id]); return { ok: true, date: n.date, written, received: n };
   });
   app.get("/ingest/:token/latest", async (req: any, reply) => { // for the Shortcut that writes OnePlate's weigh-in back into Health
     const t = await findToken(req.params.token); if (!t) return reply.code(404).send({ error: { code: "NOT_FOUND", message: "unknown or revoked token" } });
-    const r = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection='weighins' and (($2='tafseer' and doc_id !~ '^[a-z]') or doc_id like $3) order by body->>'date' desc limit 1", [t.household_id, t.member_id, t.member_id + "-%"]);
+    const owner = (await db.query<{ member_id: string }>("select member_id from memberships where household_id=$1 and level='owner' limit 1", [t.household_id])).rows[0]?.member_id || "owner";
+    const r = await db.query<{ body: any }>("select body from documents where household_id=$1 and collection='weighins' and (($2 and doc_id !~ '^[a-z]') or doc_id like $3) order by body->>'date' desc limit 1", [t.household_id, t.member_id === owner, t.member_id + "-%"]);
     const w = r.rows[0]?.body; if (!w) return { weight: null }; return { weight: w.weight, date: w.date, waist: w.waist ?? null, manual: w.src !== "health" };
   });
   // ---- web push ----
@@ -112,10 +114,10 @@ export function registerIntegrationRoutes(app: FastifyInstance, cfg: Config, db:
 }
 
 async function sendTo(db: Db, cfg: Config, hid: string, r: Reminder, onlyUser?: string): Promise<number> {
-  const keys = await vapidKeys(db, cfg); webpush.setVapidDetails(`mailto:${cfg.MAIL_FROM.replace(/.*<|>.*/g, "") || "admin@example.com"}`, keys.publicKey, keys.privateKey);
+  const keys = await vapidKeys(db, cfg); const ownerMember = (await db.query<{ member_id: string }>("select member_id from memberships where household_id=$1 and level='owner' limit 1", [hid])).rows[0]?.member_id || "owner"; webpush.setVapidDetails(`mailto:${cfg.MAIL_FROM.replace(/.*<|>.*/g, "") || "admin@example.com"}`, keys.publicKey, keys.privateKey);
   const subs = await db.query<{ id: string; subscription: any; prefs: any; member_id: string | null; user_id: string }>("select id,subscription,prefs,member_id,user_id from push_subscriptions where household_id=$1", [hid]); let n = 0;
   for (const s of subs.rows) {
-    if (onlyUser && s.user_id !== onlyUser) continue; if (!onlyUser && s.prefs && s.prefs[r.kind] === false) continue; if (!onlyUser && r.ownerOnly && s.member_id !== "tafseer") continue;
+    if (onlyUser && s.user_id !== onlyUser) continue; if (!onlyUser && s.prefs && s.prefs[r.kind] === false) continue; if (!onlyUser && r.ownerOnly && s.member_id !== ownerMember) continue;
     try { await webpush.sendNotification(s.subscription, JSON.stringify({ title: r.title, body: r.body, kind: r.kind, url: "./" }), { TTL: 1800 }); await db.query("update push_subscriptions set last_ok_at=now(), failures=0 where id=$1", [s.id]); n++; }
     catch (e: any) { if (e?.statusCode === 404 || e?.statusCode === 410) await db.query("delete from push_subscriptions where id=$1", [s.id]); else await db.query("update push_subscriptions set failures=failures+1 where id=$1", [s.id]); }
   }
@@ -125,9 +127,9 @@ async function sendTo(db: Db, cfg: Config, hid: string, r: Reminder, onlyUser?: 
 export async function schedulerTick(db: Db, cfg: Config, now = new Date(), log: (m: string) => void = () => {}): Promise<number> {
   const hh = await db.query<{ id: string; timezone: string }>("select distinct h.id,h.timezone from households h join push_subscriptions p on p.household_id=h.id"); let total = 0;
   for (const h of hh.rows) {
-    const docs = await db.query<{ collection: string; doc_id: string; body: any }>("select collection,doc_id,body from documents where household_id=$1 and (collection in ('settings','fast','quran') or (collection='days' and doc_id>=to_char(now() - interval '2 days','YYYY-MM-DD')) or (collection='weighins' and body->>'date'>=to_char(now() - interval '2 days','YYYY-MM-DD')))", [h.id]);
-    const st: HouseholdState = { timezone: h.timezone, settings: {}, fast: {}, days: {}, weighins: {}, qprog: {}, sentKeys: new Set() };
-    for (const d of docs.rows) { if (d.collection === "settings") st.settings = d.body; else if (d.collection === "fast") st.fast = d.body; else if (d.collection === "quran") st.qprog = d.body; else if (d.collection === "days") st.days[d.doc_id] = d.body; else st.weighins[d.doc_id] = d.body; }
+    const docs = await db.query<{ collection: string; doc_id: string; body: any }>("select collection,doc_id,body from documents where household_id=$1 and (collection in ('settings','fast','quran','family') or (collection='days' and doc_id>=to_char(now() - interval '2 days','YYYY-MM-DD')) or (collection='weighins' and body->>'date'>=to_char(now() - interval '2 days','YYYY-MM-DD')))", [h.id]);
+    const st: HouseholdState = { timezone: h.timezone, settings: {}, fast: {}, days: {}, weighins: {}, qprog: {}, sentKeys: new Set(), family: [] };
+    for (const d of docs.rows) { if (d.collection === "settings") st.settings = d.body; else if (d.collection === "fast") st.fast = d.body; else if (d.collection === "quran") st.qprog = d.body; else if (d.collection === "family") st.family!.push(d.body); else if (d.collection === "days") st.days[d.doc_id] = d.body; else st.weighins[d.doc_id] = d.body; }
     const sent = await db.query<{ key: string }>("select key from push_log where household_id=$1 and sent_at>now()-interval '2 days'", [h.id]); for (const s of sent.rows) st.sentKeys.add(s.key);
     for (const r of dueReminders(now, st)) { const ins = await db.query("insert into push_log(household_id,key) values($1,$2) on conflict do nothing", [h.id, r.key]); if (!ins.rowCount) continue; const n = await sendTo(db, cfg, h.id, r); total += n; log(`push ${r.kind} to ${n} device(s)`); }
   }

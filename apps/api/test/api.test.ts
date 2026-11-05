@@ -6,7 +6,7 @@ import { migrate } from "../src/db/migrate.js";
 import { ChangeBus } from "../src/events.js";
 import { MemoryMailer, createMailer, SmtpMailer } from "../src/mail.js";
 import { normalizeHealth, applyHealthToDay, dueReminders, localParts, schedulerTick } from "../src/integrations.js";
-const cfg = loadConfig({ ...process.env, NODE_ENV: "test", ADMIN_EMAILS: "tafseer@example.com", MAX_HOUSEHOLDS_PER_USER: "2", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
+const cfg = loadConfig({ ...process.env, NODE_ENV: "test", ADMIN_EMAILS: "tafseer@example.com", MAX_HOUSEHOLDS_PER_USER: "1", DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgres://oneplate:oneplate@localhost:5432/oneplate_test", LOG_LEVEL: "silent" });
 const db = createPool(cfg.DATABASE_URL); let app: Awaited<ReturnType<typeof buildApp>>; const mailer = new MemoryMailer(); const bus = new ChangeBus(cfg.DATABASE_URL);
 const cookieOf = (res: any) => String(res.headers["set-cookie"]).split(";")[0];
 beforeAll(async () => { await db.query("drop schema public cascade; create schema public"); await migrate(db); await bus.start(); app = await buildApp(cfg, db, { bus, mailer }); });
@@ -14,11 +14,13 @@ afterAll(async () => { await app.close(); await bus.stop(); await db.end(); });
 describe("OnePlate API", () => {
   let owner = "", wife = "", hid = "";
   it("registers, creates a household, invites a contributor", async () => {
-    const r1 = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "tafseer@example.com", password: "correct horse battery", displayName: "Tafseer" } }); expect(r1.statusCode).toBe(200); owner = cookieOf(r1);
-    const h = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "Haider family" } }); expect(h.statusCode).toBe(200); hid = h.json().id;
+    const r1 = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "tafseer@example.com", password: "correct horse battery", displayName: "Tafseer", householdName: "Haider family" } }); expect(r1.statusCode).toBe(200); owner = cookieOf(r1); expect(r1.json().kind).toBe("first"); hid = r1.json().householdId; expect(hid).toBeTruthy();
+    const me0 = await app.inject({ method: "GET", url: "/auth/me", headers: { cookie: owner } }); expect(me0.json().households[0].member_id).toBe("tafseer"); expect(me0.json().households[0].owner_member_id).toBe("tafseer");
+    const fam0 = await app.inject({ method: "GET", url: `/households/${hid}/docs/family/tafseer`, headers: { cookie: owner } }); expect(fam0.json().body.rel).toBe("me");
+    const noInvite = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "stranger@example.com", password: "whatever12345", displayName: "Stranger" } }); expect(noInvite.statusCode).toBe(403); expect(noInvite.json().error.code).toBe("INVITE_REQUIRED");
+    const second = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "Another" } }); expect(second.statusCode).toBe(429);
     const inv = await app.inject({ method: "POST", url: `/households/${hid}/invites`, headers: { cookie: owner }, payload: { level: "contributor", memberId: "uzma" } }); expect(inv.statusCode).toBe(200);
-    const r2 = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "uzma@example.com", password: "another good one", displayName: "Uzma" } }); wife = cookieOf(r2);
-    const acc = await app.inject({ method: "POST", url: `/invites/${inv.json().code}/accept`, headers: { cookie: wife } }); expect(acc.json().level).toBe("contributor");
+    const r2 = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "uzma@example.com", password: "another good one", displayName: "Uzma", code: inv.json().code } }); expect(r2.statusCode).toBe(200); wife = cookieOf(r2); expect(r2.json().kind).toBe("join"); expect(r2.json().level).toBe("contributor");
     const me = await app.inject({ method: "GET", url: "/auth/me", headers: { cookie: wife } }); expect(me.json().households[0].member_id).toBe("uzma");
   });
   it("writes documents with optimistic versions", async () => {
@@ -163,6 +165,30 @@ describe("OnePlate API", () => {
     const cur = await app.inject({ method: "GET", url: `/households/${hid}/docs/days/2026-11-04`, headers: { cookie: owner } }); const body = Object.assign({}, cur.json().body, { tarbiyah: { uzma: true } });
     const d = await app.inject({ method: "PUT", url: `/households/${hid}/docs/days/2026-11-04`, headers: { cookie: wife }, payload: { body, ifVersion: cur.json().version } }); expect(d.statusCode).toBe(200);
   });
+  it("admits a new family only through a household invite, with its own owner member and quota", async () => {
+    const mk = await app.inject({ method: "POST", url: "/admin/household-invites", headers: { cookie: owner }, payload: { note: "Ali and Sara", days: 7 } }); expect(mk.statusCode).toBe(200); const code = mk.json().code; expect(mk.json().url).toContain("account.html?invite=" + code);
+    const notAdmin = await app.inject({ method: "POST", url: "/admin/household-invites", headers: { cookie: wife }, payload: {} }); expect(notAdmin.statusCode).toBe(404);
+    const bad = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali@example.com", password: "a good password", displayName: "Ali Khan", code: "nope-nope" } }); expect(bad.statusCode).toBe(404);
+    const ali = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali@example.com", password: "a good password", displayName: "Ali Khan", code, householdName: "The Khans" } }); expect(ali.statusCode).toBe(200); expect(ali.json().kind).toBe("household"); const aliC = cookieOf(ali), aliH = ali.json().householdId;
+    const again = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "ali2@example.com", password: "a good password", displayName: "Ali Two", code } }); expect(again.statusCode).toBe(404); // one use
+    const me = await app.inject({ method: "GET", url: "/auth/me", headers: { cookie: aliC } }); expect(me.json().households[0].name).toBe("The Khans"); expect(me.json().households[0].owner_member_id).toBe("ali"); expect(me.json().households[0].scan_quota).toBe(60);
+    const st = await app.inject({ method: "GET", url: `/households/${aliH}/docs/settings/main`, headers: { cookie: aliC } }); expect(st.json().body.ownerMember).toBe("ali"); expect(st.json().body.startWeight).toBeNull();
+    const fam = await app.inject({ method: "GET", url: `/households/${aliH}/docs/family/ali`, headers: { cookie: aliC } }); expect(fam.json().body.name).toBe("Ali Khan");
+    // Sara joins Ali's household and the policy knows Ali, not Tafseer, is the owner member
+    const inv = await app.inject({ method: "POST", url: `/households/${aliH}/invites`, headers: { cookie: aliC }, payload: { level: "contributor", memberId: "sara" } });
+    const sara = await app.inject({ method: "POST", url: "/auth/register", payload: { email: "sara@example.com", password: "a good password", displayName: "Sara", code: inv.json().code } }); const saraC = cookieOf(sara);
+    const own = await app.inject({ method: "PUT", url: `/households/${aliH}/docs/family/ali`, headers: { cookie: saraC }, payload: { body: { id: "ali", name: "X" } } }); expect(own.statusCode).toBe(403);
+    const hers = await app.inject({ method: "PUT", url: `/households/${aliH}/docs/family/sara`, headers: { cookie: saraC }, payload: { body: { id: "sara", name: "Sara", rel: "wife", role: "adult" } } }); expect(hers.statusCode).toBe(200);
+    const aliW = await app.inject({ method: "PUT", url: `/households/${aliH}/docs/weighins/2026-11-04`, headers: { cookie: saraC }, payload: { body: { date: "2026-11-04", weight: 80 } } }); expect(aliW.statusCode).toBe(403);
+    const list = await app.inject({ method: "GET", url: "/admin/household-invites", headers: { cookie: owner } }); expect(list.json().find((i: any) => i.code === code).used_by_email).toBe("ali@example.com");
+    const hh = await app.inject({ method: "GET", url: "/admin/households", headers: { cookie: owner } }); const row = hh.json().find((h: any) => h.id === aliH); expect(row.scan_quota).toBe(60); expect(row.scans_this_month).toBe(0);
+    const q = await app.inject({ method: "PUT", url: `/admin/households/${aliH}`, headers: { cookie: owner }, payload: { scan_quota: 1 } }); expect(q.statusCode).toBe(200);
+    const fake = await buildApp(cfg, db, { mailer, scanner: async () => ({ name: "Daal", items: [{ food: "daal", qty: 1 }] }) }); const tiny = "data:image/jpeg;base64," + Buffer.alloc(120, 1).toString("base64");
+    const s1 = await fake.inject({ method: "POST", url: `/households/${aliH}/scan`, headers: { cookie: aliC }, payload: { mode: "plate", image: tiny } }); expect(s1.statusCode).toBe(200); expect(s1.json().usage.remaining).toBe(0);
+    const s2 = await fake.inject({ method: "POST", url: `/households/${aliH}/scan`, headers: { cookie: aliC }, payload: { mode: "plate", image: tiny } }); expect(s2.statusCode).toBe(429); expect(s2.json().error.code).toBe("QUOTA");
+    const status = await fake.inject({ method: "GET", url: `/households/${aliH}/scan/status`, headers: { cookie: aliC } }); expect(status.json().used).toBe(1); expect(status.json().quota).toBe(1); await fake.close();
+    const sMine = await app.inject({ method: "GET", url: `/households/${hid}/scan/status`, headers: { cookie: owner } }); expect(sMine.json().quota).toBe(60);
+  });
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
     expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);
@@ -172,10 +198,9 @@ describe("OnePlate API", () => {
     const met = await app.inject({ method: "GET", url: "/metrics" }); expect(met.json().active_sessions).toBeGreaterThan(0);
     const anon = await app.inject({ method: "GET", url: "/admin/stats" }); expect(anon.statusCode).toBe(404);
     const notAdmin = await app.inject({ method: "GET", url: "/admin/stats", headers: { cookie: wife } }); expect(notAdmin.statusCode).toBe(404);
-    const adm = await app.inject({ method: "GET", url: "/admin/stats", headers: { cookie: owner } }); expect(adm.statusCode).toBe(200); expect(adm.json().users).toBe(2);
-    const hh = await app.inject({ method: "GET", url: "/admin/households", headers: { cookie: owner } }); expect(hh.json()[0].owner).toBe("tafseer@example.com");
-    const h2 = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "second" } }); expect(h2.statusCode).toBe(200);
-    const h3 = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "third" } }); expect(h3.statusCode).toBe(429);
+    const adm = await app.inject({ method: "GET", url: "/admin/stats", headers: { cookie: owner } }); expect(adm.statusCode).toBe(200); expect(adm.json().users).toBeGreaterThanOrEqual(2);
+    const hh = await app.inject({ method: "GET", url: "/admin/households", headers: { cookie: owner } }); expect(hh.json().some((h: any) => h.owner === "tafseer@example.com")).toBe(true);
+    const h2 = await app.inject({ method: "POST", url: "/households", headers: { cookie: owner }, payload: { name: "second" } }); expect(h2.statusCode).toBe(429); // one household per account
     const ret = await app.inject({ method: "POST", url: "/admin/retention", headers: { cookie: owner } }); expect(ret.statusCode).toBe(200); expect(typeof ret.json().sessions).toBe("number");
   });
   it("exports and audits", async () => {

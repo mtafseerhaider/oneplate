@@ -1,7 +1,7 @@
 /* OnePlate service worker. Pages, scripts and the manifest are fetched from the network first so a new deploy shows on the next open, and served from the cache only when offline.
    Other same-origin assets are served from the cache and refreshed in the background. API calls never touch the cache. The build stamps CACHE with a hash of the app, so every deploy is a new cache. */
 const CACHE = "oneplate-shell-__BUILD__";
-const SHELL = ["./", "./index.html", "./account.html", "./oneplate-adapter.js", "./webauthn.js", "./manifest.webmanifest", "./icon.svg", "./privacy.html", "./terms.html", "./status.html"];
+const SHELL = ["./", "./index.html", "./account.html", "./oneplate-adapter.js", "./webauthn.js", "./manifest.webmanifest", "./icon.svg", "./privacy.html", "./terms.html", "./status.html", "./admin.html"];
 const API = ["/households/", "/auth", "/api", "/open/", "/ingest/", "/push", "/content", "/admin", "/invites"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: "reload" })).catch(() => {})))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

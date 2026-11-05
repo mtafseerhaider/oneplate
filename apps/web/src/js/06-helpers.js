@@ -6,9 +6,10 @@ function logBar(t){if(t===todayStr())return "";const dt=new Date(t+"T12:00:00");
 function logPicker(t){return `<label class="f" style="flex:0 0 auto;min-width:0"><span style="font-size:11px">${tr("Logging for")}</span><input type="date" id="logDate" value="${t}" max="${todayStr()}" style="width:150px;padding:6px 10px"></label>`}
 function weekNo(){const a=new Date(S.settings.startDate+"T00:00:00"),b=new Date(todayStr()+"T00:00:00");return Math.max(1,Math.floor((b-a)/864e5/7)+1)}
 function phase(w){return w<=3?CYCLE[0]:w<=7?CYCLE[1]:w<=12?CYCLE[2]:CYCLE[3]}
-function weighList(){return Object.values(S.weighins).filter(w=>!w.m||w.m==="tafseer").sort((a,b)=>a.date<b.date?-1:1)}
-function currentWeight(){const l=weighList();return l.length?Number(l[l.length-1].weight):Number(S.settings.startWeight)}
-function lostKg(){return Number(S.settings.startWeight)-currentWeight()}
+function weighList(){return Object.values(S.weighins).filter(w=>!w.m||w.m===ownerId()).sort((a,b)=>a.date<b.date?-1:1)}
+function planReady(){return Number(S.settings.startWeight)>0&&Number(S.settings.targetWeight)>0}
+function currentWeight(){const l=weighList();return l.length?Number(l[l.length-1].weight):Number(S.settings.startWeight)||0}
+function lostKg(){if(!planReady())return 0;return Number(S.settings.startWeight)-currentWeight()}
 function strengthOn(){return lostKg()>=(S.settings.unlockKg||5)}
 function planFor(wd){return (strengthOn()?PLAN1:PLAN0)[wd]}
 function fmtDate(s){const d=new Date(s+"T00:00:00");return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})}

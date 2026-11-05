@@ -31,9 +31,13 @@ export function parseJsonLoose(text: string): any {
 export function registerScanRoutes(app: FastifyInstance, cfg: Config, db: Db, deps: { withHousehold: any; audit: (req: any, action: string, extra?: any) => Promise<void>; scanner?: Scanner | null }) {
   const scanner = deps.scanner === undefined ? claudeScanner(cfg) : deps.scanner;
   app.get("/scan/status", async () => ({ available: !!scanner, model: scanner ? cfg.SCAN_MODEL : null }));
+  const month = () => new Date().toISOString().slice(0, 7);
+  const usage = async (hid: string) => { const q = await db.query<{ scan_quota: number }>("select scan_quota from households where id=$1", [hid]); const u = await db.query<{ n: number }>("select n from scan_usage where household_id=$1 and month=$2", [hid, month()]); const quota = q.rows[0]?.scan_quota ?? 0, used = u.rows[0]?.n ?? 0; return { quota, used, remaining: Math.max(0, quota - used) }; };
+  app.get("/households/:hid/scan/status", { preHandler: deps.withHousehold }, async (req: any) => ({ available: !!scanner, model: scanner ? cfg.SCAN_MODEL : null, month: month(), ...(await usage(req.householdId)) }));
   app.post("/households/:hid/scan", { preHandler: deps.withHousehold, config: { rateLimit: { max: 40, timeWindow: "1 hour" } } }, async (req: any, reply) => {
     if (req.actor.level === "viewer") return reply.code(403).send({ error: { code: "FORBIDDEN", message: "viewers cannot scan" } });
     if (!scanner) return reply.code(503).send({ error: { code: "NO_SCAN_KEY", message: "scanning needs an Anthropic API key on the server (ANTHROPIC_API_KEY)" } });
+    const u = await usage(req.householdId); if (u.remaining <= 0) return reply.code(429).send({ error: { code: "QUOTA", message: `this household's ${u.quota} scans for the month are used; the count resets on the 1st` } });
     const p = z.object({ mode: z.enum(["plate", "pantry"]).default("plate"), image: z.string().min(100).max(6_000_000), who: z.string().max(60).optional() }).safeParse(req.body);
     if (!p.success) return reply.code(400).send({ error: { code: "INVALID", message: "image (data URL or base64 JPEG) required" } });
     const m = p.data.image.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/s); const mediaType = (m ? m[1] : "image/jpeg") as any, data = m ? m[2]! : p.data.image;
@@ -46,7 +50,7 @@ export function registerScanRoutes(app: FastifyInstance, cfg: Config, db: Db, de
       if (e instanceof Anthropic.APIConnectionError) return reply.code(502).send({ error: { code: "UPSTREAM_DOWN", message: "could not reach the model" } });
       throw e;
     }
-    const result: ScanResult = normalizeScan(p.data.mode, raw); await deps.audit(req, "scan", { doc_id: p.data.mode });
-    return result;
+    const result: ScanResult = normalizeScan(p.data.mode, raw); await db.query("insert into scan_usage(household_id,month,n) values($1,$2,1) on conflict (household_id,month) do update set n=scan_usage.n+1", [req.householdId, month()]); await deps.audit(req, "scan", { doc_id: p.data.mode });
+    return { ...result, usage: { ...u, used: u.used + 1, remaining: u.remaining - 1 } };
   });
 }

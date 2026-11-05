@@ -44,6 +44,17 @@ A phone-first companion app lives in [`app/index.html`](app/index.html): a live 
 
 It is published as a private Claude Artifact, which works on iOS, Android and desktop browsers from one link (the page switches to a sidebar layout on wide screens) with no app store or hosting setup. Weigh-ins and check-ins sync across devices through the Claude account that owns the artifact. The same file can also be served by GitHub Pages if you ever want a public URL; in that mode data stays on each device.
 
+## Any family
+
+OnePlate is one server for several families. Each household has its own data, members, settings and progress; nothing is shared between households except the content and the review statuses. Registration is by invitation only:
+
+- **A new family** gets a household invite from the admin page (`/admin.html`, for the accounts in `ADMIN_EMAILS`): one link, one use, two weeks. The person who opens it creates the first account and becomes owner of a new household, with themselves on the Family tab. The very first account on a fresh server needs no invite.
+- **Members of a family** get an invite from their owner on the Account card, which signs them into that household as contributor or viewer, or a family link that opens by date of birth.
+
+The owner adds the family on the Family tab, each person with a relation and a date of birth; sons and daughters are children and never restricted. The plan asks for a start and a target weight before it runs. All content, the daily Learn set, the long-form companions and the whole Tarbiyah course, was written for one family and is personalised for every other: the owner, the spouse and the children appear by their own names and ages wherever the original names stood, and activities written for a seven-year-old and a four-year-old go to whichever child is closest in age. Ibn 'Abbas keeps his name.
+
+Plate and kitchen scans run on the server's Anthropic key with a monthly quota per household (`SCAN_QUOTA_DEFAULT`, 60; changeable per household on the admin page); the Account card shows what is left.
+
 ## Open it from a link, with Face ID
 
 The self-hosted OnePlate gives every adult a private **family link**. Opening the link asks for that person's date of birth, which must match the Family tab, signs the device in, and offers Face ID, Touch ID or fingerprint (a passkey). After that the link, or the installed app, opens by itself. Make the links from Progress → Account; revoke one there if it leaks. Children do not get links; their parents log for them.
