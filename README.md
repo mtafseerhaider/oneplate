@@ -52,6 +52,12 @@ Install it like an app: on Android, Chrome's menu → Install app (or the Instal
 
 The claude.ai artifact cannot do this: its database is only readable by people signed in to claude.ai whom the owner has shared it with, so a link that opens on a date of birth alone has to come from your own hosted copy.
 
+## Scan a plate, or the kitchen
+
+On the Plate tab, **Scan the plate** photographs tonight's plate and reads it: each food, its hand portion, calories and protein, matched to OnePlate's own food list where it can and estimated where it cannot, then judged against the plan (protein first, vegetables, one carb, measured fat) with two or three concrete changes. Adjust any amount with + and −, then set it as tonight's plate or save it to your meals; family portions and cook quantities follow from it. **Scan the kitchen** photographs the fridge or the shelf instead and proposes up to three plates from what is already at home, naming at most two cheap things to buy. Photos are shrunk on the phone and never stored.
+
+The self-hosted app does this through the Claude API: set `ANTHROPIC_API_KEY` on the server (a scan costs a few cents on the default model, `SCAN_MODEL`). The claude.ai artifact sends the photo to Claude on the viewer's own account, after they allow it once. The prompt and the normaliser are shared in `packages/core/src/scan.ts`.
+
 ## Notifications and Apple Health
 
 Installed to the Home Screen, the self-hosted app sends reminders as notifications: fast complete, protein starter at 7 pm, weigh-in on Friday morning, family circle at 8:30 pm and the Quran reading at 9:30 pm, each once and only when the thing is not already recorded. Turn them on per device from Progress → Account. iPhone needs iOS 16.4 or later and the app opened from the Home Screen icon.

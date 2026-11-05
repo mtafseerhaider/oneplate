@@ -11,7 +11,7 @@ function mealEditor(d){return `
       <label class="f">Type<select id="me_tag">${["chicken","beef","fish","meatless","other"].map(t=>`<option value="${t}" ${d.tag===t?"selected":""}>${t}</option>`).join("")}</select></label>
     </div>
     <div class="erows">
-      ${d.items.map((it,i)=>`<div class="erow"><select data-me="food" data-i="${i}" aria-label="food">${foodOptions(it.f)}</select><input type="number" data-me="qty" data-i="${i}" value="${it.q}" min="0" max="12" step="0.5" inputmode="decimal" aria-label="how many"><button class="btn ghost" type="button" data-a="me_del" data-i="${i}" aria-label="remove">✕</button></div>`).join("")}
+      ${d.items.map((it,i)=>`<div class="erow">${it.x?`<div class="t" style="flex:1"><b>${esc(it.x.n)}</b><small>${tr("from a scan")} · ${esc(UNITS[it.x.u][1])} · ${it.x.kcal} kcal each</small></div>`:`<select data-me="food" data-i="${i}" aria-label="food">${foodOptions(it.f)}</select>`}<input type="number" data-me="qty" data-i="${i}" value="${it.q}" min="0" max="12" step="0.5" inputmode="decimal" aria-label="how many"><button class="btn ghost" type="button" data-a="me_del" data-i="${i}" aria-label="remove">✕</button></div>`).join("")}
     </div>
     <button class="btn" type="button" data-a="me_add">+ Add a food</button>
     <div id="mtot">${mealTotals(d)}</div>
@@ -127,6 +127,7 @@ function vPlate(){
   const ed=S._medit;
   return `
   <div class="hdr"><div><p class="eyebrow">${tr("Build by hand, no scales")}</p><h1>${tr("The Plate")}</h1></div></div>
+  ${scanCard()}
   <section class="card">
     <div class="platewrap">${plateSvg()}
       <div class="legend">
@@ -154,7 +155,7 @@ function vPlate(){
   ${list.map(m=>{if(ed&&ed.id===m.id)return mealEditor(ed);const t=mealCalc(m),g=hands(m);return `<details ${S._mopen===m.id?"open":""} data-mid="${m.id}"><summary><span>${esc(m.n)}${m.base?"":` <span class="pill soft" style="font-size:10px;padding:1px 7px">custom</span>`}${m.base&&S.meals[m.id]?` <span class="pill grey" style="font-size:10px;padding:1px 7px">edited</span>`:""}<br><span class="kcal">${t.kcal} kcal · ${t.p} g protein</span></span>${ic("chev","chev")}</summary><div class="body">
     ${mbar(t)}
     <div class="hands"><span>Protein</span><div>${esc(g.protein.join(" · ")||"—")}</div><span>Veg</span><div>${esc(g.veg.join(" · ")||"—")}</div><span>Carbs</span><div>${esc(g.carb.join(" · ")||"—")}</div><span>Fat</span><div>${esc(g.fat.join(" · ")||"—")}</div><span>Plus</span><div>${esc(g.plus.join(" · ")||"—")}</div></div>
-    <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(FOODS[it.f].ur||FOODS[it.f].n)).join(" · "))}</p>
+    <p class="small muted" dir="rtl" style="text-align:right">${esc(normItems(m.items).map(it=>qtyStr(it.q)+" "+(foodOf(it).ur||foodOf(it).n)).join(" · "))}</p>
     <details class="flat" style="box-shadow:none"><summary style="font-size:13px;padding:9px 0"><span>Family portions · cook: ${esc(cookQuantities(m).join(" · "))}</span>${ic("chev","chev")}</summary><div class="body"><div class="hands">${members().map(mm=>`<span>${esc(mm.name)}</span><div class="small">${memberPortions(m,mm).length?esc(memberPortions(m,mm).join(" · "))+(mm.role==="child"?" + seconds if hungry":""):"milk-based"}</div>`).join("")}</div></div></details>
     ${m.note?`<p class="small muted">${esc(m.note)}</p>`:""}
     ${ro?"":`<div class="row"><button class="btn ${(S.days[logDate()]||{}).meal===m.id?"primary":""}" type="button" data-a="tonight" data-id="${m.id}">${(S.days[logDate()]||{}).meal===m.id?ic("check")+" "+tr("Tonight's plate"):tr("Set as tonight's plate")}</button><button class="btn ghost" type="button" data-a="me_edit" data-id="${m.id}">${tr("Edit meal")}</button></div>`}

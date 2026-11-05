@@ -147,6 +147,17 @@ describe("OnePlate API", () => {
     const failed = await db.query("select failures from push_subscriptions where endpoint=$1", [sub.endpoint]); expect(failed.rows[0].failures).toBeGreaterThanOrEqual(1); // the example push service is unreachable; the subscription is kept
     await app.inject({ method: "POST", url: `/households/${hid}/push/unsubscribe`, headers: { cookie: owner }, payload: { endpoint: sub.endpoint } });
   });
+  it("scans a plate through an injected scanner and explains a missing key", async () => {
+    const tiny = "data:image/jpeg;base64," + Buffer.alloc(120, 1).toString("base64");
+    const noKey = await app.inject({ method: "POST", url: `/households/${hid}/scan`, headers: { cookie: owner }, payload: { mode: "plate", image: tiny } }); expect(noKey.statusCode).toBe(503); expect(noKey.json().error.code).toBe("NO_SCAN_KEY");
+    const status = await app.inject({ method: "GET", url: "/scan/status" }); expect(status.json().available).toBe(false);
+    const seen: any[] = []; const fake = await buildApp(cfg, db, { mailer, scanner: async (a) => { seen.push(a); return { name: "Daal chawal", items: [{ food: "daal", qty: 1 }, { food: "rice", qty: 1.5 }, { food: "salad", qty: 1 }], verdict: "v", suggestions: ["s"], proteinFirst: false }; } });
+    const ok = await fake.inject({ method: "POST", url: `/households/${hid}/scan`, headers: { cookie: owner }, payload: { mode: "plate", image: tiny, who: "Uzma" } }); expect(ok.statusCode).toBe(200); expect(ok.json().plate.items).toEqual([{ f: "daal", q: 1 }, { f: "rice", q: 1.5 }, { f: "salad", q: 1 }]); expect(ok.json().plate.thirds).toBe("heavy-carb"); expect(ok.json().proteinFirst).toBe(false);
+    expect(seen[0].mediaType).toBe("image/jpeg"); expect(seen[0].who).toBe("Uzma"); expect(seen[0].data.length).toBeGreaterThan(100);
+    const bad = await fake.inject({ method: "POST", url: `/households/${hid}/scan`, headers: { cookie: owner }, payload: { mode: "plate", image: "short" } }); expect(bad.statusCode).toBe(400);
+    const st2 = await fake.inject({ method: "GET", url: "/scan/status" }); expect(st2.json().available).toBe(true);
+    const log = await db.query("select count(*)::int as n from audit_events where action='scan'"); expect(log.rows[0].n).toBe(1); await fake.close();
+  });
   it("builds the SMTP mailer from configuration", () => {
     expect(createMailer("smtp", () => {}, { smtpUrl: "smtp://user:pass@localhost:2525", from: "OnePlate <x@y.z>" })).toBeInstanceOf(SmtpMailer);
     expect(() => createMailer("smtp", () => {})).toThrow(/SMTP_URL/);

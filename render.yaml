@@ -17,5 +17,7 @@ services:
       # PUBLIC_URL and CORS_ORIGIN default to Render's RENDER_EXTERNAL_URL; set PUBLIC_URL yourself when you add a custom domain.
       - key: ADMIN_EMAILS
         sync: false
+      - key: ANTHROPIC_API_KEY   # optional: plate and kitchen scans
+        sync: false
       - key: MAIL_TRANSPORT
         value: console

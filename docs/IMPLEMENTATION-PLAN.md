@@ -68,6 +68,13 @@ Done in this commit:
 - Tests: normalisation, habit application, reminder decisions across local times, token lifecycle, subscribe and unsubscribe, scheduler idempotence.
 Not possible: reading Health Connect on Android from a web app.
 
+## Phase 7: Cook from what is at home
+Done in this commit:
+- Plate scan and kitchen scan. `core.scanPrompt` carries the plan's ideology and the food catalog; `core.normalizeScan` turns the model's JSON into meal items (catalog ids where matched, inline custom foods where not), calories, category shares and a one-word shape (ok, carb-heavy, low-protein, low-veg). Meal items may now carry a custom food (`x`), and portions, cook quantities and the editor understand them.
+- API: `POST /households/:hid/scan` (owner and contributor) through the Anthropic SDK with structured JSON, image size and rate limits, typed upstream errors; `/scan/status`; the scanner is injectable for tests. Artifact: the same prompt through the viewer's own Claude (`sample` with images), no key needed.
+- UI on the Plate tab: capture, shrink to 1280 px, result with +/− per item, verdict and suggestions, set as tonight's plate or save to meals; kitchen mode lists ingredients and proposes plates with a short shopping list.
+- Tests: core prompt and normalisation (4), API route with an injected scanner, browser flow from result to saved tonight's plate.
+
 ## Operating rules
 - Children are never restricted: enforced in `core`, validated at the API, tested in CI.
 - No change to a domain rule without a test.

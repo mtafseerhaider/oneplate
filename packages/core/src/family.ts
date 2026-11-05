@@ -1,5 +1,5 @@
 /** Family members and portions. Children are never restricted: no calorie or target fields exist for a child. */
-import { FOODS, normItems, portion, type Meal } from "./foods.js";
+import { FOODS, foodOf, type Food, normItems, portion, type Meal } from "./foods.js";
 export type Stage = "infant"|"toddler"|"child"|"teen"|"adult";
 export interface AdultMember { id: string; name: string; rel: string; role: "adult"; sex: "male"|"female"; dob?: string; goal: "fat_loss"|"maintain"; status?: "none"|"pregnant"|"breastfeeding"; startWeight?: number; targetWeight?: number }
 export interface ChildMember { id: string; name: string; rel: string; role: "child"; sex: "male"|"female"; dob?: string; goal: "growth" }
@@ -20,12 +20,12 @@ export function portionFactor(m: Member, today = new Date()): number {
 }
 export const roundUpQ = (q: number) => Math.ceil(q * 4 - 1e-9) / 4;
 export function memberPortions(meal: Pick<Meal,"items">, m: Member, today = new Date()): string[] {
-  const f = portionFactor(m, today); if (!f) return []; return normItems(meal.items).map(it => portion(roundUpQ(it.q * f), FOODS[it.f]!));
+  const f = portionFactor(m, today); if (!f) return []; return normItems(meal.items).map(it => portion(roundUpQ(it.q * f), foodOf(it)));
 }
 export function cookQuantities(meal: Pick<Meal,"items">, members: Member[], today = new Date()): string[] {
-  const tot: Record<string, number> = {}; for (const it of normItems(meal.items)) tot[it.f] = 0;
+  const tot: Record<string, number> = {}, foods: Record<string, Food> = {}; for (const it of normItems(meal.items)) { tot[it.f] = 0; foods[it.f] = foodOf(it); }
   for (const m of members) { const f = portionFactor(m, today); if (!f) continue; for (const it of normItems(meal.items)) tot[it.f]! += roundUpQ(it.q * f); }
-  return Object.keys(tot).map(k => portion(Math.ceil(tot[k]! * 2) / 2, FOODS[k]!));
+  return Object.keys(tot).map(k => portion(Math.ceil(tot[k]! * 2) / 2, foods[k]!));
 }
 /** Invariant used by the API: a child member may not carry weight-loss fields. */
 export function assertChildUnrestricted(m: Member): void {

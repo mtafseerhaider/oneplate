@@ -2,7 +2,9 @@
 export type Unit = "palm"|"fist"|"hand"|"thumb"|"bowl"|"roti"|"naan"|"egg"|"piece"|"scoop"|"handful"|"slice"|"glass"|"item";
 export type FoodCategory = "protein"|"veg"|"carb"|"fat"|"plus";
 export interface Food { n: string; ur?: string; short: string; u: Unit; cat: FoodCategory; kcal: number; p: number; c: number; f: number }
-export interface MealItem { f: string; q: number }
+/** A meal item references the catalog by id, or carries its own food (`x`) when it came from a scan and matched nothing in the catalog. */
+export interface CustomFood { n: string; u: Unit; cat: FoodCategory; kcal: number; p: number; c: number; f: number }
+export interface MealItem { f: string; q: number; x?: CustomFood }
 export interface Meal { id: string; n: string; tag: string; items: MealItem[] | [string, number][]; note?: string; base?: boolean; deleted?: boolean }
 export interface Macros { kcal: number; p: number; c: number; f: number }
 
@@ -76,11 +78,13 @@ export const BASE_MEALS: Meal[] = [
 ];
 
 export function normItems(items: Meal["items"] | undefined): MealItem[] {
-  return (items ?? []).map((it: any) => Array.isArray(it) ? { f: it[0], q: Number(it[1]) } : { f: it.f, q: Number(it.q) }).filter(it => FOODS[it.f] && it.q > 0);
+  return (items ?? []).map((it: any): MealItem => Array.isArray(it) ? { f: it[0], q: Number(it[1]) } : it.x ? { f: it.f, q: Number(it.q), x: it.x } : { f: it.f, q: Number(it.q) }).filter(it => (FOODS[it.f] || it.x) && it.q > 0);
 }
+/** The food behind an item: the catalog entry, or the item's own custom food. */
+export function foodOf(it: MealItem): Food { const fd = FOODS[it.f]; if (fd) return fd; const x = it.x!; return { n: x.n, short: x.n.toLowerCase(), u: x.u, cat: x.cat, kcal: x.kcal, p: x.p, c: x.c, f: x.f }; }
 export function mealCalc(m: Pick<Meal,"items">): Macros {
   let k = 0, p = 0, c = 0, f = 0;
-  for (const it of normItems(m.items)) { const fd = FOODS[it.f]!; k += fd.kcal * it.q; p += fd.p * it.q; c += fd.c * it.q; f += fd.f * it.q; }
+  for (const it of normItems(m.items)) { const fd = foodOf(it); k += fd.kcal * it.q; p += fd.p * it.q; c += fd.c * it.q; f += fd.f * it.q; }
   return { kcal: Math.round(k / 5) * 5, p: Math.round(p), c: Math.round(c), f: Math.round(f) };
 }
 export function qtyStr(q: number): string {
@@ -92,7 +96,7 @@ export function portion(q: number, fd: Food): string {
 }
 export function hands(m: Pick<Meal,"items">): Record<FoodCategory,string[]> {
   const g: Record<FoodCategory,string[]> = { protein: [], veg: [], carb: [], fat: [], plus: [] };
-  for (const it of normItems(m.items)) { const fd = FOODS[it.f]!; g[fd.cat].push(portion(it.q, fd)); }
+  for (const it of normItems(m.items)) { const fd = foodOf(it); g[fd.cat].push(portion(it.q, fd)); }
   return g;
 }
 export function handLine(m: Pick<Meal,"items">): string { const g = hands(m); return [...g.protein, ...g.veg, ...g.carb, ...g.fat, ...g.plus].join(" · "); }

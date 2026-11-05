@@ -63,3 +63,22 @@ describe("quran course", () => {
     expect(reviewOf("x", { x: { status: "bogus" } as any }).status).toBe("draft"); expect(reviewCounts(["a", "b"], { a: { status: "reviewed" } })).toEqual({ draft: 1, reviewed: 1, verified: 0, disputed: 0 });
   });
 });
+
+import { scanPrompt, normalizeScan, plateShape, foodOf, cookQuantities as cookQ, memberPortions as memberP } from "../src/index.js";
+describe("scan", () => {
+  it("builds a prompt that carries the catalog and the plan", () => { const p = scanPrompt("plate", "Uzma"); expect(p).toContain("chk_karahi | Chicken karahi | per palm"); expect(p).toContain("one plate, no refill"); expect(p).toContain("Reply with ONLY this JSON"); expect(scanPrompt("pantry")).toContain('"plates"'); });
+  it("normalises a plate reply into catalog items, custom items and a shape", () => {
+    const r = normalizeScan("plate", { name: "Karahi dinner", items: [{ food: "chk_karahi", name: "chicken karahi", qty: 1.6, unit: "palm" }, { food: "roti", qty: 2 }, { food: null, name: "Mixed pakoray", qty: 3, unit: "piece", kcal: 60, p: 2, c: 6, f: 3, cat: "carb" }, { food: null, name: "Water", qty: 1 }], verdict: "Good protein, two rotis is one too many.", suggestions: ["Keep one roti", "Add kachumber"], proteinFirst: true });
+    expect(r.plate!.items).toEqual([{ f: "chk_karahi", q: 1.5 }, { f: "roti", q: 2 }, { f: "x_mixed_pakoray", q: 3, x: { n: "Mixed pakoray", u: "piece", cat: "carb", kcal: 60, p: 2, c: 6, f: 3 } }]);
+    expect(r.plate!.thirds).toBe("heavy-carb"); expect(r.plate!.macros.kcal).toBe(795); expect(r.unknown).toEqual(["Mixed pakoray", "Water"]); expect(r.suggestions.length).toBe(2); expect(r.notFood).toBe(false);
+    expect(normalizeScan("plate", { notFood: true, items: [] }).notFood).toBe(true); expect(normalizeScan("plate", "garbage").plate!.items).toEqual([]);
+  });
+  it("normalises a kitchen reply into plates and keeps the missing list short", () => {
+    const r = normalizeScan("pantry", { ingredients: ["eggs", "spinach", "atta", "yogurt"], plates: [{ name: "Palak anda", why: "cheap protein", missing: ["tomato", "x", "y", "z", "w"], items: [{ food: "egg", qty: 2 }, { food: "palak", qty: 2 }, { food: "roti", qty: 1 }, { food: "oil", qty: 1 }] }] });
+    expect(r.plates.length).toBe(1); expect(r.plates[0]!.thirds).toBe("ok"); expect(r.plates[0]!.missing.length).toBe(4); expect(r.ingredients).toContain("atta");
+  });
+  it("custom foods flow through portions, cook quantities and shape", () => {
+    const items = [{ f: "x_saag", q: 2, x: { n: "Saag", u: "fist" as const, cat: "veg" as const, kcal: 70, p: 3, c: 6, f: 3 } }, { f: "chk_breast", q: 2 }];
+    expect(foodOf(items[0]!).n).toBe("Saag"); expect(memberP({ items }, fam[2]!, today)[0]).toBe("1 fist saag"); expect(cookQ({ items }, fam, today)[0]).toBe("6 fists saag"); expect(plateShape(items).thirds).toBe("ok");
+  });
+});

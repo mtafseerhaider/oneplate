@@ -84,6 +84,20 @@ test("learn cards carry a long-form companion and copyable text", async () => {
   assert.ok((await page.$$('[data-a="copytext"]')).length >= 9);
   await page.evaluate(() => { S._lm = "abbas"; render(); }); assert.match(await page.$eval('details[data-depth="story"] summary', e => e.textContent), /for the children/); await page.evaluate(() => { S._lm = "tafseer"; render(); });
 });
+test("scan: a result renders in hand portions, adjusts, and saves as tonight's plate", async () => {
+  await page.evaluate(() => { SCAN = { ok: true, why: "" }; tab = "plate"; render(); });
+  assert.ok(await page.$('[data-a="scan_pick"][data-mode="plate"]')); assert.ok(await page.$('[data-a="scan_pick"][data-mode="pantry"]')); assert.ok(await page.$("#scanFile[accept='image/*']"));
+  await page.evaluate(() => { S._scan = { mode: "plate", result: normalizeScan("plate", { name: "Karahi dinner", items: [{ food: "chk_karahi", qty: 1.5 }, { food: "roti", qty: 2 }, { food: null, name: "Pakoray", qty: 3, unit: "piece", kcal: 60, p: 2, c: 6, f: 3, cat: "carb" }], verdict: "Protein is good; two rotis is one too many.", suggestions: ["Keep one roti"], proteinFirst: true }) }; render(); });
+  assert.match(await page.$eval(".scanplate .pill", e => e.textContent), /Carb-heavy/); assert.equal(await page.$$eval(".scanrow", r => r.length), 3); assert.match(await page.$eval(".scanplate", e => e.textContent), /Pakoray[\s\S]*estimated/);
+  await page.click('[data-a="scan_qty"][data-pi="0"][data-i="1"][data-d="-0.25"]'); await page.click('[data-a="scan_qty"][data-pi="0"][data-i="1"][data-d="-0.25"]'); await page.click('[data-a="scan_qty"][data-pi="0"][data-i="1"][data-d="-0.25"]'); await page.click('[data-a="scan_qty"][data-pi="0"][data-i="1"][data-d="-0.25"]');
+  assert.match(await page.$eval(".scanplate .pill", e => e.textContent), /No vegetables/); assert.equal(await page.evaluate(() => scanPlates()[0].items[1].q), 1);
+  await page.click('[data-a="scan_save"][data-tonight="1"]'); await page.waitForTimeout(100);
+  const saved = await page.evaluate(() => { const d = S.days[logDate()]; const m = S.meals[d.meal]; return { n: m.n, tag: m.tag, items: m.items, kcal: mealCalc(m).kcal, line: handLine(m), tonight: tonightMeal().id === d.meal, scanned: m.scanned }; });
+  assert.equal(saved.n, "Karahi dinner"); assert.equal(saved.tag, "chicken"); assert.equal(saved.items.length, 3); assert.ok(saved.items[2].x && saved.items[2].x.n === "Pakoray"); assert.equal(saved.kcal, 675); assert.match(saved.line, /1 ½ palms chicken karahi · 1 roti/); assert.ok(saved.tonight && saved.scanned);
+  const pantry = await page.evaluate(() => { S._scan = { mode: "pantry", result: normalizeScan("pantry", { ingredients: ["eggs", "palak", "atta"], plates: [{ name: "Palak anda", why: "cheap", missing: ["tomato"], items: [{ food: "egg", qty: 2 }, { food: "palak", qty: 2 }, { food: "roti", qty: 1 }] }, { name: "Egg bhurji", items: [{ food: "egg", qty: 3 }, { food: "salad", qty: 1 }] }] }) }; render(); return document.querySelectorAll(".scanplate").length; }); assert.equal(pantry, 2);
+  assert.match(await page.$eval(".card.accent", e => e.textContent), /At home:[\s\S]*eggs, palak, atta[\s\S]*To buy:[\s\S]*tomato/);
+  await page.evaluate(() => { S._scan = null; render(); });
+});
 test("appearance cycles auto, light, dark and is remembered per device", async () => {
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), null);
   await page.click("#themeBtn"); assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");

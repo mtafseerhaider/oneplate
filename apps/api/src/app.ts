@@ -18,10 +18,11 @@ import path from "node:path";
 import { registerPasskeyRoutes } from "./auth/passkeys.js";
 import { registerOpsRoutes, createErrorReporter } from "./ops.js";
 import { registerIntegrationRoutes } from "./integrations.js";
+import { registerScanRoutes, type Scanner } from "./scan.js";
 
 declare module "fastify" { interface FastifyRequest { userId?: string; actor?: Actor; householdId?: string } }
 
-export interface AppDeps { bus?: ChangeBus; mailer?: Mailer }
+export interface AppDeps { bus?: ChangeBus; mailer?: Mailer; scanner?: Scanner | null }
 export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: { level: cfg.LOG_LEVEL, ...(cfg.NODE_ENV === "development" ? { transport: { target: "pino-pretty" } } : {}) }, trustProxy: true });
   await app.register(helmet, { contentSecurityPolicy: false });
@@ -147,6 +148,7 @@ export async function buildApp(cfg: Config, db: Db, deps: AppDeps = {}): Promise
   });
 
   registerIntegrationRoutes(app, cfg, db, { audit: async (r, a, x) => { await audit(r, a, x); }, withHousehold, requireUser });
+  registerScanRoutes(app, cfg, db, { withHousehold, audit: async (r, a, x) => { await audit(r, a, x); }, scanner: deps.scanner });
 
   // ---- documents: the same contract the artifact database serves ----
   const COLL = /^[a-z][a-z0-9_-]{0,39}$/, DOC = /^[A-Za-z0-9_\-.~:@+]{1,200}$/;

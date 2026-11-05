@@ -10,13 +10,14 @@ function mealAction(a,b){
   if(a==="me_cancel"){S._medit=null;render();return true}
   if(a==="me_add"){d.items.push({f:"salad",q:1});render();return true}
   if(a==="me_del"){d.items.splice(Number(b.dataset.i),1);render();return true}
-  if(a==="me_save"){const n=(document.getElementById("me_n")||{}).value||d.n;d.n=n.trim();d.items=d.items.filter(it=>FOODS[it.f]&&it.q>0);if(!d.n){toast("Give the meal a name");return true}if(!d.items.length){toast("Add at least one food");return true}const id=d.id||("c_"+Date.now().toString(36));const rec={id,n:d.n,tag:d.tag,note:d.note||"",items:d.items.map(it=>({f:it.f,q:it.q}))};S.meals[id]=rec;persistMeal(id);S._medit=null;S._mopen=id;toast("Meal saved · "+mealCalc(rec).kcal+" kcal");render();return true}
+  if(a==="me_save"){const n=(document.getElementById("me_n")||{}).value||d.n;d.n=n.trim();d.items=d.items.filter(it=>(FOODS[it.f]||it.x)&&it.q>0);if(!d.n){toast("Give the meal a name");return true}if(!d.items.length){toast("Add at least one food");return true}const id=d.id||("c_"+Date.now().toString(36));const rec={id,n:d.n,tag:d.tag,note:d.note||"",items:d.items.map(it=>({f:it.f,q:it.q}))};S.meals[id]=rec;persistMeal(id);S._medit=null;S._mopen=id;toast("Meal saved · "+mealCalc(rec).kcal+" kcal");render();return true}
   if(a==="me_reset"){removeMeal(d.id);S._medit=null;toast("Reset to default");render();return true}
   if(a==="me_delete"){if(d.base){S.meals[d.id]={id:d.id,deleted:true};persistMeal(d.id);toast("Hidden")}else{removeMeal(d.id);toast("Deleted")}S._medit=null;render();return true}
   return false;
 }
 document.addEventListener("change",e=>{
   const t=e.target,d=S._medit;
+  if(t.id==="scanFile"){const f=t.files&&t.files[0];if(f)runScan(f,t.dataset.mode||"plate");return}
   if(t.id==="logDate"){const v=t.value;S._ld=(v&&v<todayStr())?v:null;render();return}
   if(t.id==="sleepH"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);const v=parseFloat(t.value);if(v>=0&&v<=14)dd.sleep=v;else delete dd.sleep;persistDay(ld);toast("Sleep saved · "+fmtDate(ld));return}
   if(t.id==="gratIn"&&isOwner&&!readOnly){const ld=logDate(),dd=day(ld);dd.grat=t.value.trim();persistDay(ld);if(dd.grat)toast("Alhamdulillah");render();return}
@@ -91,6 +92,10 @@ document.addEventListener("click",e=>{
   if(a==="dot"){const dd=b.dataset.d||t,d=day(dd),f=b.dataset.f,v=Number(b.dataset.v);d[f]=(d[f]||0)===v?v-1:v;persistDay(dd);render();return}
   if(a==="tog"){const dd=b.dataset.d||t,d=day(dd);d[b.dataset.k]=!d[b.dataset.k];persistDay(dd);render();return}
   if(a==="mood"){const d=day(t);d.mood=Number(b.dataset.v);persistDay(t);render();return}
+  if(a==="scan_pick"){if(SCAN.ok===false){toast(SCAN.why||"Scanning is not set up");return}const inp=document.getElementById("scanFile");if(!inp)return;inp.dataset.mode=b.dataset.mode;inp.value="";inp.click();return}
+  if(a==="scan_reset"){S._scan=null;render();return}
+  if(a==="scan_qty"||a==="scan_del"){const pl=scanPlates()[Number(b.dataset.pi)];if(!pl)return;const i=Number(b.dataset.i);if(a==="scan_del")pl.items.splice(i,1);else{pl.items[i].q=Math.max(0.25,Math.min(12,Math.round((pl.items[i].q+Number(b.dataset.d))*4)/4))}rescan(pl);render();return}
+  if(a==="scan_save"){const pl=scanPlates()[Number(b.dataset.pi)];if(!pl||!pl.items.length){toast("Nothing to save");return}const id=saveScanPlate(pl,b.dataset.tonight==="1");toast(b.dataset.tonight==="1"?"Tonight's plate set":"Saved to meals");S._scan=null;S._mopen=id;render();return}
   if(a==="copytext"||a==="share"){const kind=b.dataset.kind,x=findItem(kind,decodeURIComponent(b.dataset.key)),kid=b.dataset.kid==="1";if(!x){toast("Not found");return}const text=shareTextFor(kind,x,kid);
     if(a==="share"&&navigator.share){navigator.share({title:"OnePlate · "+itemTitle(kind,x).slice(0,80),text}).catch(e=>{if(e&&e.name!=="AbortError")copyText(text).then(ok=>toast(ok?"Copied instead":""))});return}
     copyText(text).then(ok=>{if(ok)toast(tr("Copied"))});return}
